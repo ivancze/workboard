@@ -1,2 +1,2 @@
 # workboard
-A Kanban style issue tracker
+A Kanban board for a small team to track their work.
