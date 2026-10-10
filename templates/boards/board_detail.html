@@ -7,10 +7,23 @@
   <h1>{{ board.name }}</h1>
 
   <div>
-    {% for stage in board.stages.all %}
+    {% for stage in stages %}
       <section>
         <h2>{{ stage.name }}</h2>
-        <p>No cards yet.</p>
+        {% if stage.cards.all %}
+          <ol>
+            {% for card in stage.cards.all %}
+              <li><a href="{% url 'card_detail' board.pk card.pk %}">{{ card.title }}</a></li>
+            {% endfor %}
+          </ol>
+        {% else %}
+          <p>No cards yet.</p>
+        {% endif %}
+        <form method="post" action="{% url 'card_create' board.pk stage.pk %}">
+          {% csrf_token %}
+          <label>{{ form.title.label }} {{ form.title }}</label>
+          <button type="submit">Add card</button>
+        </form>
       </section>
     {% endfor %}
   </div>

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load markdown %}
+
+{% block title %}{{ card.title }} · {{ board.name }} · Workboard{% endblock %}
+
+{% block content %}
+  <p><a href="{% url 'board_detail' board.pk %}">← {{ board.name }}</a></p>
+  <h1>{{ card.title }}</h1>
+  <p>Created by {{ card.creator.name }} on {{ card.created_at|date:"j F Y, H:i" }}</p>
+
+  <div>{{ card.description|markdown }}</div>
+
+  <h2>Edit</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Save</button>
+  </form>
+{% endblock %}

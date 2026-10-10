@@ -111,3 +111,41 @@ class Stage(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class CardManager(models.Manager):
+    def create_at_end(self, *, stage, **fields):
+        """Create a Card at the bottom of its Stage's Card order.
+
+        A new Card has not been prioritised by anyone yet, so it waits below
+        the Cards that have.
+        """
+        last = stage.cards.aggregate(last=models.Max("position"))["last"]
+        position = 0 if last is None else last + 1
+        return self.create(stage=stage, position=position, **fields)
+
+
+class Card(models.Model):
+    """One unit of work, sitting in exactly one Stage."""
+
+    stage = models.ForeignKey(Stage, on_delete=models.CASCADE, related_name="cards")
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    position = models.PositiveIntegerField()
+    # PROTECT: the Creator is a historical fact that survives leaving the board,
+    # so deleting the User must not silently rewrite or erase it.
+    creator = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    # Recorded for a future display and Card history; nothing shows it yet.
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = CardManager()
+
+    class Meta:
+        # Card order is set by hand and read as priority; `id` only breaks ties.
+        ordering = ["position", "id"]
+
+    def __str__(self):
+        return self.title
