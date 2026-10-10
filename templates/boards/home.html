@@ -4,7 +4,24 @@
 {% block content %}
   {% if user.is_authenticated %}
     <h1>Hello, {{ user.name }}</h1>
-    <p>You have no boards yet.</p>
+
+    <h2>Your boards</h2>
+    {% if boards %}
+      <ul>
+        {% for board in boards %}
+          <li><a href="{% url 'board_detail' board.pk %}">{{ board.name }}</a></li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>You have no boards yet.</p>
+    {% endif %}
+
+    <h2>New board</h2>
+    <form method="post" action="{% url 'board_create' %}">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit">Create board</button>
+    </form>
   {% else %}
     <h1>Workboard</h1>
     <p>A Kanban board for a small team.</p>

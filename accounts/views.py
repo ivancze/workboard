@@ -4,15 +4,6 @@ from django.shortcuts import redirect, render
 from .forms import DisplayNameForm
 
 
-def home(request):
-    """The landing page: a sign-in prompt, or a greeting.
-
-    Boards arrive here in a later ticket; for now this is only enough to prove
-    who you are.
-    """
-    return render(request, "accounts/home.html")
-
-
 @login_required
 def profile(request):
     if request.method == "POST":
