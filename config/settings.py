@@ -39,6 +39,8 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -73,6 +75,12 @@ CSRF_COOKIE_SECURE = HTTPS_ONLY
 # once a browser has seen it, so a short window stays recoverable.
 SECURE_HSTS_SECONDS = 3600 if HTTPS_ONLY else 0
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Both concern HSTS on a hostname we do not own. includeSubDomains would cover
+# subdomains of an onrender.com name that will never exist, and preloading
+# requires controlling the registered domain, which Render does. Silenced so a
+# genuinely new warning from `check --deploy` stands out.
+SILENCED_SYSTEM_CHECKS = ["security.W005", "security.W021"]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 USE_TZ = True
