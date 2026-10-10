@@ -16,4 +16,10 @@ RUN uv sync --locked --no-dev
 
 COPY . .
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Collect static during the build so the running container does no startup work
+# and needs no writable filesystem. Settings require these variables to exist;
+# the throwaway values here are never used for anything but this command.
+RUN SECRET_KEY=build-only DATABASE_URL=postgres://u:p@localhost/db \
+    python manage.py collectstatic --noinput
+
+CMD ["sh", "-c", "gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --access-logfile - --error-logfile -"]

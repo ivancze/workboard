@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: workboard
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    region: singapore
+    # Paid instance, so the service is always on. The free tier spins down
+    # after 15 minutes idle and costs roughly a minute to wake.
+    plan: 0.5c-512mb
+    healthCheckPath: /healthz
+    # Runs after the image is built and before traffic moves to it, so new code
+    # never queries an old schema.
+    preDeployCommand: python manage.py migrate
+    envVars:
+      # Prompted for during blueprint creation and stored by Render, never here.
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: HTTPS_ONLY
+        value: "True"
