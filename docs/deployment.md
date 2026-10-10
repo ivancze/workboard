@@ -93,3 +93,10 @@ browser caching, which is irrelevant at this size.
 Unrelated to the above: `docker compose up` runs the application against a
 Postgres container, with source bind-mounted. `.env` holds local values only and
 is never committed. Production values live in Render and nowhere else.
+
+## Moving off Render
+
+Candidate directions for v2 — Google Cloud Run with Terraform and GitHub
+Actions, or a Raspberry Pi behind a Cloudflare Tunnel — are recorded in
+[v2-infrastructure.md](./v2-infrastructure.md), along with what makes this
+application portable and what each move would cost.

@@ -1,0 +1,26 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Workboard{% endblock %}</title>
+
+<header>
+  <strong>Workboard</strong>
+  {% if user.is_authenticated %}
+    <span>{{ user.name }}</span>
+    <a href="{% url 'profile' %}">Profile</a>
+    <form method="post" action="{% url 'account_logout' %}">
+      {% csrf_token %}
+      <button type="submit">Sign out</button>
+    </form>
+  {% endif %}
+</header>
+
+{% if messages %}
+  <ul>
+    {% for message in messages %}<li>{{ message }}</li>{% endfor %}
+  </ul>
+{% endif %}
+
+<main>
+  {% block content %}{% endblock %}
+</main>

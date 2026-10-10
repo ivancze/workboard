@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load socialaccount %}
+
+{% block content %}
+  {% if user.is_authenticated %}
+    <h1>Hello, {{ user.name }}</h1>
+    <p>You have no boards yet.</p>
+  {% else %}
+    <h1>Workboard</h1>
+    <p>A Kanban board for a small team.</p>
+    {% comment %}
+      A POST, not a link: allauth refuses provider login over GET so that a
+      third-party page cannot start a sign-in by embedding a URL.
+    {% endcomment %}
+    <form method="post" action="{% provider_login_url 'google' process='login' %}">
+      {% csrf_token %}
+      <button type="submit">Sign in with Google</button>
+    </form>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}Profile · Workboard{% endblock %}
+
+{% block content %}
+  <h1>Profile</h1>
+  <p>Signed in as {{ user.email }}.</p>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Save</button>
+  </form>
+{% endblock %}
