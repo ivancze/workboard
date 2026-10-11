@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models, transaction
+from django.utils import timezone
 
 # Every board starts with these, in this order. Boards are expected to diverge
 # from them immediately; they exist so a new board is usable rather than empty.
@@ -137,6 +138,20 @@ class Card(models.Model):
     creator = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
     )
+    # SET_NULL: the Assignee is a current responsibility, not history, so a
+    # deleted User leaves the Card visibly unassigned.
+    assignee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    # Free text, never matched to Users: they are people outside the board.
+    contact_persons = models.CharField(max_length=200, blank=True)
+    # A plain date with no time or timezone, and advisory only: nothing in the
+    # system sorts, filters, blocks or notifies on it.
+    due_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     # Recorded for a future display and Card history; nothing shows it yet.
     updated_at = models.DateTimeField(auto_now=True)
@@ -149,3 +164,11 @@ class Card(models.Model):
 
     def __str__(self):
         return self.title
+
+    @property
+    def is_overdue(self):
+        """Its Due date has passed. A Card due today is not yet overdue.
+
+        "Today" is the team's date, from TIME_ZONE, not the server's.
+        """
+        return self.due_date is not None and self.due_date < timezone.localdate()

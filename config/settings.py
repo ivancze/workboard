@@ -152,3 +152,7 @@ SILENCED_SYSTEM_CHECKS = ["security.W005", "security.W021"]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 USE_TZ = True
+# The team's timezone. A Due date is a plain date, but deciding that one "has
+# passed" needs a today, and on UTC a Card would turn overdue up to eight hours
+# late for a team in Kuala Lumpur.
+TIME_ZONE = "Asia/Kuala_Lumpur"

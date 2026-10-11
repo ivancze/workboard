@@ -1,6 +1,8 @@
-from datetime import timedelta
+from datetime import date, datetime, timedelta
+from unittest import mock
 
-from django.test import TestCase
+from django.core import mail
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -280,3 +282,175 @@ class CardAccessTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 302)
+
+
+class AssigneeTests(TestCase):
+    def setUp(self):
+        self.ada = a_user()
+        self.grace = a_user("grace@example.com")
+        self.board = Board.objects.create_with_owner(name="Housework", owner=self.ada)
+        Membership.objects.create(board=self.board, user=self.grace)
+        self.card = a_card(self.board.stages.first())
+        self.url = reverse("card_detail", args=[self.board.pk, self.card.pk])
+        self.board_url = reverse("board_detail", args=[self.board.pk])
+        self.client.force_login(self.ada)
+
+    def edit(self, **fields):
+        return self.client.post(self.url, {"title": "Buy milk", **fields})
+
+    def test_a_member_can_be_assigned_and_is_shown(self):
+        self.edit(assignee=self.grace.pk)
+
+        self.card.refresh_from_db()
+        self.assertEqual(self.card.assignee, self.grace)
+        self.assertContains(self.client.get(self.board_url), "grace")
+        self.assertContains(self.client.get(self.url), "grace")
+
+    def test_a_card_starts_unassigned_and_says_so(self):
+        self.assertIsNone(self.card.assignee)
+        self.assertContains(self.client.get(self.board_url), "Unassigned")
+        self.assertContains(self.client.get(self.url), "Unassigned")
+
+    def test_the_assignee_can_be_removed(self):
+        Card.objects.filter(pk=self.card.pk).update(assignee=self.grace)
+
+        self.edit(assignee="")
+
+        self.card.refresh_from_db()
+        self.assertIsNone(self.card.assignee)
+
+    def test_only_members_are_offered(self):
+        a_user("mallory@example.com")
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, f'<option value="{self.grace.pk}">grace</option>', html=True)
+        self.assertNotContains(response, "mallory")
+
+    def test_a_non_member_is_refused(self):
+        mallory = a_user("mallory@example.com")
+
+        response = self.edit(assignee=mallory.pk)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Select a valid choice")
+        self.card.refresh_from_db()
+        self.assertIsNone(self.card.assignee)
+
+
+class ContactPersonTests(TestCase):
+    def setUp(self):
+        self.ada = a_user()
+        self.board = Board.objects.create_with_owner(name="Housework", owner=self.ada)
+        self.card = a_card(self.board.stages.first())
+        self.url = reverse("card_detail", args=[self.board.pk, self.card.pk])
+        self.client.force_login(self.ada)
+
+    def test_contact_persons_are_recorded_as_typed_and_shown(self):
+        self.client.post(
+            self.url, {"title": "Buy milk", "contact_persons": "Dave, Priya from Acme"}
+        )
+
+        self.card.refresh_from_db()
+        self.assertEqual(self.card.contact_persons, "Dave, Priya from Acme")
+        self.assertContains(self.client.get(self.url), "Dave, Priya from Acme")
+
+    def test_naming_a_user_does_not_link_or_admit_them(self):
+        grace = a_user("grace@example.com")
+
+        self.client.post(self.url, {"title": "Buy milk", "contact_persons": "grace"})
+
+        self.card.refresh_from_db()
+        self.assertIsNone(self.card.assignee)
+        self.assertFalse(Board.objects.for_user(grace).exists())
+
+
+class DueDateTests(TestCase):
+    def setUp(self):
+        self.ada = a_user()
+        self.board = Board.objects.create_with_owner(name="Housework", owner=self.ada)
+        self.stage = self.board.stages.first()
+        self.card = a_card(self.stage)
+        self.url = reverse("card_detail", args=[self.board.pk, self.card.pk])
+        self.board_url = reverse("board_detail", args=[self.board.pk])
+        self.client.force_login(self.ada)
+
+    def test_a_due_date_is_saved_as_a_plain_date(self):
+        self.client.post(self.url, {"title": "Buy milk", "due_date": "2026-10-14"})
+
+        self.card.refresh_from_db()
+        self.assertEqual(self.card.due_date, date(2026, 10, 14))
+        self.assertContains(self.client.get(self.url), 'value="2026-10-14"')
+
+    def test_the_date_shown_is_the_date_entered_in_any_timezone(self):
+        Card.objects.filter(pk=self.card.pk).update(due_date=date(2026, 10, 14))
+
+        # Twenty-six hours apart: a date that shifted with the timezone would
+        # show as the 13th or the 15th in one of them.
+        for tz in ["Pacific/Pago_Pago", "Pacific/Kiritimati"]:
+            with self.subTest(tz=tz), override_settings(TIME_ZONE=tz):
+                self.assertContains(self.client.get(self.url), "14 October 2026")
+                self.assertContains(self.client.get(self.board_url), "Due 14 Oct 2026")
+
+    def test_a_card_past_its_due_date_is_emphasised(self):
+        a_card(self.stage, "Late one", due_date=timezone.localdate() - timedelta(days=1))
+
+        response = self.client.get(self.board_url)
+
+        self.assertContains(response, "Overdue", count=1)
+        self.assertContains(response, "border-danger", count=1)
+
+    def test_a_card_due_today_is_not_yet_overdue(self):
+        a_card(self.stage, "Today", due_date=timezone.localdate())
+
+        self.assertNotContains(self.client.get(self.board_url), "Overdue")
+
+    def test_a_card_without_a_due_date_is_never_overdue(self):
+        self.assertIsNone(self.card.due_date)
+        self.assertNotContains(self.client.get(self.board_url), "Overdue")
+        self.assertNotContains(self.client.get(self.url), "Overdue")
+
+    @override_settings(TIME_ZONE="Asia/Kuala_Lumpur")
+    def test_overdue_is_judged_by_the_teams_date_not_utc(self):
+        # 01:00 on the 14th in Kuala Lumpur is still the 13th in UTC.
+        just_after_midnight = datetime(2026, 10, 13, 17, 0, tzinfo=timezone.UTC)
+        Card.objects.filter(pk=self.card.pk).update(due_date=date(2026, 10, 13))
+
+        with mock.patch("django.utils.timezone.now", return_value=just_after_midnight):
+            self.assertContains(self.client.get(self.board_url), "Overdue")
+
+
+class DueDateIsAdvisoryTests(TestCase):
+    """Nothing sorts, filters, blocks or notifies on a Due date."""
+
+    def setUp(self):
+        self.ada = a_user()
+        self.board = Board.objects.create_with_owner(name="Housework", owner=self.ada)
+        self.stage = self.board.stages.first()
+        self.client.force_login(self.ada)
+
+    def test_card_order_ignores_due_dates(self):
+        today = timezone.localdate()
+        a_card(self.stage, "Due later", due_date=today + timedelta(days=9))
+        a_card(self.stage, "Long overdue", due_date=today - timedelta(days=9))
+        a_card(self.stage, "Due soon", due_date=today + timedelta(days=1))
+
+        content = self.client.get(
+            reverse("board_detail", args=[self.board.pk])
+        ).content.decode()
+
+        self.assertLess(content.index("Due later"), content.index("Long overdue"))
+        self.assertLess(content.index("Long overdue"), content.index("Due soon"))
+
+    def test_a_past_due_date_is_accepted_and_sends_nothing(self):
+        card = a_card(self.stage)
+
+        response = self.client.post(
+            reverse("card_detail", args=[self.board.pk, card.pk]),
+            {"title": "Buy milk", "due_date": "2020-01-01"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        card.refresh_from_db()
+        self.assertEqual(card.due_date, date(2020, 1, 1))
+        self.assertEqual(mail.outbox, [])

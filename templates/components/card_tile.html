@@ -1,4 +1,15 @@
-{# A Card as it sits in its Stage. Needs `board` and `card`. #}
+{% comment %}
+  A Card as it sits in its Stage. Needs `board` and `card`. An overdue Card
+  says so in words as well as colour.
+{% endcomment %}
 <li>
-  <a href="{% url 'card_detail' board.pk card.pk %}" class="block rounded-lg border border-border bg-surface p-3 font-semibold shadow-sm transition-colors hover:border-accent">{{ card.title }}</a>
+  <a href="{% url 'card_detail' board.pk card.pk %}" class="block rounded-lg border {% if card.is_overdue %}border-danger{% else %}border-border{% endif %} bg-surface p-3 shadow-sm transition-colors hover:border-accent">
+    <span class="block font-semibold">{{ card.title }}</span>
+    <span class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-muted">
+      <span>{% if card.assignee %}{{ card.assignee.name }}{% else %}Unassigned{% endif %}</span>
+      {% if card.due_date %}
+        <span{% if card.is_overdue %} class="font-semibold text-danger"{% endif %}>{% if card.is_overdue %}Overdue · {% endif %}Due {{ card.due_date|date:"j M Y" }}</span>
+      {% endif %}
+    </span>
+  </a>
 </li>

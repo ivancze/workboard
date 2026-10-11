@@ -84,6 +84,8 @@ class EveryPageUsesTheSystemTests(TestCase):
         content = response.content.decode()
         self.assertRegex(content, r'<input[^>]*class="[^"]*border-control')
         self.assertRegex(content, r'<textarea[^>]*class="[^"]*border-control')
+        self.assertRegex(content, r'<select[^>]*class="[^"]*border-control')
+        self.assertRegex(content, r'<input type="date"[^>]*class="[^"]*border-control')
 
 
 # `p-[13px]` and `[&>p]:…` use brackets; v4 also has `p-(--gap)`.

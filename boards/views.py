@@ -1,6 +1,7 @@
 import copy
 
 from django.contrib.auth.decorators import login_required
+from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import BoardForm, CardForm, NewCardForm
@@ -49,7 +50,9 @@ def board_detail(request, pk):
         "boards/board_detail.html",
         {
             "board": board,
-            "stages": board.stages.prefetch_related("cards"),
+            "stages": board.stages.prefetch_related(
+                Prefetch("cards", queryset=Card.objects.select_related("assignee"))
+            ),
             # No auto ids: the form repeats once per Stage, and its label
             # wraps its input instead.
             "form": NewCardForm(auto_id=False),
@@ -76,12 +79,13 @@ def create_card(request, board_pk, stage_pk):
 def card_detail(request, board_pk, pk):
     board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
     card = get_object_or_404(
-        Card.objects.filter(stage__board=board).select_related("creator"), pk=pk
+        Card.objects.filter(stage__board=board).select_related("creator", "assignee"),
+        pk=pk,
     )
 
     # The form gets its own copy so a rejected edit cannot leak into the saved
     # Card the page displays alongside it.
-    form = CardForm(request.POST or None, instance=copy.copy(card))
+    form = CardForm(request.POST or None, instance=copy.copy(card), board=board)
     if request.method == "POST" and form.is_valid():
         form.save()
         return redirect("card_detail", board_pk=board.pk, pk=card.pk)
