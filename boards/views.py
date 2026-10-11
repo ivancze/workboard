@@ -76,7 +76,11 @@ def board_detail(request, pk):
     # Scoped by membership, so a non-member gets a 404 rather than a 403: the
     # response does not reveal whether the board exists at all.
     board = get_object_or_404(Board.objects.for_user(request.user), pk=pk)
-    return render(request, "boards/board_detail.html", board_context(board))
+    context = board_context(board)
+    # Left by a Move button's redirect, for the next board page only: a reload
+    # plays nothing. A Card is on one board, so another board ignores it.
+    context["landed"] = request.session.pop("landed", None)
+    return render(request, "boards/board_detail.html", context)
 
 
 @login_required
@@ -143,14 +147,28 @@ def card_move(request, board_pk, pk):
     if not form.is_valid():
         return HttpResponseBadRequest("Position must be a whole number from 0.")
 
+    target = form.cleaned_data["stage"]
+    origin = card.stage_id
     try:
-        card.move_to(form.cleaned_data["stage"], form.cleaned_data["position"])
+        card.move_to(target, form.cleaned_data["position"])
     except Stage.DoesNotExist:
         raise Http404("That Stage has just been deleted.")
+
+    # A Card arriving in a different Stage animates on the board, and arriving
+    # in the board's last Stage, its "done", also celebrates.
+    landed = None
+    if target.pk != origin:
+        last = board.stages.order_by("position", "id").last()
+        landed = {"card": card.pk, "celebrate": target.pk == last.pk}
+
     # A drag sends this with htmx and gets the board back, fresh from the
     # database, to replace what the page shows. A plain form gets a redirect.
     if request.headers.get("HX-Request"):
-        return render(request, "components/board.html", board_context(board))
+        return render(
+            request, "components/board.html", {**board_context(board), "landed": landed}
+        )
+    if landed:
+        request.session["landed"] = landed
     return redirect("board_detail", pk=board.pk)
 
 

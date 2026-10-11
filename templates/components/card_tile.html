@@ -4,10 +4,13 @@
   in words as well as colour. An Unestimated Card shows no Effort, so it stays
   distinct from an Effort of zero.
 
+  A Card that has just arrived from another Stage carries `data-landed`, and
+  `data-celebrate` too in the board's last Stage (`landed`, from the views).
+
   Move offers one button per other Stage, each submitting the form by itself:
   two clicks to move a Card, and no JavaScript.
 {% endcomment %}
-<li data-move-url="{% url 'card_move' board.pk card.pk %}" class="cursor-grab rounded-lg border {% if card.is_overdue %}border-danger{% else %}border-border{% endif %} bg-surface shadow-sm transition-colors hover:border-accent">
+<li data-move-url="{% url 'card_move' board.pk card.pk %}"{% if card.pk == landed.card %} data-landed{% if landed.celebrate %} data-celebrate{% endif %}{% endif %} class="cursor-grab rounded-lg border {% if card.is_overdue %}border-danger{% else %}border-border{% endif %} bg-surface shadow-sm transition-colors hover:border-accent data-landed:animate-land">
   <a href="{% url 'card_detail' board.pk card.pk %}" class="block p-3 pb-2">
     <span class="block font-semibold">{{ card.title }}</span>
     <span class="mt-2 flex flex-col gap-1 text-xs text-text-muted">

@@ -214,6 +214,94 @@ class DragAndDropTests(TestCase):
         self.assertEqual(content.count("data-card-list"), 3)  # empty Stages too
 
 
+class LandingTests(TestCase):
+    """The board marks a Card that just arrived from another Stage, and
+    celebrates one arriving in the last Stage. The animation itself is CSS
+    and JavaScript, checked by eye."""
+
+    def setUp(self):
+        self.ada = a_user()
+        self.board = Board.objects.create_with_owner(name="Housework", owner=self.ada)
+        self.to_do, self.in_progress, self.done = self.board.stages.all()
+        self.card = a_card(self.to_do, "Buy milk")
+        self.other = a_card(self.to_do, "Bystander")
+        self.board_url = reverse("board_detail", args=[self.board.pk])
+        self.client.force_login(self.ada)
+
+    def press(self, stage):
+        """A Move button: a plain POST, then the board it redirects to."""
+        self.client.post(
+            reverse("card_move", args=[self.board.pk, self.card.pk]), {"stage": stage.pk}
+        )
+        return self.client.get(self.board_url).content.decode()
+
+    def drag(self, stage, position=0):
+        return self.client.post(
+            reverse("card_move", args=[self.board.pk, self.card.pk]),
+            {"stage": stage.pk, "position": position},
+            headers={"HX-Request": "true"},
+        ).content.decode()
+
+    def landed(self, content):
+        """Whether any tile carries the attribute, as opposed to the
+        data-landed: class every tile has for when it does."""
+        return re.search(r'\sdata-landed[\s>]', content) is not None
+
+    def tile(self, content, card):
+        url = reverse("card_move", args=[self.board.pk, card.pk])
+        return re.search(rf'<li data-move-url="{url}"[^>]*>', content).group()
+
+    def test_a_card_moved_to_another_stage_is_marked_once(self):
+        content = self.press(self.in_progress)
+
+        self.assertTrue(self.landed(self.tile(content, self.card)))
+        self.assertNotIn("data-celebrate", content)
+        self.assertFalse(self.landed(self.tile(content, self.other)))
+        # A reload plays nothing.
+        self.assertFalse(self.landed(self.client.get(self.board_url).content.decode()))
+
+    def test_landing_in_the_last_stage_celebrates(self):
+        content = self.press(self.done)
+
+        self.assertIn("data-landed data-celebrate", self.tile(content, self.card))
+
+    def test_a_drag_into_the_last_stage_celebrates_in_the_returned_board(self):
+        content = self.drag(self.done)
+
+        self.assertIn("data-landed data-celebrate", self.tile(content, self.card))
+        # The swap carried it, so nothing waits in the session for a reload.
+        self.assertFalse(self.landed(self.client.get(self.board_url).content.decode()))
+
+    def test_the_last_stage_is_whichever_is_last_now(self):
+        self.done.shift(-1)  # In Progress is now last
+
+        self.assertIn("data-celebrate", self.press(self.in_progress))
+
+    def test_reordering_within_a_stage_plays_nothing(self):
+        self.assertFalse(self.landed(self.drag(self.to_do, 1)))
+
+    def test_adding_a_card_plays_nothing(self):
+        self.client.post(
+            reverse("card_create", args=[self.board.pk, self.done.pk]), {"title": "New"}
+        )
+
+        self.assertFalse(self.landed(self.client.get(self.board_url).content.decode()))
+
+    def test_a_mark_is_not_shown_on_another_board_and_does_not_linger(self):
+        other_board = Board.objects.create_with_owner(name="Elsewhere", owner=self.ada)
+        self.press(self.in_progress)  # consumed by that board load
+        self.client.post(
+            reverse("card_move", args=[self.board.pk, self.card.pk]), {"stage": self.done.pk}
+        )
+
+        elsewhere = self.client.get(reverse("board_detail", args=[other_board.pk]))
+
+        self.assertFalse(self.landed(elsewhere.content.decode()))
+        # The mark is for the very next board page only; it doesn't linger to
+        # play much later.
+        self.assertFalse(self.landed(self.client.get(self.board_url).content.decode()))
+
+
 class MoveAccessTests(TestCase):
     def setUp(self):
         self.ada = a_user()

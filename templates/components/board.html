@@ -8,10 +8,18 @@
     {% include "components/effort_total.html" with total=totals.effort_total unestimated=totals.unestimated %}
   </div>
 
-  {# Stages scroll sideways rather than wrapping, so a narrow screen stays usable. #}
-  <div class="mt-6 flex items-start gap-4 overflow-x-auto pb-4">
-    {% for stage in stages %}
-      {% include "components/stage.html" %}
-    {% endfor %}
+  {% comment %}
+    Stages scroll sideways rather than wrapping, so a narrow screen stays
+    usable. The inner row is as wide as its Stages and centred, so a few
+    Stages sit in the middle, and a row wider than the screen still scrolls
+    from its first Stage rather than being cut off on the left. Stages stretch
+    to the tallest one, so every Stage offers the same room to drop into.
+  {% endcomment %}
+  <div class="mt-6 overflow-x-auto pb-4">
+    <div class="mx-auto flex w-max items-stretch gap-4">
+      {% for stage in stages %}
+        {% include "components/stage.html" %}
+      {% endfor %}
+    </div>
   </div>
 </div>

@@ -112,5 +112,17 @@ server answers with `components/board.html`, the board's totals and Stages
 fresh from the database, and htmx swaps it in. The page therefore always shows
 where the server actually put the Card. A failed save fetches the board again
 for the same reason. Every Stage keeps its `<ol data-card-list>` even when it
-is empty, so a Card can be dropped into it.
+is empty, so a Card can be dropped into it. While dragging, the spot where the
+Card will land is an empty dashed outline: Sortable's placeholder, given the
+`card-placeholder` class, styled in `assets/app.css`.
+
+**Landing and confetti.** A Card arriving from another Stage carries
+`data-landed`, and the `animate-land` animation (defined in `@theme`) plays
+through the `data-landed:` variant. In the board's last Stage it also carries
+`data-celebrate`, and `board.js` throws confetti: plain `.confetti` elements
+styled in `assets/app.css`, coloured with the theme tokens, and removed on a
+timer. A timer is used rather than `animationend`, which a hidden tab suspends.
+The views set the mark, in the board fragment after a drag, or in the session
+for the page a Move button redirects to, so it plays once. Reduced motion skips
+the confetti, and the global override stills the landing animation.
 

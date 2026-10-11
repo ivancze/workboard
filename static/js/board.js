@@ -9,6 +9,8 @@ function makeSortable(root) {
     Sortable.create(list, {
       group: "cards",
       animation: 150,
+      // Where the Card will land shows as an empty outline (assets/app.css).
+      ghostClass: "card-placeholder",
       // The Move toggle and its buttons stay clickable rather than dragging.
       filter: "summary, button",
       preventOnFilter: false,
@@ -35,7 +37,35 @@ function restoreBoard(event) {
   });
 }
 
+// A Card that landed in the board's last Stage throws confetti: a burst of
+// small pieces in the theme's colours, flying up and out, then falling away.
+// The animation is 1s (assets/app.css); the pieces are removed after 1.5s.
+const CONFETTI_COLOURS = ["--color-accent", "--color-danger", "--color-accent-hover", "--color-text-muted"];
+
+function celebrate(root) {
+  const card = root.querySelector("[data-celebrate]");
+  if (!card || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const { left, top, width } = card.getBoundingClientRect();
+  for (let i = 0; i < 40; i++) {
+    const piece = document.createElement("span");
+    piece.className = "confetti";
+    const angle = (-160 + Math.random() * 140) * (Math.PI / 180); // mostly upwards
+    const distance = 60 + Math.random() * 120;
+    piece.style.left = `${left + width / 2}px`;
+    piece.style.top = `${top + 20}px`;
+    piece.style.background = `var(${CONFETTI_COLOURS[i % CONFETTI_COLOURS.length]})`;
+    piece.style.setProperty("--dx", `${Math.cos(angle) * distance}px`);
+    piece.style.setProperty("--dy", `${Math.sin(angle) * distance}px`);
+    piece.style.setProperty("--spin", `${Math.random() * 720 - 360}deg`);
+    document.body.append(piece);
+  }
+  // A timer rather than animationend: a tab hidden mid-burst suspends
+  // animation events, and the finished pieces would linger unseen.
+  setTimeout(() => document.querySelectorAll(".confetti").forEach((piece) => piece.remove()), 1500);
+}
+
 // Runs for the page and again for every board swapped in.
 htmx.onLoad(makeSortable);
+htmx.onLoad(celebrate);
 document.addEventListener("htmx:responseError", restoreBoard);
 document.addEventListener("htmx:sendError", restoreBoard);

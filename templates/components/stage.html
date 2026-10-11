@@ -3,7 +3,7 @@
   Needs `board`, `stage` annotated with its Effort totals, all the board's
   `stages`, and the add-Card `form`.
 {% endcomment %}
-<section class="flex w-80 shrink-0 flex-col gap-3 rounded-xl bg-sunken p-3">
+<section class="flex min-h-96 w-80 shrink-0 flex-col gap-3 rounded-xl bg-sunken p-3">
   <div class="px-1">
     <h2 class="font-condensed text-2xl tracking-wide">{{ stage.name }}</h2>
     {% include "components/effort_total.html" with total=stage.effort_total unestimated=stage.unestimated %}
@@ -11,8 +11,12 @@
   {% if not stage.cards.all %}
     <p class="px-1 text-sm text-text-muted">No cards yet.</p>
   {% endif %}
-  {# Always present, even empty, so a Card can be dropped into an empty Stage. #}
-  <ol data-card-list data-stage="{{ stage.pk }}" class="flex min-h-4 flex-col gap-2">
+  {% comment %}
+    Always present, even empty, so a Card can be dropped into an empty Stage.
+    It fills the Stage's spare height, so a drop anywhere below the last Card
+    lands at the bottom rather than missing the list.
+  {% endcomment %}
+  <ol data-card-list data-stage="{{ stage.pk }}" class="flex min-h-4 flex-1 flex-col gap-2">
     {% for card in stage.cards.all %}
       {% include "components/card_tile.html" %}
     {% endfor %}

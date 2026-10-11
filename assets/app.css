@@ -32,6 +32,23 @@
   --color-on-accent: light-dark(#ffffff, #111114); /* text on accent */
   --color-danger: light-dark(#c42121, #f87878);
   --color-focus: light-dark(#4f46e5, #8b93f8);
+
+  /* A Card arriving in a new Stage: a small pop and a fading accent ring. */
+  --animate-land: land 700ms ease-out;
+  @keyframes land {
+    0% {
+      transform: scale(0.96);
+      box-shadow: 0 0 0 0 var(--color-accent);
+    }
+    40% {
+      transform: scale(1.03);
+      box-shadow: 0 0 0 6px color-mix(in oklab, var(--color-accent) 40%, transparent);
+    }
+    100% {
+      transform: scale(1);
+      box-shadow: 0 0 0 10px transparent;
+    }
+  }
 }
 
 /* `dark:` is for genuine exceptions only. It follows the same choice as the
@@ -116,4 +133,44 @@
       scroll-behavior: auto !important;
     }
   }
+}
+
+/* Confetti for a Card landing in the board's last Stage. The pieces are made
+   by static/js/board.js, which sets each one's colour, flight (--dx, --dy)
+   and spin, and removes them on a timer. */
+@layer components {
+  .confetti {
+    position: fixed;
+    z-index: 50;
+    width: 6px;
+    height: 10px;
+    border-radius: 1px;
+    pointer-events: none;
+    animation: confetti-burst 1000ms cubic-bezier(0.2, 0.7, 0.4, 1) forwards;
+  }
+  @keyframes confetti-burst {
+    from {
+      transform: translate(-50%, -50%) rotate(0);
+      opacity: 1;
+    }
+    to {
+      transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy) + 60px))
+        rotate(var(--spin));
+      opacity: 0;
+    }
+  }
+}
+
+
+/* Where a dragged Card will land: Sortable gives the placeholder in the list
+   this class (static/js/board.js). Unlayered, so it beats the tile's border,
+   background and shadow utilities. The contents are hidden, not removed, so
+   the outline keeps the Card's height. */
+.card-placeholder {
+  border: 2px dashed var(--color-accent);
+  background: transparent;
+  box-shadow: none;
+}
+.card-placeholder > * {
+  visibility: hidden;
 }
