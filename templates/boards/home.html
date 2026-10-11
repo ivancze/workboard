@@ -17,6 +17,8 @@
         </ul>
       {% else %}
         <p class="mt-3 text-sm text-text-muted">You have no boards yet.</p>
+        {# So a mistyped invitation shows itself: compare this with what the Owner typed. #}
+        <p class="mt-2 text-sm text-text-muted">You're signed in as <span class="font-semibold text-text">{{ user.email }}</span>. If someone has invited you to a board, check they used this address.</p>
       {% endif %}
     </section>
 

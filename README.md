@@ -7,9 +7,21 @@ A Kanban board for a small team to track their work.
 changed from your profile.
 
 **Boards.** Create a board from the home page. It starts with three Stages:
-To Do, In Progress and Done.
+To Do, In Progress and Done. *Members*, *Archive* and *Edit stages* are in the
+⋯ menu beside *Add card*.
 
-**Stages.** *Edit stages*, beside the board's name, lets you add, rename,
+**Members.** The board's Owner invites people from *Members* by typing the
+email address they sign in to Google with. Nothing is sent, so tell them
+yourself: the board appears for them once they sign in with that address.
+Until then the invitation is listed as waiting, and the Owner can withdraw it.
+If someone signs in and sees no boards, the home page shows the address they
+signed in with, so a mistyped invitation is easy to spot.
+
+The Owner can also remove a Member. They lose access at once, and Cards
+assigned to them become unassigned, though Cards they created still credit
+them.
+
+**Stages.** *Edit stages* lets you add, rename,
 reorder (↑ ↓) and delete Stages. Names are unique on a board. Only an empty
 Stage can be deleted, and a board always keeps at least one.
 
@@ -35,7 +47,7 @@ arriving in the board's last Stage gets confetti.
 from a Card's ⋯ menu, or on the Card's page. The Card disappears from the
 board and its totals, but nothing is lost:
 
-- *Archive*, beside the board's name, lists the board's archived Cards, most
+- *Archive*, in the board's ⋯ menu, lists the board's archived Cards, most
   recently archived first.
 - An archived Card can still be opened and edited, and is never Overdue.
 - *Restore* puts it back at the bottom of the Stage it left. If that Stage has

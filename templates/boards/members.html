@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Members · {{ board.name }} · Workboard{% endblock %}
+
+{% block content %}
+  <a href="{% url 'board_detail' board.pk %}" class="mb-2 inline-block text-sm text-text-muted hover:text-text">← {{ board.name }}</a>
+  {% include "components/page_heading.html" with text="Members" %}
+  <p class="mt-1 text-sm text-text-muted">Everyone here can see and change this board's Cards and Stages. Only the Owner can invite and remove people.</p>
+
+  <ul class="mt-6 flex flex-col gap-3">
+    {% for membership, assigned in members %}
+      <li class="flex items-center gap-4 rounded-xl border border-border bg-surface p-4">
+        <div class="min-w-0 flex-1">
+          <p class="font-semibold break-words">{{ membership.user.name }}{% if membership.user == request.user %} <span class="font-normal text-text-muted">(you)</span>{% endif %}</p>
+          <p class="mt-1 text-sm break-words text-text-muted">{{ membership.user.email }}</p>
+        </div>
+        {% if membership.role == "owner" %}
+          <span class="shrink-0 text-sm font-semibold text-text-muted">Owner</span>
+        {% elif is_owner %}
+          {% with pk=membership.pk|stringformat:"d" %}{% with dialog_id="remove-member-"|add:pk %}
+            {% include "components/button.html" with label="Remove…" type="button" commandfor=dialog_id aria_label="Remove "|add:membership.user.name variant="ghost" %}
+            {% url 'member_remove' board.pk membership.pk as remove_url %}
+            {% with count=assigned|stringformat:"d" plural=assigned|pluralize %}
+              {% if assigned %}
+                {% include "components/confirm_dialog.html" with id=dialog_id question="Remove "|add:membership.user.name|add:"?" note="They lose access to this board at once. The "|add:count|add:" Card"|add:plural|add:" assigned to them will become unassigned; Cards they created still credit them." action=remove_url confirm_label="Remove" variant="danger" %}
+              {% else %}
+                {% include "components/confirm_dialog.html" with id=dialog_id question="Remove "|add:membership.user.name|add:"?" note="They lose access to this board at once. Cards they created still credit them." action=remove_url confirm_label="Remove" variant="danger" %}
+              {% endif %}
+            {% endwith %}
+          {% endwith %}{% endwith %}
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+
+  {% if pending %}
+    <section class="mt-10">
+      <h2 class="font-condensed text-3xl tracking-wide text-text-muted">Invited, not signed in yet</h2>
+      <ul class="mt-4 flex flex-col gap-3">
+        {% for membership in pending %}
+          <li class="flex items-center gap-4 rounded-xl border border-dashed border-border bg-surface p-4">
+            <div class="min-w-0 flex-1">
+              <p class="font-semibold break-words">{{ membership.email }}</p>
+              <p class="mt-1 text-sm text-text-muted">Invited {{ membership.created_at|date:"j M Y" }}. No access until they sign in with this address.</p>
+            </div>
+            {% if is_owner %}
+              <form method="post" action="{% url 'member_remove' board.pk membership.pk %}" class="shrink-0">
+                {% csrf_token %}
+                {% include "components/button.html" with label="Withdraw" aria_label="Withdraw the invitation for "|add:membership.email variant="ghost" %}
+              </form>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  {% if is_owner %}
+    <section class="mt-10 rounded-xl border border-border bg-surface p-6">
+      <h2 class="font-condensed text-3xl tracking-wide">Invite someone</h2>
+      <form method="post" action="{% url 'member_invite' board.pk %}" class="mt-4 flex flex-col gap-4">
+        {% csrf_token %}
+        {% include "components/fields.html" with form=invite_form %}
+        <div>{% include "components/button.html" with label="Invite" %}</div>
+      </form>
+    </section>
+  {% endif %}
+{% endblock %}

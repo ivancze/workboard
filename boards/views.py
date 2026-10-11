@@ -2,7 +2,7 @@ import copy
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import DatabaseError, transaction
 from django.db.models import Count, Prefetch, Q, Sum
 from django.http import Http404, HttpResponseBadRequest
@@ -11,8 +11,8 @@ from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST, require_safe
 
-from .forms import BoardForm, CardForm, MoveCardForm, StageForm
-from .models import Board, Card, Stage
+from .forms import BoardForm, CardForm, InviteForm, MoveCardForm, StageForm
+from .models import Board, Card, Membership, Stage, lock_membership
 
 
 def home(request):
@@ -20,6 +20,9 @@ def home(request):
     if not request.user.is_authenticated:
         return render(request, "boards/home.html")
 
+    # Also claimed at sign-in. Here too, because a sign-in lasts weeks and an
+    # invitation made meanwhile would otherwise wait for the next one.
+    Membership.objects.claim_for(request.user)
     return render(
         request,
         "boards/home.html",
@@ -91,17 +94,37 @@ def card_create(request, board_pk):
     board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
     form = CardForm(request.POST or None, board=board)
     if request.method == "POST" and form.is_valid():
-        card = Card.objects.create_in_first_stage(
-            board=board, creator=request.user, **form.cleaned_data
-        )
-        messages.success(request, f"Added {card.title} to {card.stage.name}.")
-        return redirect("board_detail", pk=board.pk)
+        try:
+            with transaction.atomic():
+                lock_assignee(board, form)
+                card = Card.objects.create_in_first_stage(
+                    board=board, creator=request.user, **form.cleaned_data
+                )
+        except Membership.DoesNotExist:
+            pass  # the form now says why
+        else:
+            messages.success(request, f"Added {card.title} to {card.stage.name}.")
+            return redirect("board_detail", pk=board.pk)
 
     return render(
         request,
         "boards/card_create.html",
         {"board": board, "form": form, "first_stage": board.stages.first()},
     )
+
+
+def lock_assignee(board, form):
+    """Lock the chosen Assignee's membership while their Card is saved, so a
+    removal can't slip in between. If they were removed since the form was
+    checked, say so on the field and raise Membership.DoesNotExist."""
+    assignee = form.cleaned_data.get("assignee")
+    if assignee is None:
+        return
+    try:
+        lock_membership(board, assignee)
+    except Membership.DoesNotExist:
+        form.add_error("assignee", f"{assignee.name} is no longer a Member of this board.")
+        raise
 
 
 def get_card(request, board_pk, pk):
@@ -149,7 +172,15 @@ def card_edit(request, board_pk, pk):
             # Its own savepoint, so a failure leaves the request's
             # transaction usable for the check below.
             with transaction.atomic():
+                lock_assignee(board, form)
                 form.instance.save(update_fields=[*form.Meta.fields, "updated_at"])
+        except Membership.DoesNotExist:
+            return render(
+                request,
+                "boards/card_edit.html",
+                {"board": board, "card": card, "form": form},
+                status=400,
+            )
         except DatabaseError:
             # Django's answer when the row to update is gone: deleted while
             # this edit was open.
@@ -247,6 +278,93 @@ def board_archive(request, board_pk):
         "boards/board_archive.html",
         {"board": board, "cards": cards, "first_stage": board.stages.first()},
     )
+
+
+def require_owner(board, user):
+    """Inviting and removing are the Owner's alone. A Member reaching these
+    gets a 403: they can see the board, so a 404 would only mislead."""
+    if not board.is_owner(user):
+        raise PermissionDenied("Only the board's Owner can do that.")
+
+
+def render_members(request, board, *, invite_form=None, status=200):
+    """The Members page. Everyone on the board sees who else is; only the
+    Owner gets the Invite form and the Withdraw and Remove buttons."""
+    assigned = dict(
+        board.cards.filter(assignee__isnull=False)
+        .values_list("assignee")
+        .annotate(n=Count("pk"))
+        .values_list("assignee", "n")
+    )
+    members = [
+        (membership, assigned.get(membership.user_id, 0))
+        for membership in board.memberships.filter(user__isnull=False)
+        .select_related("user")
+        .order_by("-role", "user__display_name", "user__email")
+    ]
+    return render(
+        request,
+        "boards/members.html",
+        {
+            "board": board,
+            "members": members,
+            "pending": board.memberships.filter(user__isnull=True).order_by("created_at"),
+            "is_owner": board.is_owner(request.user),
+            "invite_form": invite_form or InviteForm(),
+        },
+        status=status,
+    )
+
+
+@require_safe
+@login_required
+def board_members(request, board_pk):
+    board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
+    return render_members(request, board)
+
+
+@require_POST
+@login_required
+def member_invite(request, board_pk):
+    board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
+    require_owner(board, request.user)
+    form = InviteForm(request.POST)
+    if form.is_valid():
+        try:
+            invited = board.invite(form.cleaned_data["email"])
+        except ValidationError as error:
+            form.add_error("email", error)
+        else:
+            messages.success(
+                request,
+                f"Invited {invited.email}. Let them know: the board appears when "
+                "they sign in with Google using that address.",
+            )
+            return redirect("board_members", board_pk=board.pk)
+    return render_members(request, board, invite_form=form, status=400)
+
+
+@require_POST
+@login_required
+def member_remove(request, board_pk, pk):
+    """Withdraws a Pending member, or removes a Member."""
+    board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
+    require_owner(board, request.user)
+    membership = get_object_or_404(board.memberships.select_related("user"), pk=pk)
+    try:
+        cleared = membership.remove()
+    except ValidationError as error:
+        messages.error(request, error.message)
+    else:
+        if membership.is_pending:
+            messages.success(request, f"Withdrew the invitation for {membership.email}.")
+        else:
+            unassigned = (
+                f" {cleared} Card{'s' if cleared != 1 else ''} they were assigned "
+                f"{'are' if cleared != 1 else 'is'} now unassigned." if cleared else ""
+            )
+            messages.success(request, f"Removed {membership.user.name}.{unassigned}")
+    return redirect("board_members", board_pk=board.pk)
 
 
 def render_stages(request, board, *, failed=None, failed_form=None, refusal=None, add_form=None):

@@ -54,4 +54,13 @@ urlpatterns = [
         name="stage_archive_cards",
     ),
     path("boards/<int:board_pk>/archive/", views.board_archive, name="board_archive"),
+    path("boards/<int:board_pk>/members/", views.board_members, name="board_members"),
+    path(
+        "boards/<int:board_pk>/members/invite/", views.member_invite, name="member_invite"
+    ),
+    path(
+        "boards/<int:board_pk>/members/<int:pk>/remove/",
+        views.member_remove,
+        name="member_remove",
+    ),
 ]

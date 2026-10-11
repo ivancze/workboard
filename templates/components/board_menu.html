@@ -1,0 +1,15 @@
+{% comment %}
+  The board's other pages, behind a ⋯ button beside Add card, so the one
+  everyday action stays the prominent one. Needs `board`. Menus behave as in
+  card_menu.html.
+{% endcomment %}
+<details data-menu class="relative">
+  <summary aria-label="More for {{ board.name }}" class="flex size-9 cursor-pointer list-none items-center justify-center rounded-md border border-control bg-surface text-text transition-colors hover:bg-sunken">
+    <svg class="size-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+  </summary>
+  <div data-menu-panel class="absolute right-0 z-10 mt-1 w-52 rounded-lg border border-border bg-surface p-1 shadow-lg">
+    <a href="{% url 'board_members' board.pk %}" class="block rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-sunken">Members</a>
+    <a href="{% url 'board_archive' board.pk %}" class="block rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-sunken">Archive</a>
+    <a href="{% url 'stage_list' board.pk %}" class="block rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-sunken">Edit stages</a>
+  </div>
+</details>

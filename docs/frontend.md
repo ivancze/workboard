@@ -117,8 +117,8 @@ is empty, so a Card can be dropped into it. While dragging, the spot where the
 Card will land is an empty dashed outline: Sortable's placeholder, given the
 `card-placeholder` class, styled in `assets/app.css`.
 
-**The ⋯ menus** on each Card (`components/card_menu.html`) and each Stage
-(`components/stage_menu.html`) are `<details data-menu>` dropdowns, so they
+**The ⋯ menus** on each Card (`components/card_menu.html`), each Stage
+(`components/stage_menu.html`) and the board (`components/board_menu.html`) are `<details data-menu>` dropdowns, so they
 work without JavaScript. `board.js` closes one on a click elsewhere or Escape,
 and pins an open menu to the window (`position: fixed`), below its ⋯ button
 or above it when there is no room below. The Stage row scrolls sideways, and

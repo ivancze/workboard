@@ -12,6 +12,13 @@ class BoardForm(forms.ModelForm):
         labels = {"name": "Board name"}
 
 
+class InviteForm(forms.Form):
+    email = forms.EmailField(
+        label="Email address",
+        help_text="The address they sign in to Google with. Nothing is sent: tell them yourself.",
+    )
+
+
 class StageForm(forms.Form):
     name = forms.CharField(max_length=50, label="Stage name")
 

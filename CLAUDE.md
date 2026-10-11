@@ -69,10 +69,15 @@ unique constraint on (Stage, position) catches what the code gets wrong, at
 commit.
 
 Locks are always taken in the same order: the board (`Board.lock`, only for
-adding or deleting Stages), then Stages, then Cards. `lock_stages` raises
+adding or deleting Stages, and for invitations), then Stages, then Cards. `lock_stages` raises
 `Stage.DoesNotExist` if a Stage was deleted first. A Card's Stage and its
 board are both PROTECT, so nothing that deletes a Stage, or a board, can take
 Cards with it by accident.
+
+Saving a Card that names an Assignee first locks that person's membership
+(`lock_membership`), and removing a Member locks theirs before clearing their
+Cards, so a Card can never end up assigned to someone with no access. This
+lock comes before any Stage lock.
 
 An archived Card has no Stage and no position, and a database check keeps it
 from being half of each. `stage.cards` therefore holds only the Cards on the

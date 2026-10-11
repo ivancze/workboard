@@ -3,8 +3,10 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, StepValueValidator
+from allauth.account.models import EmailAddress
 from django.db import models, transaction
 from django.db.models import F
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 # Every board starts with these, in this order. Boards are expected to diverge
@@ -67,6 +69,25 @@ class Board(models.Model):
     def owner(self):
         return self.memberships.get(role=Membership.Role.OWNER).user
 
+    def is_owner(self, user):
+        return self.memberships.filter(user=user, role=Membership.Role.OWNER).exists()
+
+    def invite(self, email):
+        """Make `email` a Pending member of this board, or refuse with the
+        reason. Nothing is sent: the Owner tells the person themselves.
+
+        Addresses are compared ignoring case, under the board lock, so two
+        Owners' tabs inviting the same address at once make one invitation.
+        """
+        email = email.strip()
+        with transaction.atomic():
+            self.lock()
+            if self.memberships.filter(user__email__iexact=email).exists():
+                raise ValidationError(f"{email} is already a Member of this board.")
+            if self.memberships.filter(user__isnull=True, email__iexact=email).exists():
+                raise ValidationError(f"{email} has already been invited.")
+            return self.memberships.create(email=email)
+
     def lock(self):
         """Lock this board for the rest of the transaction. Taken before any
         Stage lock by everything that adds or deletes Stages, so those take
@@ -89,10 +110,35 @@ class Board(models.Model):
             return self.stages.create(name=name, position=0 if last is None else last + 1)
 
 
+class MembershipManager(models.Manager):
+    def claim_for(self, user):
+        """Turn the Pending memberships naming this user's email address into
+        memberships of theirs, ignoring case. Returns how many were claimed.
+
+        Only an address Google has verified claims anything, so an invitation
+        can't be taken by someone who merely typed the address somewhere.
+        Runs at every sign-in and on the home page, so an invitation made
+        while someone is already signed in still reaches them.
+        """
+        verified = EmailAddress.objects.filter(
+            user=user, email__iexact=user.email, verified=True
+        )
+        if not verified.exists():
+            return 0
+        with transaction.atomic():
+            invited = self.filter(user__isnull=True, email__iexact=user.email)
+            # Already a Member there: the invitation adds nothing.
+            invited.filter(board__memberships__user=user).delete()
+            return invited.update(user=user, email="")
+
+
 class Membership(models.Model):
     """The link between a user and a board, carrying their role.
 
-    Memberships are the only record of who can see what.
+    Memberships are the only record of who can see what. A Pending member is
+    a membership with an email address and no user yet: the invitation and
+    the membership are one record, in two states. With no user it matches no
+    one, so it grants nothing until it is claimed.
     """
 
     class Role(models.TextChoices):
@@ -103,20 +149,79 @@ class Membership(models.Model):
         Board, on_delete=models.CASCADE, related_name="memberships"
     )
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="memberships"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="memberships",
     )
+    # Only while Pending: the address the Owner typed, as they typed it.
+    email = models.EmailField(blank=True)
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.MEMBER)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = MembershipManager()
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
                 fields=["board", "user"], name="one_membership_per_user_per_board"
-            )
+            ),
+            models.UniqueConstraint(
+                Lower("email"),
+                "board",
+                condition=models.Q(user__isnull=True),
+                name="one_invitation_per_address_per_board",
+            ),
+            # A user, or an address waiting for one. Never both, never neither.
+            models.CheckConstraint(
+                condition=models.Q(user__isnull=False, email="")
+                | models.Q(user__isnull=True) & ~models.Q(email=""),
+                name="member_or_pending",
+            ),
         ]
 
     def __str__(self):
-        return f"{self.user} on {self.board} ({self.role})"
+        return f"{self.user or self.email} on {self.board} ({self.role})"
+
+    @property
+    def is_pending(self):
+        return self.user_id is None
+
+    def remove(self):
+        """Take this Member off the board, or withdraw this invitation.
+        Returns how many Cards lost them as Assignee.
+
+        Cards naming them as Assignee become unassigned, archived ones
+        included, so no Card names someone who can't see it. Cards they
+        created still credit them: that is history, not access. The Owner
+        can't be removed.
+
+        The membership is locked first, as every save naming an Assignee locks
+        theirs (`lock_membership`), so such a save either lands before this
+        and is cleared by it, or finds them gone.
+        """
+        with transaction.atomic():
+            membership = Membership.objects.select_for_update().filter(pk=self.pk).first()
+            if membership is None:
+                return 0  # removed by someone else first
+            if membership.role == Membership.Role.OWNER:
+                raise ValidationError("The Owner cannot be removed.")
+            cleared = 0
+            if membership.user_id:
+                cleared = Card.objects.filter(
+                    board_id=membership.board_id, assignee_id=membership.user_id
+                ).update(assignee=None, updated_at=timezone.now())
+            membership.delete()
+            return cleared
+
+
+def lock_membership(board, user):
+    """Lock `user`'s membership of `board` for the rest of the transaction, so
+    they can't be removed while a Card naming them as Assignee is saved.
+    Raises Membership.DoesNotExist if they are no longer a Member.
+    """
+    Membership.objects.select_for_update().get(board=board, user=user)
 
 
 class Stage(models.Model):
