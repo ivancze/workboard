@@ -1,7 +1,7 @@
 import copy
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Prefetch
+from django.db.models import Count, Prefetch, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import BoardForm, CardForm, NewCardForm
@@ -45,14 +45,27 @@ def board_detail(request, pk):
     # response does not reveal whether the board exists at all.
     board = get_object_or_404(Board.objects.for_user(request.user), pk=pk)
 
+    # Effort totals are summed by the database, so a large board costs the
+    # same two queries as a small one. Each total travels with the count of
+    # Unestimated Cards it could not include.
+    stages = board.stages.annotate(
+        effort_total=Sum("cards__effort"),
+        unestimated=Count("cards", filter=Q(cards__effort__isnull=True)),
+    ).prefetch_related(
+        Prefetch("cards", queryset=Card.objects.select_related("assignee"))
+    )
+    totals = Card.objects.filter(stage__board=board).aggregate(
+        effort_total=Sum("effort"),
+        unestimated=Count("pk", filter=Q(effort__isnull=True)),
+    )
+
     return render(
         request,
         "boards/board_detail.html",
         {
             "board": board,
-            "stages": board.stages.prefetch_related(
-                Prefetch("cards", queryset=Card.objects.select_related("assignee"))
-            ),
+            "stages": stages,
+            "totals": totals,
             # No auto ids: the form repeats once per Stage, and its label
             # wraps its input instead.
             "form": NewCardForm(auto_id=False),

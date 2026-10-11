@@ -40,12 +40,24 @@ class CardForm(forms.ModelForm):
 
     class Meta:
         model = Card
-        fields = ["title", "description", "assignee", "contact_persons", "due_date"]
+        fields = [
+            "title",
+            "description",
+            "assignee",
+            "contact_persons",
+            "due_date",
+            "effort",
+        ]
         help_texts = {
             "description": "Markdown. HTML is shown as plain text.",
             "contact_persons": "People outside the board, e.g. Dave, Priya from Acme.",
+            "effort": "In steps of 0.5. Leave empty if Unestimated.",
         }
-        widgets = {"due_date": DateInput()}
+        widgets = {
+            "due_date": DateInput(),
+            # Stepper arrows. The model's validators are what enforce these.
+            "effort": forms.NumberInput(attrs={"min": "0", "step": "0.5"}),
+        }
 
     def __init__(self, *args, board, **kwargs):
         super().__init__(*args, **kwargs)

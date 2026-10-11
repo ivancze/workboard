@@ -1,8 +1,12 @@
+import re
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 from unittest import mock
 
 from django.core import mail
+from django.db import connection
 from django.test import TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
@@ -454,3 +458,133 @@ class DueDateIsAdvisoryTests(TestCase):
         card.refresh_from_db()
         self.assertEqual(card.due_date, date(2020, 1, 1))
         self.assertEqual(mail.outbox, [])
+
+
+class EffortTests(TestCase):
+    def setUp(self):
+        self.ada = a_user()
+        self.board = Board.objects.create_with_owner(name="Housework", owner=self.ada)
+        self.card = a_card(self.board.stages.first())
+        self.url = reverse("card_detail", args=[self.board.pk, self.card.pk])
+        self.client.force_login(self.ada)
+
+    def edit(self, effort):
+        return self.client.post(self.url, {"title": "Buy milk", "effort": effort})
+
+    def test_effort_is_saved_in_steps_of_a_half_with_no_small_ceiling(self):
+        for typed, saved in [("2.5", Decimal("2.5")), ("0", Decimal("0")), ("100000", Decimal("100000"))]:
+            with self.subTest(typed=typed):
+                self.edit(typed)
+                self.card.refresh_from_db()
+                self.assertEqual(self.card.effort, saved)
+
+    def test_the_field_has_stepper_arrows(self):
+        self.assertContains(
+            self.client.get(self.url), 'type="number" name="effort"'
+        )
+        self.assertContains(self.client.get(self.url), 'step="0.5"')
+
+    def test_values_off_the_half_step_are_rejected(self):
+        for typed in ["0.3", "1.25"]:
+            with self.subTest(typed=typed):
+                response = self.edit(typed)
+                self.assertEqual(response.status_code, 200)
+                self.card.refresh_from_db()
+                self.assertIsNone(self.card.effort)
+
+    def test_negative_effort_is_rejected(self):
+        response = self.edit("-1")
+
+        self.assertContains(response, "greater than or equal to 0")
+        self.card.refresh_from_db()
+        self.assertIsNone(self.card.effort)
+
+    def test_unestimated_and_zero_are_saved_and_shown_differently(self):
+        self.edit("")
+        self.card.refresh_from_db()
+        self.assertIsNone(self.card.effort)
+        shown = '<span class="font-normal text-text-muted">Unestimated</span>'
+        self.assertContains(self.client.get(self.url), shown, html=True)
+        tile = self.client.get(reverse("board_detail", args=[self.board.pk]))
+        self.assertNotContains(tile, "Effort 0</span>")
+
+        self.edit("0")
+        self.card.refresh_from_db()
+        self.assertEqual(self.card.effort, Decimal("0"))
+        self.assertNotContains(self.client.get(self.url), shown, html=True)
+        tile = self.client.get(reverse("board_detail", args=[self.board.pk]))
+        self.assertContains(tile, "<span>Effort 0</span>", html=True)
+
+
+class EffortTotalTests(TestCase):
+    def setUp(self):
+        self.ada = a_user()
+        self.board = Board.objects.create_with_owner(name="Housework", owner=self.ada)
+        self.to_do, self.in_progress, self.done = self.board.stages.all()
+        self.url = reverse("board_detail", args=[self.board.pk])
+        self.client.force_login(self.ada)
+
+    def totals(self, response):
+        """Each "Effort N · M unestimated" line on the page, board first."""
+        content = response.content.decode()
+        return [
+            " ".join(line.split())
+            for line in re.findall(r'<p class="text-sm text-text-muted">Effort (.*?)</p>', content, re.S)
+        ]
+
+    def test_each_stage_and_the_board_show_their_total_and_unestimated_count(self):
+        a_card(self.to_do, "A", effort=Decimal("2.5"))
+        a_card(self.to_do, "B", effort=Decimal("1"))
+        a_card(self.to_do, "C")
+        a_card(self.in_progress, "D", effort=Decimal("0"))
+        a_card(self.in_progress, "E")
+
+        lines = self.totals(self.client.get(self.url))
+
+        self.assertEqual(
+            [re.sub(r"<[^>]+>", "", line) for line in lines],
+            [
+                "3.5 · 2 unestimated",  # board
+                "3.5 · 1 unestimated",  # To Do
+                "0 · 1 unestimated",  # In Progress
+                "0 · 0 unestimated",  # Done, empty
+            ],
+        )
+
+    def test_a_total_of_only_unestimated_cards_still_reports_them(self):
+        a_card(self.done, "Mystery")
+
+        lines = self.totals(self.client.get(self.url))
+
+        self.assertEqual(re.sub(r"<[^>]+>", "", lines[3]), "0 · 1 unestimated")
+
+    def test_totals_are_summed_by_the_database(self):
+        for i in range(10):
+            a_card(self.to_do, f"Card {i}", effort=Decimal("1"))
+
+        with CaptureQueriesContext(connection) as captured:
+            self.client.get(self.url)
+
+        sums = [q["sql"] for q in captured if "SUM(" in q["sql"]]
+        self.assertEqual(len(sums), 2, "one query for the Stages, one for the board")
+
+    def test_the_board_costs_the_same_queries_however_many_cards_it_has(self):
+        a_card(self.to_do, "Only")
+        with CaptureQueriesContext(connection) as few:
+            self.client.get(self.url)
+
+        for i in range(20):
+            a_card(self.in_progress, f"Card {i}", effort=Decimal("1"))
+        with CaptureQueriesContext(connection) as many:
+            self.client.get(self.url)
+
+        self.assertEqual(len(few), len(many))
+
+    def test_totals_only_count_this_boards_cards(self):
+        other = Board.objects.create_with_owner(name="Elsewhere", owner=self.ada)
+        a_card(other.stages.first(), "Not here", effort=Decimal("9"))
+        a_card(other.stages.first(), "Nor here")
+
+        lines = self.totals(self.client.get(self.url))
+
+        self.assertEqual(re.sub(r"<[^>]+>", "", lines[0]), "0 · 0 unestimated")

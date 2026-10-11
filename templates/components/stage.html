@@ -1,9 +1,13 @@
 {% comment %}
   One Stage and its Cards in Card order, with the form that adds a Card to it.
-  Needs `board`, `stage` and the add-Card `form`.
+  Needs `board`, `stage` annotated with its Effort totals, and the add-Card
+  `form`.
 {% endcomment %}
 <section class="flex w-80 shrink-0 flex-col gap-3 rounded-xl bg-sunken p-3">
-  <h2 class="px-1 font-condensed text-2xl tracking-wide">{{ stage.name }}</h2>
+  <div class="px-1">
+    <h2 class="font-condensed text-2xl tracking-wide">{{ stage.name }}</h2>
+    {% include "components/effort_total.html" with total=stage.effort_total unestimated=stage.unestimated %}
+  </div>
   {% if stage.cards.all %}
     <ol class="flex flex-col gap-2">
       {% for card in stage.cards.all %}

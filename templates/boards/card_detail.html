@@ -8,7 +8,7 @@
   {% include "components/page_heading.html" with text=card.title %}
   <p class="mt-1 text-sm text-text-muted">Created by {{ card.creator.name }} on {{ card.created_at|date:"j F Y, H:i" }}</p>
 
-  <dl class="mt-6 grid gap-4 sm:grid-cols-3">
+  <dl class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
     <div>
       <dt class="text-sm text-text-muted">Assignee</dt>
       <dd class="mt-1 font-semibold">{% if card.assignee %}{{ card.assignee.name }}{% else %}<span class="font-normal text-text-muted">Unassigned</span>{% endif %}</dd>
@@ -22,6 +22,10 @@
           <span class="font-normal text-text-muted">No due date</span>
         {% endif %}
       </dd>
+    </div>
+    <div>
+      <dt class="text-sm text-text-muted">Effort</dt>
+      <dd class="mt-1 font-semibold">{% if card.effort is not None %}{{ card.effort|floatformat:"-1" }}{% else %}<span class="font-normal text-text-muted">Unestimated</span>{% endif %}</dd>
     </div>
     <div>
       <dt class="text-sm text-text-muted">Contact persons</dt>

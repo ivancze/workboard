@@ -1,4 +1,7 @@
+from decimal import Decimal
+
 from django.conf import settings
+from django.core.validators import MinValueValidator, StepValueValidator
 from django.db import models, transaction
 from django.utils import timezone
 
@@ -152,6 +155,16 @@ class Card(models.Model):
     # A plain date with no time or timezone, and advisory only: nothing in the
     # system sorts, filters, blocks or notifies on it.
     due_date = models.DateField(null=True, blank=True)
+    # A bare number in the team's own unit, in steps of 0.5. Null is
+    # Unestimated, which is not the same as zero: zero says this is free,
+    # Unestimated says nobody has looked yet. No ceiling beyond the column's.
+    effort = models.DecimalField(
+        max_digits=12,
+        decimal_places=1,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0), StepValueValidator(Decimal("0.5"))],
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     # Recorded for a future display and Card history; nothing shows it yet.
     updated_at = models.DateTimeField(auto_now=True)

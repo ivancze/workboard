@@ -1,0 +1,6 @@
+{% comment %}
+  An Effort total, always with the count of Unestimated Cards it leaves out, so
+  an incomplete total never passes as a complete one. Needs `total` (None when
+  there is nothing to sum) and `unestimated`.
+{% endcomment %}
+<p class="text-sm text-text-muted">Effort <span class="font-semibold text-text">{{ total|default:0|floatformat:"-1" }}</span> · {{ unestimated }} unestimated</p>
