@@ -91,6 +91,7 @@ class EditingACardTests(TestCase):
         self.stage = self.board.stages.first()
         self.card = a_card(self.stage, "Buy milk", description="Semi-skimmed")
         self.url = reverse("card_detail", args=[self.board.pk, self.card.pk])
+        self.edit_url = reverse("card_edit", args=[self.board.pk, self.card.pk])
         self.client.force_login(self.ada)
 
     def test_opening_a_card_shows_its_detail(self):
@@ -105,20 +106,20 @@ class EditingACardTests(TestCase):
         self.assertContains(response, f'href="{self.url}"')
 
     def test_title_and_description_can_be_changed(self):
-        self.client.post(self.url, {"title": "Buy oat milk", "description": "Barista"})
+        self.client.post(self.edit_url, {"title": "Buy oat milk", "description": "Barista"})
 
         self.card.refresh_from_db()
         self.assertEqual(self.card.title, "Buy oat milk")
         self.assertEqual(self.card.description, "Barista")
 
     def test_the_description_may_be_cleared(self):
-        self.client.post(self.url, {"title": "Buy milk", "description": ""})
+        self.client.post(self.edit_url, {"title": "Buy milk", "description": ""})
 
         self.card.refresh_from_db()
         self.assertEqual(self.card.description, "")
 
     def test_the_title_cannot_be_cleared(self):
-        response = self.client.post(self.url, {"title": "", "description": "x"})
+        response = self.client.post(self.edit_url, {"title": "", "description": "x"})
 
         self.assertEqual(response.status_code, 200)
         self.card.refresh_from_db()
@@ -129,18 +130,59 @@ class EditingACardTests(TestCase):
         Membership.objects.create(board=self.board, user=grace)
         self.client.force_login(grace)
 
-        self.client.post(self.url, {"title": "Buy oat milk", "description": ""})
+        self.client.post(self.edit_url, {"title": "Buy oat milk", "description": ""})
 
         self.card.refresh_from_db()
         self.assertEqual(self.card.creator, self.ada)
         self.assertEqual(self.card.stage, self.stage)
         self.assertEqual(self.card.position, 0)
 
-    def test_a_rejected_edit_does_not_show_its_description_as_saved(self):
-        response = self.client.post(self.url, {"title": "", "description": "Unsaved"})
+    def test_a_rejected_edit_stays_on_the_edit_page_with_what_was_typed(self):
+        response = self.client.post(self.edit_url, {"title": "", "description": "Unsaved"})
 
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "This field is required.")
+        self.assertContains(response, "Unsaved</textarea>")
+
+    def test_a_rejected_edit_names_the_card_by_its_saved_title(self):
+        # A valid title is written onto the form's instance even when another
+        # field fails, so this is the case that would leak into the heading.
+        response = self.client.post(self.edit_url, {"title": "Buy oat milk", "effort": "-1"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "← Buy milk")
+        self.assertNotContains(response, "← Buy oat milk")
+
+    def test_a_rejected_edit_leaves_the_card_page_as_saved(self):
+        self.client.post(self.edit_url, {"title": "", "description": "Unsaved"})
+
+        response = self.client.get(self.url)
         self.assertContains(response, "<p>Semi-skimmed</p>", html=True)
-        self.assertNotContains(response, "<p>Unsaved</p>", html=True)
+        self.assertNotContains(response, "Unsaved")
+
+    def test_the_card_page_is_read_only_with_an_edit_button(self):
+        response = self.client.get(self.url)
+
+        self.assertNotContains(response, 'name="title"')
+        self.assertContains(response, f'href="{self.edit_url}"')
+
+    def test_saving_returns_to_the_card_page(self):
+        response = self.client.post(self.edit_url, {"title": "Buy oat milk"})
+
+        self.assertRedirects(response, self.url)
+
+    def test_cancel_returns_to_the_card_page(self):
+        response = self.client.get(self.edit_url)
+
+        self.assertContains(response, f'<a href="{self.url}"', count=2)  # back link and Cancel
+        self.assertContains(response, ">Cancel</a>")
+
+    def test_posting_to_the_card_page_is_refused(self):
+        response = self.client.post(self.url, {"title": "Ignored", "description": ""})
+
+        self.assertEqual(response.status_code, 405)
+        self.card.refresh_from_db()
+        self.assertEqual(self.card.title, "Buy milk")
 
     def test_the_last_change_is_recorded(self):
         Card.objects.filter(pk=self.card.pk).update(
@@ -149,7 +191,7 @@ class EditingACardTests(TestCase):
         self.card.refresh_from_db()
         before = self.card.updated_at
 
-        self.client.post(self.url, {"title": "Buy oat milk", "description": ""})
+        self.client.post(self.edit_url, {"title": "Buy oat milk", "description": ""})
 
         self.card.refresh_from_db()
         self.assertGreater(self.card.updated_at, before)
@@ -211,7 +253,7 @@ class MarkdownDescriptionTests(TestCase):
 
         content = response.content.decode()
         self.assertNotIn("<script>alert", content)
-        self.assertIn("&lt;script&gt;alert(&#x27;pwned&#x27;)&lt;/script&gt;", content)
+        self.assertIn("<p>Hello &lt;script&gt;alert('pwned')&lt;/script&gt;</p>", content)
 
     def test_raw_html_is_shown_as_text_not_markup(self):
         response = self.view('<img src=x onerror="alert(1)"> <b>bold</b>')
@@ -259,10 +301,9 @@ class CardAccessTests(TestCase):
 
     def test_a_non_member_cannot_edit_a_card(self):
         for board in [self.graces_board, self.adas_board]:
-            response = self.client.post(
-                reverse("card_detail", args=[board.pk, self.graces_card.pk]),
-                {"title": "Defaced", "description": ""},
-            )
+            url = reverse("card_edit", args=[board.pk, self.graces_card.pk])
+            self.assertEqual(self.client.get(url).status_code, 404)
+            response = self.client.post(url, {"title": "Defaced", "description": ""})
             self.assertEqual(response.status_code, 404)
 
         self.graces_card.refresh_from_db()
@@ -296,11 +337,12 @@ class AssigneeTests(TestCase):
         Membership.objects.create(board=self.board, user=self.grace)
         self.card = a_card(self.board.stages.first())
         self.url = reverse("card_detail", args=[self.board.pk, self.card.pk])
+        self.edit_url = reverse("card_edit", args=[self.board.pk, self.card.pk])
         self.board_url = reverse("board_detail", args=[self.board.pk])
         self.client.force_login(self.ada)
 
     def edit(self, **fields):
-        return self.client.post(self.url, {"title": "Buy milk", **fields})
+        return self.client.post(self.edit_url, {"title": "Buy milk", **fields})
 
     def test_a_member_can_be_assigned_and_is_shown(self):
         self.edit(assignee=self.grace.pk)
@@ -326,7 +368,7 @@ class AssigneeTests(TestCase):
     def test_only_members_are_offered(self):
         a_user("mallory@example.com")
 
-        response = self.client.get(self.url)
+        response = self.client.get(self.edit_url)
 
         self.assertContains(response, f'<option value="{self.grace.pk}">grace</option>', html=True)
         self.assertNotContains(response, "mallory")
@@ -348,11 +390,12 @@ class ContactPersonTests(TestCase):
         self.board = Board.objects.create_with_owner(name="Housework", owner=self.ada)
         self.card = a_card(self.board.stages.first())
         self.url = reverse("card_detail", args=[self.board.pk, self.card.pk])
+        self.edit_url = reverse("card_edit", args=[self.board.pk, self.card.pk])
         self.client.force_login(self.ada)
 
     def test_contact_persons_are_recorded_as_typed_and_shown(self):
         self.client.post(
-            self.url, {"title": "Buy milk", "contact_persons": "Dave, Priya from Acme"}
+            self.edit_url, {"title": "Buy milk", "contact_persons": "Dave, Priya from Acme"}
         )
 
         self.card.refresh_from_db()
@@ -362,7 +405,7 @@ class ContactPersonTests(TestCase):
     def test_naming_a_user_does_not_link_or_admit_them(self):
         grace = a_user("grace@example.com")
 
-        self.client.post(self.url, {"title": "Buy milk", "contact_persons": "grace"})
+        self.client.post(self.edit_url, {"title": "Buy milk", "contact_persons": "grace"})
 
         self.card.refresh_from_db()
         self.assertIsNone(self.card.assignee)
@@ -376,15 +419,16 @@ class DueDateTests(TestCase):
         self.stage = self.board.stages.first()
         self.card = a_card(self.stage)
         self.url = reverse("card_detail", args=[self.board.pk, self.card.pk])
+        self.edit_url = reverse("card_edit", args=[self.board.pk, self.card.pk])
         self.board_url = reverse("board_detail", args=[self.board.pk])
         self.client.force_login(self.ada)
 
     def test_a_due_date_is_saved_as_a_plain_date(self):
-        self.client.post(self.url, {"title": "Buy milk", "due_date": "2026-10-14"})
+        self.client.post(self.edit_url, {"title": "Buy milk", "due_date": "2026-10-14"})
 
         self.card.refresh_from_db()
         self.assertEqual(self.card.due_date, date(2026, 10, 14))
-        self.assertContains(self.client.get(self.url), 'value="2026-10-14"')
+        self.assertContains(self.client.get(self.edit_url), 'value="2026-10-14"')
 
     def test_the_date_shown_is_the_date_entered_in_any_timezone(self):
         Card.objects.filter(pk=self.card.pk).update(due_date=date(2026, 10, 14))
@@ -450,7 +494,7 @@ class DueDateIsAdvisoryTests(TestCase):
         card = a_card(self.stage)
 
         response = self.client.post(
-            reverse("card_detail", args=[self.board.pk, card.pk]),
+            reverse("card_edit", args=[self.board.pk, card.pk]),
             {"title": "Buy milk", "due_date": "2020-01-01"},
         )
 
@@ -466,10 +510,11 @@ class EffortTests(TestCase):
         self.board = Board.objects.create_with_owner(name="Housework", owner=self.ada)
         self.card = a_card(self.board.stages.first())
         self.url = reverse("card_detail", args=[self.board.pk, self.card.pk])
+        self.edit_url = reverse("card_edit", args=[self.board.pk, self.card.pk])
         self.client.force_login(self.ada)
 
     def edit(self, effort):
-        return self.client.post(self.url, {"title": "Buy milk", "effort": effort})
+        return self.client.post(self.edit_url, {"title": "Buy milk", "effort": effort})
 
     def test_effort_is_saved_in_steps_of_a_half_with_no_small_ceiling(self):
         for typed, saved in [("2.5", Decimal("2.5")), ("0", Decimal("0")), ("100000", Decimal("100000"))]:
@@ -479,10 +524,10 @@ class EffortTests(TestCase):
                 self.assertEqual(self.card.effort, saved)
 
     def test_the_field_has_stepper_arrows(self):
-        self.assertContains(
-            self.client.get(self.url), 'type="number" name="effort"'
-        )
-        self.assertContains(self.client.get(self.url), 'step="0.5"')
+        response = self.client.get(self.edit_url)
+
+        self.assertContains(response, 'type="number" name="effort"')
+        self.assertContains(response, 'step="0.5"')
 
     def test_values_off_the_half_step_are_rejected(self):
         for typed in ["0.3", "1.25"]:

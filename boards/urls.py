@@ -14,4 +14,7 @@ urlpatterns = [
     path(
         "boards/<int:board_pk>/cards/<int:pk>/", views.card_detail, name="card_detail"
     ),
+    path(
+        "boards/<int:board_pk>/cards/<int:pk>/edit/", views.card_edit, name="card_edit"
+    ),
 ]

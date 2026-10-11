@@ -31,6 +31,7 @@ class EveryPageUsesTheSystemTests(TestCase):
             reverse("home"),
             reverse("board_detail", args=[self.board.pk]),
             reverse("card_detail", args=[self.board.pk, self.card.pk]),
+            reverse("card_edit", args=[self.board.pk, self.card.pk]),
             reverse("profile"),
             reverse("account_logout"),
         ]
@@ -78,7 +79,7 @@ class EveryPageUsesTheSystemTests(TestCase):
         self.client.force_login(self.ada)
 
         response = self.client.get(
-            reverse("card_detail", args=[self.board.pk, self.card.pk])
+            reverse("card_edit", args=[self.board.pk, self.card.pk])
         )
 
         content = response.content.decode()

@@ -3,6 +3,7 @@ import copy
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Prefetch, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_safe
 
 from .forms import BoardForm, CardForm, NewCardForm
 from .models import Board, Card
@@ -88,21 +89,35 @@ def create_card(request, board_pk, stage_pk):
     return redirect("board_detail", pk=board.pk)
 
 
-@login_required
-def card_detail(request, board_pk, pk):
+def get_card(request, board_pk, pk):
     board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
     card = get_object_or_404(
         Card.objects.filter(stage__board=board).select_related("creator", "assignee"),
         pk=pk,
     )
+    return board, card
+
+
+# Read-only: edits go to card_edit, so a stray POST here is refused rather than
+# silently dropped.
+@require_safe
+@login_required
+def card_detail(request, board_pk, pk):
+    board, card = get_card(request, board_pk, pk)
+    return render(request, "boards/card_detail.html", {"board": board, "card": card})
+
+
+@login_required
+def card_edit(request, board_pk, pk):
+    board, card = get_card(request, board_pk, pk)
 
     # The form gets its own copy so a rejected edit cannot leak into the saved
-    # Card the page displays alongside it.
+    # Card the page names in its heading.
     form = CardForm(request.POST or None, instance=copy.copy(card), board=board)
     if request.method == "POST" and form.is_valid():
         form.save()
         return redirect("card_detail", board_pk=board.pk, pk=card.pk)
 
     return render(
-        request, "boards/card_detail.html", {"board": board, "card": card, "form": form}
+        request, "boards/card_edit.html", {"board": board, "card": card, "form": form}
     )
