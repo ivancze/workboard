@@ -3,11 +3,14 @@
 {% block title %}Profile · Workboard{% endblock %}
 
 {% block content %}
-  <h1>Profile</h1>
-  <p>Signed in as {{ user.email }}.</p>
-  <form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Save</button>
-  </form>
+  {% include "components/page_heading.html" with text="Profile" %}
+  <p class="mt-1 text-sm text-text-muted">Signed in as {{ user.email }}.</p>
+
+  <section class="mt-6 rounded-xl border border-border bg-surface p-6">
+    <form method="post" class="flex flex-col gap-4">
+      {% csrf_token %}
+      {% include "components/fields.html" %}
+      <div>{% include "components/button.html" with label="Save" %}</div>
+    </form>
+  </section>
 {% endblock %}

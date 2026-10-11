@@ -1,26 +1,53 @@
-<!doctype html>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block title %}Workboard{% endblock %}</title>
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Workboard{% endblock %}</title>
+  {% comment %}
+    Runs before the stylesheet so the first paint is already in the chosen
+    theme. No stored choice means System, which the stylesheet resolves from
+    the OS by itself.
+  {% endcomment %}
+  <script>
+    try {
+      const theme = localStorage.getItem("theme");
+      if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
+    } catch (e) {}
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400..800&family=Poppins:wght@600;700;800&family=Bebas+Neue&display=swap">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="{% static 'js/theme.js' %}" defer></script>
+</head>
+<body class="min-h-screen bg-canvas text-text antialiased">
+  <header class="border-b border-border bg-surface">
+    <div class="flex items-center gap-4 px-6 py-3">
+      <a href="{% url 'home' %}" class="font-condensed text-3xl tracking-wide">Workboard</a>
+      <div class="ml-auto flex items-center gap-1 text-sm">
+        {% include "components/theme_toggle.html" %}
+        {% if user.is_authenticated %}
+          {% url 'profile' as profile_url %}
+          {% include "components/button.html" with label=user.name href=profile_url variant="ghost" %}
+          <form method="post" action="{% url 'account_logout' %}">
+            {% csrf_token %}
+            {% include "components/button.html" with label="Sign out" variant="ghost" %}
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </header>
 
-<header>
-  <strong>Workboard</strong>
-  {% if user.is_authenticated %}
-    <span>{{ user.name }}</span>
-    <a href="{% url 'profile' %}">Profile</a>
-    <form method="post" action="{% url 'account_logout' %}">
-      {% csrf_token %}
-      <button type="submit">Sign out</button>
-    </form>
-  {% endif %}
-</header>
-
-{% if messages %}
-  <ul>
-    {% for message in messages %}<li>{{ message }}</li>{% endfor %}
-  </ul>
-{% endif %}
-
-<main>
-  {% block content %}{% endblock %}
-</main>
+  <main class="mx-auto px-6 py-8 {% block width %}max-w-3xl{% endblock %}">
+    {% if messages %}
+      <ul class="mb-6 flex flex-col gap-2">
+        {% for message in messages %}
+          <li class="rounded-lg border border-border bg-surface px-4 py-3 text-sm">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

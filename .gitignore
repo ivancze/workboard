@@ -5,3 +5,7 @@ __pycache__/
 *.pyc
 .venv/
 staticfiles/
+
+# Built by bin/tailwind, never committed
+.bin/
+static/css/

@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% comment %}
+  allauth's own pages render inside the site layout. With Google the only way
+  in, the reachable ones are the sign-in and sign-out confirmations and the
+  sign-in error pages, and the provider list at /accounts/login/, built from the elements beside this directory.
+{% endcomment %}
+{% block title %}{% block head_title %}{% endblock head_title %} · Workboard{% endblock %}
+{% block width %}max-w-md{% endblock %}

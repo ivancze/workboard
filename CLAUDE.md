@@ -34,6 +34,13 @@ docker compose up -d --force-recreate web
 Keep `watchdog` out of the dependencies: it switches Django to inotify, which
 never sees host edits, and reloads stop with no error.
 
+## Styling
+
+Tailwind v4, built by the `css` Compose service, which polls because file
+events from the host never reach the container. Colours come only from
+semantic tokens, there are no arbitrary values, and components are template
+partials. Read [docs/frontend.md](docs/frontend.md) before writing markup.
+
 ## Which database am I talking to
 
 `.env` holds the local URL, pointing at the `db` service. Production credentials
@@ -81,6 +88,8 @@ forgotten check yields a 404 rather than another team's board. See
   adding a field, or writing anything a user will see; it lists the rejected
   synonyms as well as the chosen terms.
 - [docs/adr/](docs/adr/) — decisions and the trade-offs behind them.
+- [docs/frontend.md](docs/frontend.md) — the design system: tokens, partials,
+  the theme toggle, and how the stylesheet is built.
 - [docs/deployment.md](docs/deployment.md) — how a deploy works, and why
   compute and database sit with two providers.
 - [docs/v2-features.md](docs/v2-features.md) and

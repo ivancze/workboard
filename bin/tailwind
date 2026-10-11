@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+"""Run the pinned Tailwind standalone CLI, downloading it on first use.
+
+    bin/tailwind watch    rebuild on every template edit
+    bin/tailwind build    one-off build; --minify for production
+
+Compose runs `watch --poll` as the `css` service. Polling is required there:
+file events from host edits never cross Colima's virtiofs mount, so an
+event-based watcher in the container builds once and then sits silent.
+"""
+
+import hashlib
+import os
+import platform
+import subprocess
+import sys
+import urllib.request
+from pathlib import Path
+
+VERSION = "v4.3.3"
+# From the release's sha256sums.txt. A download that does not match is refused.
+SHA256 = {
+    "macos-arm64": "cdf646702987a743464dff4d9c60fd4480d1c1e73dd819a9a67f1078815dce9d",
+    "macos-x64": "7922e0953f2110c05976e3bf58f14e643d90427575e766b7d433f5f80cbee7e1",
+    "linux-arm64": "55fd0b241214eff3de1e8ee4f22796662f2d2e7a49bcfca7477cfd0bac398195",
+    "linux-x64": "dc61b3ac6b8c9ca874c0cc4c57b2409791a64c5540404ca5f5367360babc313a",
+}
+
+ROOT = Path(__file__).resolve().parent.parent
+INPUT = ROOT / "assets" / "app.css"
+OUTPUT = ROOT / "static" / "css" / "app.css"
+
+
+def target():
+    system = {"Darwin": "macos", "Linux": "linux"}[platform.system()]
+    arch = {"arm64": "arm64", "aarch64": "arm64", "x86_64": "x64", "amd64": "x64"}[
+        platform.machine().lower()
+    ]
+    return f"{system}-{arch}"
+
+
+def binary():
+    name = target()
+    path = ROOT / ".bin" / f"tailwindcss-{VERSION}-{name}"
+    if path.exists():
+        return path
+
+    url = (
+        "https://github.com/tailwindlabs/tailwindcss/releases/download/"
+        f"{VERSION}/tailwindcss-{name}"
+    )
+    print(f"Downloading {url}", file=sys.stderr)
+    data = urllib.request.urlopen(url).read()
+    if hashlib.sha256(data).hexdigest() != SHA256[name]:
+        sys.exit(f"Checksum mismatch for {url}; refusing to run it.")
+
+    path.parent.mkdir(exist_ok=True)
+    path.write_bytes(data)
+    path.chmod(0o755)
+    return path
+
+
+def main():
+    command, *extra = sys.argv[1:] or ["build"]
+    # `always`: plain --watch exits as soon as stdin closes, which it is under
+    # Compose or any process manager.
+    flags = {"build": [], "watch": ["--watch=always"]}[command]
+    os.chdir(ROOT)
+    cmd = [str(binary()), "-i", str(INPUT), "-o", str(OUTPUT), *flags, *extra]
+    sys.exit(subprocess.call(cmd))
+
+
+if __name__ == "__main__":
+    main()

@@ -25,5 +25,13 @@ services:
       db:
         condition: service_healthy
 
+  # Rebuilds static/css/app.css whenever a template changes. Polls, like the
+  # autoreloader, because file events from the host never cross the mount.
+  css:
+    build: .
+    command: python bin/tailwind watch --poll
+    volumes:
+      - .:/app
+
 volumes:
   pgdata:

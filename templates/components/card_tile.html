@@ -1,0 +1,4 @@
+{# A Card as it sits in its Stage. Needs `board` and `card`. #}
+<li>
+  <a href="{% url 'card_detail' board.pk card.pk %}" class="block rounded-lg border border-border bg-surface p-3 font-semibold shadow-sm transition-colors hover:border-accent">{{ card.title }}</a>
+</li>

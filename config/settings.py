@@ -35,7 +35,12 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    # Before staticfiles: WhiteNoise serves static in development too, marking
+    # it max-age=0, where runserver's handler leaves browsers to cache the
+    # stylesheet heuristically and show a stale one after each rebuild.
+    "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
+    "django.forms",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
@@ -55,6 +60,10 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
 ]
+
+# Widgets render through project templates, so form controls carry the design
+# system's classes rather than browser defaults. See docs/frontend.md.
+FORM_RENDERER = "django.forms.renderers.TemplatesSetting"
 
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
@@ -113,6 +122,8 @@ SOCIALACCOUNT_PROVIDERS = {
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+# static/css/app.css is built by bin/tailwind and never committed.
+STATICFILES_DIRS = [BASE_DIR / "static"]
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     # Compressed but not hashed. Hashed filenames would need a manifest built

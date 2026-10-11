@@ -1,0 +1,24 @@
+{% comment %}
+  One Stage and its Cards in Card order, with the form that adds a Card to it.
+  Needs `board`, `stage` and the add-Card `form`.
+{% endcomment %}
+<section class="flex w-80 shrink-0 flex-col gap-3 rounded-xl bg-sunken p-3">
+  <h2 class="px-1 font-condensed text-2xl tracking-wide">{{ stage.name }}</h2>
+  {% if stage.cards.all %}
+    <ol class="flex flex-col gap-2">
+      {% for card in stage.cards.all %}
+        {% include "components/card_tile.html" %}
+      {% endfor %}
+    </ol>
+  {% else %}
+    <p class="px-1 text-sm text-text-muted">No cards yet.</p>
+  {% endif %}
+  <form method="post" action="{% url 'card_create' board.pk stage.pk %}" class="flex gap-2">
+    {% csrf_token %}
+    <label class="min-w-0 flex-1">
+      <span class="sr-only">{{ form.title.label }}</span>
+      {{ form.title }}
+    </label>
+    {% include "components/button.html" with label="Add card" variant="secondary" %}
+  </form>
+</section>

@@ -3,35 +3,43 @@
 
 {% block content %}
   {% if user.is_authenticated %}
-    <h1>Hello, {{ user.name }}</h1>
+    {% include "components/page_heading.html" with text="Hello, "|add:user.name %}
 
-    <h2>Your boards</h2>
-    {% if boards %}
-      <ul>
-        {% for board in boards %}
-          <li><a href="{% url 'board_detail' board.pk %}">{{ board.name }}</a></li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p>You have no boards yet.</p>
-    {% endif %}
+    <section class="mt-8">
+      <h2 class="font-condensed text-3xl tracking-wide text-text-muted">Your boards</h2>
+      {% if boards %}
+        <ul class="mt-4 grid gap-4 sm:grid-cols-2">
+          {% for board in boards %}
+            <li>
+              <a href="{% url 'board_detail' board.pk %}" class="block rounded-xl border border-border bg-surface p-5 font-display text-xl font-bold tracking-tight shadow-sm transition-colors hover:border-accent">{{ board.name }}</a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="mt-3 text-sm text-text-muted">You have no boards yet.</p>
+      {% endif %}
+    </section>
 
-    <h2>New board</h2>
-    <form method="post" action="{% url 'board_create' %}">
-      {% csrf_token %}
-      {{ form.as_p }}
-      <button type="submit">Create board</button>
-    </form>
+    <section class="mt-10 rounded-xl border border-border bg-surface p-6">
+      <h2 class="font-condensed text-3xl tracking-wide">New board</h2>
+      <form method="post" action="{% url 'board_create' %}" class="mt-4 flex flex-col gap-4">
+        {% csrf_token %}
+        {% include "components/fields.html" %}
+        <div>{% include "components/button.html" with label="Create board" %}</div>
+      </form>
+    </section>
   {% else %}
-    <h1>Workboard</h1>
-    <p>A Kanban board for a small team.</p>
-    {% comment %}
-      A POST, not a link: allauth refuses provider login over GET so that a
-      third-party page cannot start a sign-in by embedding a URL.
-    {% endcomment %}
-    <form method="post" action="{% provider_login_url 'google' process='login' %}">
-      {% csrf_token %}
-      <button type="submit">Sign in with Google</button>
-    </form>
+    <div class="py-24 text-center">
+      <h1 class="font-condensed text-8xl tracking-wide sm:text-9xl">Workboard</h1>
+      <p class="mt-4 text-xl text-text-muted sm:text-2xl">A Kanban board for a small team.</p>
+      {% comment %}
+        A POST, not a link: allauth refuses provider login over GET so that a
+        third-party page cannot start a sign-in by embedding a URL.
+      {% endcomment %}
+      <form method="post" action="{% provider_login_url 'google' process='login' %}" class="mt-8">
+        {% csrf_token %}
+        {% include "components/button.html" with label="Sign in with Google" %}
+      </form>
+    </div>
   {% endif %}
 {% endblock %}

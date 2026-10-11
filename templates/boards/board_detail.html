@@ -1,30 +1,16 @@
 {% extends "base.html" %}
 
 {% block title %}{{ board.name }} · Workboard{% endblock %}
+{% block width %}max-w-none{% endblock %}
 
 {% block content %}
-  <p><a href="{% url 'home' %}">← Your boards</a></p>
-  <h1>{{ board.name }}</h1>
+  <a href="{% url 'home' %}" class="mb-2 inline-block text-sm text-text-muted hover:text-text">← Your boards</a>
+  {% include "components/page_heading.html" with text=board.name %}
 
-  <div>
+  {# Stages scroll sideways rather than wrapping, so a narrow screen stays usable. #}
+  <div class="mt-6 flex items-start gap-4 overflow-x-auto pb-4">
     {% for stage in stages %}
-      <section>
-        <h2>{{ stage.name }}</h2>
-        {% if stage.cards.all %}
-          <ol>
-            {% for card in stage.cards.all %}
-              <li><a href="{% url 'card_detail' board.pk card.pk %}">{{ card.title }}</a></li>
-            {% endfor %}
-          </ol>
-        {% else %}
-          <p>No cards yet.</p>
-        {% endif %}
-        <form method="post" action="{% url 'card_create' board.pk stage.pk %}">
-          {% csrf_token %}
-          <label>{{ form.title.label }} {{ form.title }}</label>
-          <button type="submit">Add card</button>
-        </form>
-      </section>
+      {% include "components/stage.html" %}
     {% endfor %}
   </div>
 {% endblock %}

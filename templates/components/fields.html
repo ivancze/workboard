@@ -1,0 +1,20 @@
+{% comment %}
+  Every field of `form`: label, control, help text and errors. The controls
+  themselves are styled by the widget templates in templates/django/forms/.
+{% endcomment %}
+{% for error in form.non_field_errors %}
+  <p class="text-sm text-danger">{{ error }}</p>
+{% endfor %}
+{% for field in form.hidden_fields %}{{ field }}{% endfor %}
+{% for field in form.visible_fields %}
+  <div class="flex flex-col gap-1.5">
+    <label for="{{ field.id_for_label }}" class="text-sm font-semibold">{{ field.label }}</label>
+    {{ field }}
+    {% if field.help_text %}
+      <p id="{{ field.auto_id }}_helptext" class="text-sm text-text-muted">{{ field.help_text }}</p>
+    {% endif %}
+    {% for error in field.errors %}
+      <p class="text-sm text-danger">{{ error }}</p>
+    {% endfor %}
+  </div>
+{% endfor %}

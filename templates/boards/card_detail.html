@@ -4,16 +4,24 @@
 {% block title %}{{ card.title }} · {{ board.name }} · Workboard{% endblock %}
 
 {% block content %}
-  <p><a href="{% url 'board_detail' board.pk %}">← {{ board.name }}</a></p>
-  <h1>{{ card.title }}</h1>
-  <p>Created by {{ card.creator.name }} on {{ card.created_at|date:"j F Y, H:i" }}</p>
+  <a href="{% url 'board_detail' board.pk %}" class="mb-2 inline-block text-sm text-text-muted hover:text-text">← {{ board.name }}</a>
+  {% include "components/page_heading.html" with text=card.title %}
+  <p class="mt-1 text-sm text-text-muted">Created by {{ card.creator.name }} on {{ card.created_at|date:"j F Y, H:i" }}</p>
 
-  <div>{{ card.description|markdown }}</div>
+  <section class="mt-6 rounded-xl border border-border bg-surface p-6">
+    {% if card.description %}
+      <div class="prose prose-tokens max-w-none">{{ card.description|markdown }}</div>
+    {% else %}
+      <p class="text-sm text-text-muted">No description.</p>
+    {% endif %}
+  </section>
 
-  <h2>Edit</h2>
-  <form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Save</button>
-  </form>
+  <section class="mt-6 rounded-xl border border-border bg-surface p-6">
+    <h2 class="font-condensed text-3xl tracking-wide">Edit</h2>
+    <form method="post" class="mt-4 flex flex-col gap-4">
+      {% csrf_token %}
+      {% include "components/fields.html" %}
+      <div>{% include "components/button.html" with label="Save" %}</div>
+    </form>
+  </section>
 {% endblock %}
