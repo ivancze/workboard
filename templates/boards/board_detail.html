@@ -10,6 +10,10 @@
 
 {% block content %}
   <a href="{% url 'home' %}" class="mb-2 inline-block text-sm text-text-muted hover:text-text">← Your boards</a>
-  {% include "components/page_heading.html" with text=board.name %}
+  <div class="flex items-start justify-between gap-4">
+    {% include "components/page_heading.html" with text=board.name %}
+    {% url 'stage_list' board.pk as stages_url %}
+    <div class="shrink-0 pt-1">{% include "components/button.html" with label="Edit stages" href=stages_url variant="secondary" %}</div>
+  </div>
   {% include "components/board.html" %}
 {% endblock %}

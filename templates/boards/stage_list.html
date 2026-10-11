@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Edit stages · {{ board.name }} · Workboard{% endblock %}
+
+{% block content %}
+  {% url 'board_detail' board.pk as board_url %}
+  <a href="{{ board_url }}" class="mb-2 inline-block text-sm text-text-muted hover:text-text">← {{ board.name }}</a>
+  {% include "components/page_heading.html" with text="Edit stages" %}
+  <p class="mt-1 text-sm text-text-muted">In board order. Each Stage's Cards move with it. New Stages go at the end, and only an empty Stage can be deleted.</p>
+
+  <ol class="mt-6 flex flex-col gap-3">
+    {% for stage, form, refusal in rows %}
+      <li class="rounded-xl border border-border bg-surface p-4">
+        <div class="flex flex-wrap items-start gap-2">
+          <form method="post" action="{% url 'stage_rename' board.pk stage.pk %}" class="flex min-w-0 flex-1 gap-2">
+            {% csrf_token %}
+            <label class="min-w-0 flex-1">
+              <span class="sr-only">Name of {{ stage.name }}</span>
+              {{ form.name }}
+            </label>
+            {% include "components/button.html" with label="Save" variant="secondary" %}
+          </form>
+          {# Two fixed slots, so every row's name field lines up whichever arrows it has. #}
+          <form method="post" action="{% url 'stage_shift' board.pk stage.pk %}" class="grid w-18 grid-cols-2 gap-1">
+            {% csrf_token %}
+            {% if forloop.first %}<span></span>{% else %}
+              {% include "components/button.html" with label="↑" name="direction" value="up" aria_label="Move "|add:stage.name|add:" up" variant="ghost" %}
+            {% endif %}
+            {% if forloop.last %}<span></span>{% else %}
+              {% include "components/button.html" with label="↓" name="direction" value="down" aria_label="Move "|add:stage.name|add:" down" variant="ghost" %}
+            {% endif %}
+          </form>
+          <form method="post" action="{% url 'stage_delete' board.pk stage.pk %}">
+            {% csrf_token %}
+            {% include "components/button.html" with label="Delete" variant="ghost" %}
+          </form>
+        </div>
+        <p class="mt-2 text-sm text-text-muted">{{ stage.card_count }} Card{{ stage.card_count|pluralize }}</p>
+        {% for error in form.name.errors %}
+          <p class="mt-1 text-sm text-danger">{{ error }}</p>
+        {% endfor %}
+        {% if refusal %}
+          <p class="mt-1 text-sm text-danger">{{ refusal }}</p>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ol>
+
+  <section class="mt-8 rounded-xl border border-border bg-surface p-6">
+    <h2 class="font-condensed text-3xl tracking-wide">Add stage</h2>
+    <form method="post" action="{% url 'stage_create' board.pk %}" class="mt-4 flex flex-col gap-4">
+      {% csrf_token %}
+      {% include "components/fields.html" with form=add_form %}
+      <div>{% include "components/button.html" with label="Add stage" %}</div>
+    </form>
+  </section>
+{% endblock %}

@@ -30,9 +30,6 @@ duplicating work already done for Card order.
 storage, a storage account, upload limits, and a decision about what happens to
 files when a Card is deleted. Genuinely more work than it looks.
 
-**Stage reordering.** Cut as a second drag-and-drop implementation for purely
-cosmetic gain, after the Card one was already built.
-
 **Board templates.** Cut as speculative: nobody knows what template they want
 until they have made the same board three times.
 

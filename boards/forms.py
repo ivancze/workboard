@@ -19,6 +19,10 @@ class NewCardForm(forms.ModelForm):
         labels = {"title": "Card title"}
 
 
+class StageForm(forms.Form):
+    name = forms.CharField(max_length=50, label="Stage name")
+
+
 class MoveCardForm(forms.Form):
     stage = forms.ModelChoiceField(queryset=None)
     # Where in the Stage, counting from 0. Left out by the Move buttons, which

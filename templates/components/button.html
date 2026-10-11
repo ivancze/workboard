@@ -2,6 +2,7 @@
   A button, or a link that looks like one when `href` is given. `label` is its
   text; `variant` is primary (the default), secondary or ghost; `type`
   defaults to submit. `name` and `value` are submitted with the form, so one
-  form can offer several buttons.
+  form can offer several buttons. `aria_label` names a button whose label is
+  only a symbol.
 {% endcomment %}
-{% if href %}<a href="{{ href }}"{% else %}<button type="{{ type|default:'submit' }}"{% if name %} name="{{ name }}" value="{{ value }}"{% endif %}{% endif %} class="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition-colors {% if variant == 'secondary' %}border border-control bg-surface text-text hover:bg-sunken{% elif variant == 'ghost' %}text-text-muted hover:bg-sunken hover:text-text{% else %}bg-accent text-on-accent hover:bg-accent-hover{% endif %}">{{ label }}</{% if href %}a{% else %}button{% endif %}>
+{% if href %}<a href="{{ href }}"{% else %}<button type="{{ type|default:'submit' }}"{% if name %} name="{{ name }}" value="{{ value }}"{% endif %}{% endif %}{% if aria_label %} aria-label="{{ aria_label }}"{% endif %} class="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition-colors {% if variant == 'secondary' %}border border-control bg-surface text-text hover:bg-sunken{% elif variant == 'ghost' %}text-text-muted hover:bg-sunken hover:text-text{% else %}bg-accent text-on-accent hover:bg-accent-hover{% endif %}">{{ label }}</{% if href %}a{% else %}button{% endif %}>

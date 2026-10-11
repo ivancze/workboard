@@ -68,6 +68,12 @@ Card: locking a Card first deadlocks against a concurrent move. A deferred
 unique constraint on (Stage, position) catches what the code gets wrong, at
 commit.
 
+Locks are always taken in the same order: the board (`Board.lock`, only for
+adding or deleting Stages), then Stages, then Cards. `lock_stages` raises
+`Stage.DoesNotExist` if a Stage was deleted first. A Card's Stage is PROTECT,
+so nothing that deletes a Stage, or a board, can take Cards with it by
+accident.
+
 ## Settings that look like mistakes
 
 - `HTTPS_ONLY` is its own flag rather than `not DEBUG`, because Django forces

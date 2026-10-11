@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, StepValueValidator
 from django.db import models, transaction
 from django.db.models import F
@@ -66,6 +67,27 @@ class Board(models.Model):
     def owner(self):
         return self.memberships.get(role=Membership.Role.OWNER).user
 
+    def lock(self):
+        """Lock this board for the rest of the transaction. Taken before any
+        Stage lock by everything that adds or deletes Stages, so those take
+        turns: two deletes at once could otherwise leave no Stage at all."""
+        Board.objects.select_for_update().get(pk=self.pk)
+
+    def check_stage_name_free(self, name, *, exclude=None):
+        """Stage names are unique on a board, ignoring case, so the Move
+        buttons are never ambiguous. Checked under the board lock."""
+        taken = self.stages.filter(name__iexact=name).exclude(pk=exclude)
+        if taken.exists():
+            raise ValidationError(f"This board already has a Stage called {taken.get().name}.")
+
+    def add_stage(self, name):
+        """Add a Stage at the end. Stage order is otherwise fixed."""
+        with transaction.atomic():
+            self.lock()
+            self.check_stage_name_free(name)
+            last = self.stages.aggregate(last=models.Max("position"))["last"]
+            return self.stages.create(name=name, position=0 if last is None else last + 1)
+
 
 class Membership(models.Model):
     """The link between a user and a board, carrying their role.
@@ -117,15 +139,66 @@ class Stage(models.Model):
     def __str__(self):
         return self.name
 
+    def rename(self, name):
+        with transaction.atomic():
+            self.board.lock()
+            self.board.check_stage_name_free(name, exclude=self.pk)
+            self.name = name
+            self.save(update_fields=["name"])
+
+    def shift(self, step):
+        """Move this Stage one place earlier (-1) or later (+1) in the board's
+        Stage order. Its Cards go with it: they belong to the Stage, not to a
+        place on the board. Does nothing at either end.
+
+        The board's Stages are renumbered 0..n-1 under the board lock, so
+        simultaneous presses take turns and gaps left by deletes close up.
+        """
+        with transaction.atomic():
+            self.board.lock()
+            order = list(self.board.stages.all())
+            here = next((i for i, stage in enumerate(order) if stage.pk == self.pk), None)
+            if here is None:
+                raise Stage.DoesNotExist("This Stage was deleted first.")
+            there = here + step
+            if 0 <= there < len(order):
+                order[here], order[there] = order[there], order[here]
+            for position, stage in enumerate(order):
+                if stage.position != position:
+                    Stage.objects.filter(pk=stage.pk).update(position=position)
+
+    def delete_if_empty(self):
+        """Delete this Stage, or refuse with the reason.
+
+        Only an empty Stage goes, so deleting never takes Cards with it. The
+        Stage's lock is the one every write to Card order holds, so no Card
+        can arrive between the check and the delete.
+        """
+        with transaction.atomic():
+            self.board.lock()
+            lock_stages(self.pk)
+            held = self.cards.count()
+            if held:
+                raise ValidationError(
+                    f"Still holds {held} Card{'s' if held != 1 else ''}. Move "
+                    f"{'them' if held != 1 else 'it'} out first."
+                )
+            if self.board.stages.count() == 1:
+                raise ValidationError("A board needs at least one Stage.")
+            self.delete()
+
 
 def lock_stages(*stage_ids):
     """Lock Stages for the rest of the transaction, so their Card order can be
     rewritten without another request interleaving.
 
     Always locked in id order: two requests locking the same pair can then only
-    queue behind each other, never wait on each other forever.
+    queue behind each other, never wait on each other forever. A Stage deleted
+    by a request that got there first raises Stage.DoesNotExist.
     """
-    list(Stage.objects.select_for_update().filter(pk__in=stage_ids).order_by("pk"))
+    locked = Stage.objects.select_for_update().filter(pk__in=stage_ids).order_by("pk")
+    if len(locked) != len(set(stage_ids)):
+        raise Stage.DoesNotExist("A Stage was deleted before it could be locked.")
 
 
 def end_of(stage_id):
@@ -148,7 +221,9 @@ class CardManager(models.Manager):
 class Card(models.Model):
     """One unit of work, sitting in exactly one Stage."""
 
-    stage = models.ForeignKey(Stage, on_delete=models.CASCADE, related_name="cards")
+    # PROTECT: deleting a Stage must never take its Cards with it. Only an
+    # empty Stage is deleted (Stage.delete_if_empty); this is the backstop.
+    stage = models.ForeignKey(Stage, on_delete=models.PROTECT, related_name="cards")
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     position = models.PositiveIntegerField()

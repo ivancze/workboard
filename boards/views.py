@@ -1,13 +1,14 @@
 import copy
 
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.db.models import Count, Prefetch, Q, Sum
 from django.http import Http404, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST, require_safe
 
-from .forms import BoardForm, CardForm, MoveCardForm, NewCardForm
-from .models import Board, Card
+from .forms import BoardForm, CardForm, MoveCardForm, NewCardForm, StageForm
+from .models import Board, Card, Stage
 
 
 def home(request):
@@ -47,10 +48,12 @@ def board_context(board):
     # Effort totals are summed by the database, so a large board costs the
     # same two queries as a small one. Each total travels with the count of
     # Unestimated Cards it could not include.
+    # Ordered explicitly: Django drops Meta.ordering from aggregating queries,
+    # and the Stages would come back in whatever order the database likes.
     stages = board.stages.annotate(
         effort_total=Sum("cards__effort"),
         unestimated=Count("cards", filter=Q(cards__effort__isnull=True)),
-    ).prefetch_related(
+    ).order_by("position", "id").prefetch_related(
         Prefetch("cards", queryset=Card.objects.select_related("assignee"))
     )
     totals = Card.objects.filter(stage__board=board).aggregate(
@@ -85,9 +88,12 @@ def create_card(request, board_pk, stage_pk):
 
     form = NewCardForm(request.POST)
     if form.is_valid():
-        Card.objects.create_at_end(
-            stage=stage, title=form.cleaned_data["title"], creator=request.user
-        )
+        try:
+            Card.objects.create_at_end(
+                stage=stage, title=form.cleaned_data["title"], creator=request.user
+            )
+        except Stage.DoesNotExist:
+            raise Http404("That Stage has just been deleted.")
     return redirect("board_detail", pk=board.pk)
 
 
@@ -137,9 +143,95 @@ def card_move(request, board_pk, pk):
     if not form.is_valid():
         return HttpResponseBadRequest("Position must be a whole number from 0.")
 
-    card.move_to(form.cleaned_data["stage"], form.cleaned_data["position"])
+    try:
+        card.move_to(form.cleaned_data["stage"], form.cleaned_data["position"])
+    except Stage.DoesNotExist:
+        raise Http404("That Stage has just been deleted.")
     # A drag sends this with htmx and gets the board back, fresh from the
     # database, to replace what the page shows. A plain form gets a redirect.
     if request.headers.get("HX-Request"):
         return render(request, "components/board.html", board_context(board))
     return redirect("board_detail", pk=board.pk)
+
+
+def render_stages(request, board, *, failed=None, failed_form=None, refusal=None, add_form=None):
+    """The Edit stages page. A refused change comes back as `failed`, the
+    Stage concerned, with its bound form or the reason a delete was refused,
+    so the error shows on that Stage's own row."""
+    rows = []
+    # Ordered explicitly, as in board_context: the Count drops Meta.ordering.
+    for stage in board.stages.annotate(card_count=Count("cards")).order_by("position", "id"):
+        form = StageForm(initial={"name": stage.name}, prefix=f"stage{stage.pk}")
+        if stage == failed:
+            rows.append((stage, failed_form or form, refusal))
+        else:
+            rows.append((stage, form, None))
+    return render(
+        request,
+        "boards/stage_list.html",
+        {"board": board, "rows": rows, "add_form": add_form or StageForm(prefix="new")},
+        status=400 if failed or add_form else 200,
+    )
+
+
+@require_safe
+@login_required
+def stage_list(request, board_pk):
+    board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
+    return render_stages(request, board)
+
+
+@require_POST
+@login_required
+def stage_create(request, board_pk):
+    board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
+    form = StageForm(request.POST, prefix="new")
+    if form.is_valid():
+        try:
+            board.add_stage(form.cleaned_data["name"])
+            return redirect("stage_list", board_pk=board.pk)
+        except ValidationError as error:
+            form.add_error("name", error)
+    return render_stages(request, board, add_form=form)
+
+
+@require_POST
+@login_required
+def stage_rename(request, board_pk, pk):
+    board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
+    stage = get_object_or_404(board.stages, pk=pk)
+    form = StageForm(request.POST, prefix=f"stage{stage.pk}")
+    if form.is_valid():
+        try:
+            stage.rename(form.cleaned_data["name"])
+            return redirect("stage_list", board_pk=board.pk)
+        except ValidationError as error:
+            form.add_error("name", error)
+    return render_stages(request, board, failed=stage, failed_form=form)
+
+
+@require_POST
+@login_required
+def stage_delete(request, board_pk, pk):
+    board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
+    stage = get_object_or_404(board.stages, pk=pk)
+    try:
+        stage.delete_if_empty()
+    except ValidationError as error:
+        return render_stages(request, board, failed=stage, refusal=error.message)
+    return redirect("stage_list", board_pk=board.pk)
+
+
+@require_POST
+@login_required
+def stage_shift(request, board_pk, pk):
+    board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
+    stage = get_object_or_404(board.stages, pk=pk)
+    step = {"up": -1, "down": 1}.get(request.POST.get("direction"))
+    if step is None:
+        return HttpResponseBadRequest("Direction must be up or down.")
+    try:
+        stage.shift(step)
+    except Stage.DoesNotExist:
+        raise Http404("That Stage has just been deleted.")
+    return redirect("stage_list", board_pk=board.pk)
