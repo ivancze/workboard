@@ -4,13 +4,39 @@
 {% block title %}{{ card.title }} · {{ board.name }} · Workboard{% endblock %}
 
 {% block content %}
-  <a href="{% url 'board_detail' board.pk %}" class="mb-2 inline-block text-sm text-text-muted hover:text-text">← {{ board.name }}</a>
+  {% if card.archived_at %}
+    <a href="{% url 'board_archive' board.pk %}" class="mb-2 inline-block text-sm text-text-muted hover:text-text">← {{ board.name }} archive</a>
+  {% else %}
+    <a href="{% url 'board_detail' board.pk %}" class="mb-2 inline-block text-sm text-text-muted hover:text-text">← {{ board.name }}</a>
+  {% endif %}
   <div class="flex items-start justify-between gap-4">
     {% include "components/page_heading.html" with text=card.title %}
     {% url 'card_edit' board.pk card.pk as edit_url %}
-    <div class="shrink-0 pt-1">{% include "components/button.html" with label="Edit" href=edit_url variant="secondary" %}</div>
+    {# Archive and Restore come back to this page, which then shows the change. #}
+    <div class="flex shrink-0 gap-2 pt-1">
+      {% include "components/button.html" with label="Edit" href=edit_url variant="secondary" %}
+      {% if card.archived_at %}
+        <form method="post" action="{% url 'card_restore' board.pk card.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.path }}">
+          {% include "components/button.html" with label="Restore" %}
+        </form>
+      {% else %}
+        <form method="post" action="{% url 'card_archive' board.pk card.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.path }}">
+          {% include "components/button.html" with label="Archive" variant="secondary" %}
+        </form>
+      {% endif %}
+    </div>
   </div>
   <p class="mt-1 text-sm text-text-muted">Created by {{ card.creator.name }} on {{ card.created_at|date:"j F Y, H:i" }}</p>
+  {% if card.archived_at %}
+    <p class="mt-4 rounded-lg border border-border bg-sunken px-4 py-3 text-sm">
+      Archived on {{ card.archived_at|date:"j F Y, H:i" }}, from
+      {% if card.archived_from %}{{ card.archived_from.name }}. Restore returns it there.{% else %}a Stage since deleted. Restore puts it in {{ board.stages.first.name }}.{% endif %}
+    </p>
+  {% endif %}
 
   <dl class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
     <div>

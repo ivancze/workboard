@@ -70,9 +70,14 @@ commit.
 
 Locks are always taken in the same order: the board (`Board.lock`, only for
 adding or deleting Stages), then Stages, then Cards. `lock_stages` raises
-`Stage.DoesNotExist` if a Stage was deleted first. A Card's Stage is PROTECT,
-so nothing that deletes a Stage, or a board, can take Cards with it by
-accident.
+`Stage.DoesNotExist` if a Stage was deleted first. A Card's Stage and its
+board are both PROTECT, so nothing that deletes a Stage, or a board, can take
+Cards with it by accident.
+
+An archived Card has no Stage and no position, and a database check keeps it
+from being half of each. `stage.cards` therefore holds only the Cards on the
+board; reach archived Cards, or a board's Cards in general, through
+`board.cards`.
 
 ## Settings that look like mistakes
 

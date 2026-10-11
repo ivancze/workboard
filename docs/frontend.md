@@ -117,6 +117,14 @@ is empty, so a Card can be dropped into it. While dragging, the spot where the
 Card will land is an empty dashed outline: Sortable's placeholder, given the
 `card-placeholder` class, styled in `assets/app.css`.
 
+**The Card menu** (`components/card_menu.html`) is a `<details>` dropdown, so
+it works without JavaScript. `board.js` closes it on a click elsewhere or
+Escape, and pins an open menu to the window (`position: fixed`), below its ⋯
+button or above it when there is no room below. The Stage row scrolls
+sideways, and that also clips anything overflowing its bottom, so a menu left
+inside it would be cut off on the lowest Card. Scrolling closes an open menu
+rather than leaving it behind.
+
 **Landing and confetti.** A Card arriving from another Stage carries
 `data-landed`, and the `animate-land` animation (defined in `@theme`) plays
 through the `data-landed:` variant. In the board's last Stage it also carries

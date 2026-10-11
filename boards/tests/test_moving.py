@@ -466,5 +466,9 @@ class ConcurrentCardOrderTests(TransactionTestCase):
         with self.assertRaises(IntegrityError):
             with transaction.atomic():
                 Card.objects.create(
-                    stage=self.to_do, position=card.position, title="Clash", creator=card.creator
+                    board=self.board,
+                    stage=self.to_do,
+                    position=card.position,
+                    title="Clash",
+                    creator=card.creator,
                 )

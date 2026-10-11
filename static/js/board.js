@@ -81,6 +81,26 @@ document.addEventListener("keydown", (event) => {
   menu.querySelector("summary").focus();
 });
 
+// The Stage row scrolls sideways, which also clips anything overflowing its
+// bottom, so an open menu is pinned to the window instead: below its ⋯
+// button, or above it when there is no room below. Scrolling closes it rather
+// than leaving it behind.
+function placeCardMenu(event) {
+  const menu = event.target;
+  if (!menu.matches("[data-card-menu]") || !menu.open) return;
+  const panel = menu.querySelector("[data-card-menu-panel]");
+  const button = menu.querySelector("summary").getBoundingClientRect();
+  const below = button.bottom + 4;
+  const fits = below + panel.offsetHeight <= window.innerHeight;
+  panel.style.position = "fixed";
+  panel.style.margin = "0";
+  panel.style.top = `${fits ? below : button.top - 4 - panel.offsetHeight}px`;
+  panel.style.left = `${button.right - panel.offsetWidth}px`;
+}
+
+document.addEventListener("toggle", placeCardMenu, true); // toggle doesn't bubble
+document.addEventListener("scroll", () => closeCardMenus(null), true);
+
 // Runs for the page and again for every board swapped in.
 htmx.onLoad(makeSortable);
 htmx.onLoad(celebrate);

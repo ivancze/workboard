@@ -13,7 +13,11 @@
   <div class="flex items-start justify-between gap-4">
     {% include "components/page_heading.html" with text=board.name %}
     {% url 'stage_list' board.pk as stages_url %}
-    <div class="shrink-0 pt-1">{% include "components/button.html" with label="Edit stages" href=stages_url variant="secondary" %}</div>
+    {% url 'board_archive' board.pk as archive_url %}
+    <div class="flex shrink-0 gap-2 pt-1">
+      {% include "components/button.html" with label="Archive" href=archive_url variant="secondary" %}
+      {% include "components/button.html" with label="Edit stages" href=stages_url variant="secondary" %}
+    </div>
   </div>
   {% include "components/board.html" %}
 {% endblock %}

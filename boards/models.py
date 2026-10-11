@@ -215,18 +215,38 @@ class CardManager(models.Manager):
         """
         with transaction.atomic():
             lock_stages(stage.pk)
-            return self.create(stage=stage, position=end_of(stage.pk), **fields)
+            return self.create(
+                board=stage.board, stage=stage, position=end_of(stage.pk), **fields
+            )
 
 
 class Card(models.Model):
-    """One unit of work, sitting in exactly one Stage."""
+    """One unit of work, sitting in exactly one Stage, or in its board's
+    archive.
 
+    An archived Card has no Stage and no position: it has left Card order. It
+    remembers the Stage it left, for Restore, and keeps its board, which is
+    how the archive and every access check still find it.
+    """
+
+    # PROTECT, like the Stage: deleting a board must not take Cards with it by
+    # accident, archived ones included.
+    board = models.ForeignKey(Board, on_delete=models.PROTECT, related_name="cards")
     # PROTECT: deleting a Stage must never take its Cards with it. Only an
     # empty Stage is deleted (Stage.delete_if_empty); this is the backstop.
-    stage = models.ForeignKey(Stage, on_delete=models.PROTECT, related_name="cards")
+    # Null while archived, so `stage.cards` holds only the Cards on the board.
+    stage = models.ForeignKey(
+        Stage, on_delete=models.PROTECT, null=True, blank=True, related_name="cards"
+    )
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    position = models.PositiveIntegerField()
+    position = models.PositiveIntegerField(null=True, blank=True)
+    archived_at = models.DateTimeField(null=True, blank=True)
+    # SET_NULL: archived Cards don't keep their Stage from being deleted.
+    # Restore then uses the board's first Stage.
+    archived_from = models.ForeignKey(
+        Stage, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
     # PROTECT: the Creator is a historical fact that survives leaving the board,
     # so deleting the User must not silently rewrite or erase it.
     creator = models.ForeignKey(
@@ -272,7 +292,21 @@ class Card(models.Model):
                 fields=["stage", "position"],
                 name="one_card_per_position_per_stage",
                 deferrable=models.Deferrable.DEFERRED,
-            )
+            ),
+            # A Card is on the board, in a Stage at a position, or archived,
+            # with neither. Never half of each.
+            models.CheckConstraint(
+                condition=models.Q(
+                    archived_at__isnull=True,
+                    stage__isnull=False,
+                    position__isnull=False,
+                    archived_from__isnull=True,
+                )
+                | models.Q(
+                    archived_at__isnull=False, stage__isnull=True, position__isnull=True
+                ),
+                name="on_the_board_or_archived",
+            ),
         ]
 
     def __str__(self):
@@ -296,6 +330,8 @@ class Card(models.Model):
                 # deadlocks: closing the gap rewrites other Cards, which a
                 # concurrent move may hold while it waits for these Stages.
                 origin = Card.objects.values_list("stage_id", flat=True).get(pk=self.pk)
+                if origin is None:
+                    raise Card.DoesNotExist("This Card was archived.")
                 if origin == stage.pk and position is None:
                     return
                 lock_stages(origin, stage.pk)
@@ -329,10 +365,83 @@ class Card(models.Model):
 
         self.stage, self.position = card.stage, card.position
 
+    def archive(self):
+        """Take this Card off the board into its archive, remembering its
+        Stage for Restore. The Cards below it move up to close the gap. An
+        archived Card stays as it is.
+
+        Locks as move_to does: the Stage first, then the Card.
+        """
+        while True:
+            with transaction.atomic():
+                origin = Card.objects.values_list("stage_id", flat=True).get(pk=self.pk)
+                if origin is None:
+                    break
+                lock_stages(origin)
+                card = Card.objects.get(pk=self.pk)
+                if card.stage_id != origin:
+                    continue  # moved by someone else before the lock; start over
+
+                Card.objects.filter(
+                    stage_id=origin, position__gt=card.position
+                ).update(position=F("position") - 1)
+                card.stage, card.position = None, None
+                card.archived_at, card.archived_from_id = timezone.now(), origin
+                card.save(
+                    update_fields=[
+                        "stage", "position", "archived_at", "archived_from", "updated_at"
+                    ]
+                )
+                break
+
+        self.refresh_from_db(fields=["stage", "position", "archived_at", "archived_from"])
+
+    def restore(self):
+        """Return this archived Card to the bottom of the Stage it was archived
+        from, or of the board's first Stage if that one has been deleted. A
+        Card on the board stays as it is.
+        """
+        while True:
+            with transaction.atomic():
+                card = Card.objects.get(pk=self.pk)
+                if card.archived_at is None:
+                    break
+                target = card.archived_from_id or (
+                    self.board.stages.order_by("position", "id")
+                    .values_list("pk", flat=True)
+                    .first()
+                )
+                try:
+                    lock_stages(target)
+                except Stage.DoesNotExist:
+                    continue  # deleted before the lock; choose again
+
+                came_from = card.archived_from_id
+                card = Card.objects.get(pk=self.pk)
+                if card.archived_at is None:
+                    break  # restored by someone else meanwhile
+                if card.archived_from_id != came_from:
+                    continue  # restored and archived again elsewhere; choose again
+                card.stage_id, card.position = target, end_of(target)
+                card.archived_at, card.archived_from = None, None
+                card.save(
+                    update_fields=[
+                        "stage", "position", "archived_at", "archived_from", "updated_at"
+                    ]
+                )
+                break
+
+        self.refresh_from_db(fields=["stage", "position", "archived_at", "archived_from"])
+
     @property
     def is_overdue(self):
-        """Its Due date has passed. A Card due today is not yet overdue.
+        """Its Due date has passed. A Card due today is not yet overdue, and
+        an archived Card never is: archiving is how work stops being overdue.
 
         "Today" is the team's date, from TIME_ZONE, not the server's.
         """
-        return self.due_date is not None and self.due_date < timezone.localdate()
+        return (
+            self.archived_at is None
+            and self.due_date is not None
+            and self.due_date < timezone.localdate()
+        )

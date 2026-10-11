@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Archive · {{ board.name }} · Workboard{% endblock %}
+
+{% block content %}
+  <a href="{% url 'board_detail' board.pk %}" class="mb-2 inline-block text-sm text-text-muted hover:text-text">← {{ board.name }}</a>
+  {% include "components/page_heading.html" with text="Archive" %}
+  <p class="mt-1 text-sm text-text-muted">Cards taken off this board, most recently archived first. Each stays editable, and Restore puts it back at the bottom of the Stage it left.</p>
+
+  {% if cards %}
+    <ul class="mt-6 flex flex-col gap-3">
+      {% for card in cards %}
+        <li class="flex items-center gap-4 rounded-xl border border-border bg-surface p-4">
+          <div class="min-w-0 flex-1">
+            <a href="{% url 'card_detail' board.pk card.pk %}" class="font-semibold break-words hover:text-accent">{{ card.title }}</a>
+            <p class="mt-1 text-sm text-text-muted">
+              Archived {{ card.archived_at|date:"j M Y, H:i" }} from
+              {% if card.archived_from %}{{ card.archived_from.name }}{% else %}a deleted Stage, so restores to {{ first_stage.name }}{% endif %}
+            </p>
+          </div>
+          <form method="post" action="{% url 'card_restore' board.pk card.pk %}" class="shrink-0">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            {% include "components/button.html" with label="Restore" aria_label="Restore "|add:card.title variant="secondary" %}
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="mt-6 text-sm text-text-muted">Nothing archived yet. Archive a Card from its ⋯ menu on the board.</p>
+  {% endif %}
+{% endblock %}

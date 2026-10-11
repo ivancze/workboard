@@ -1,10 +1,13 @@
 import copy
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.db.models import Count, Prefetch, Q, Sum
 from django.http import Http404, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST, require_safe
 
 from .forms import BoardForm, CardForm, MoveCardForm, NewCardForm, StageForm
@@ -56,7 +59,7 @@ def board_context(board):
     ).order_by("position", "id").prefetch_related(
         Prefetch("cards", queryset=Card.objects.select_related("assignee"))
     )
-    totals = Card.objects.filter(stage__board=board).aggregate(
+    totals = board.cards.filter(archived_at__isnull=True).aggregate(
         effort_total=Sum("effort"),
         unestimated=Count("pk", filter=Q(effort__isnull=True)),
     )
@@ -103,11 +106,24 @@ def create_card(request, board_pk, stage_pk):
 
 def get_card(request, board_pk, pk):
     board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
+    # Through the Card's own board, so archived Cards, which have no Stage,
+    # are found the same way.
     card = get_object_or_404(
-        Card.objects.filter(stage__board=board).select_related("creator", "assignee"),
+        board.cards.select_related("creator", "assignee", "stage", "archived_from"),
         pk=pk,
     )
     return board, card
+
+
+def back_to(request, default):
+    """Where an action posted from several pages returns: the page given in
+    `next`, if it is on this site, or else `default`."""
+    url = request.POST.get("next")
+    if url and url_has_allowed_host_and_scheme(
+        url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return redirect(url)
+    return redirect(default)
 
 
 # Read-only: edits go to card_edit, so a stray POST here is refused rather than
@@ -153,6 +169,8 @@ def card_move(request, board_pk, pk):
         card.move_to(target, form.cleaned_data["position"])
     except Stage.DoesNotExist:
         raise Http404("That Stage has just been deleted.")
+    except Card.DoesNotExist:
+        raise Http404("That Card has just been archived.")
 
     # A Card arriving in a different Stage animates on the board, and arriving
     # in the board's last Stage, its "done", also celebrates.
@@ -170,6 +188,41 @@ def card_move(request, board_pk, pk):
     if landed:
         request.session["landed"] = landed
     return redirect("board_detail", pk=board.pk)
+
+
+@require_POST
+@login_required
+def card_archive(request, board_pk, pk):
+    board, card = get_card(request, board_pk, pk)
+    try:
+        card.archive()
+    except Stage.DoesNotExist:
+        raise Http404("That Card's Stage has just been deleted.")
+    messages.success(request, f"Archived {card.title}.")
+    return back_to(request, reverse("board_detail", args=[board.pk]))
+
+
+@require_POST
+@login_required
+def card_restore(request, board_pk, pk):
+    board, card = get_card(request, board_pk, pk)
+    card.restore()
+    messages.success(request, f"Restored {card.title} to {card.stage.name}.")
+    return back_to(request, reverse("board_detail", args=[board.pk]))
+
+
+@require_safe
+@login_required
+def board_archive(request, board_pk):
+    board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
+    cards = board.cards.filter(archived_at__isnull=False).select_related(
+        "archived_from"
+    ).order_by("-archived_at", "-id")
+    return render(
+        request,
+        "boards/board_archive.html",
+        {"board": board, "cards": cards, "first_stage": board.stages.first()},
+    )
 
 
 def render_stages(request, board, *, failed=None, failed_form=None, refusal=None, add_form=None):
