@@ -7,11 +7,10 @@
   A Card that has just arrived from another Stage carries `data-landed`, and
   `data-celebrate` too in the board's last Stage (`landed`, from the views).
 
-  Move offers one button per other Stage, each submitting the form by itself:
-  two clicks to move a Card, and no JavaScript.
+  The Card's actions, Move among them, are in its ⋯ menu (card_menu.html).
 {% endcomment %}
-<li data-move-url="{% url 'card_move' board.pk card.pk %}"{% if card.pk == landed.card %} data-landed{% if landed.celebrate %} data-celebrate{% endif %}{% endif %} class="cursor-grab rounded-lg border {% if card.is_overdue %}border-danger{% else %}border-border{% endif %} bg-surface shadow-sm transition-colors hover:border-accent data-landed:animate-land">
-  <a href="{% url 'card_detail' board.pk card.pk %}" class="block p-3 pb-2">
+<li data-move-url="{% url 'card_move' board.pk card.pk %}"{% if card.pk == landed.card %} data-landed{% if landed.celebrate %} data-celebrate{% endif %}{% endif %} class="relative cursor-grab rounded-lg border {% if card.is_overdue %}border-danger{% else %}border-border{% endif %} bg-surface shadow-sm transition-colors hover:border-accent data-landed:animate-land">
+  <a href="{% url 'card_detail' board.pk card.pk %}" class="block p-3 pr-12">
     <span class="block font-semibold">{{ card.title }}</span>
     <span class="mt-2 flex flex-col gap-1 text-xs text-text-muted">
       {# Each emoji stands in for a label, so screen readers get the word instead. #}
@@ -24,17 +23,5 @@
       {% endif %}
     </span>
   </a>
-  {% if stages|length > 1 %}
-    <details class="px-3 pb-3">
-      <summary class="w-fit cursor-pointer text-xs font-semibold text-text-muted hover:text-text">Move</summary>
-      <form method="post" action="{% url 'card_move' board.pk card.pk %}" aria-label="Move {{ card.title }} to" class="mt-2 flex flex-wrap gap-2">
-        {% csrf_token %}
-        {% for other in stages %}
-          {% if other.pk != stage.pk %}
-            {% include "components/button.html" with label=other.name name="stage" value=other.pk variant="secondary" %}
-          {% endif %}
-        {% endfor %}
-      </form>
-    </details>
-  {% endif %}
+  {% include "components/card_menu.html" %}
 </li>

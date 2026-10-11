@@ -48,6 +48,20 @@ class MovingACardTests(TestCase):
             [(str(self.in_progress.pk), "In Progress"), (str(self.done.pk), "Done")],
         )
 
+    def test_with_one_stage_the_menu_stays_and_move_is_disabled(self):
+        self.in_progress.delete()
+        self.done.delete()
+        card = a_card(self.to_do, "Buy milk")
+
+        content = self.client.get(
+            reverse("board_detail", args=[self.board.pk])
+        ).content.decode()
+
+        self.assertIn('aria-label="Actions for Buy milk"', content)
+        self.assertRegex(content, r"<button type=\"button\" disabled[^>]*>\s*Move\b")
+        action = reverse("card_move", args=[self.board.pk, card.pk])
+        self.assertNotIn(f'<form method="post" action="{action}"', content)
+
     def test_choosing_a_stage_moves_the_card_and_survives_a_reload(self):
         card = a_card(self.to_do, "Buy milk")
 

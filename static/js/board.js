@@ -11,8 +11,8 @@ function makeSortable(root) {
       animation: 150,
       // Where the Card will land shows as an empty outline (assets/app.css).
       ghostClass: "card-placeholder",
-      // The Move toggle and its buttons stay clickable rather than dragging.
-      filter: "summary, button",
+      // The Card's menu stays clickable rather than dragging.
+      filter: "[data-card-menu]",
       preventOnFilter: false,
       onEnd(event) {
         if (event.from === event.to && event.oldIndex === event.newIndex) return;
@@ -63,6 +63,23 @@ function celebrate(root) {
   // animation events, and the finished pieces would linger unseen.
   setTimeout(() => document.querySelectorAll(".confetti").forEach((piece) => piece.remove()), 1500);
 }
+
+// An open Card menu closes on a click outside it, or on Escape, which returns
+// focus to its ⋯ button. Opening another menu is a click outside this one.
+function closeCardMenus(keep) {
+  document.querySelectorAll("[data-card-menu][open]").forEach((menu) => {
+    if (menu !== keep) menu.open = false;
+  });
+}
+
+document.addEventListener("click", (event) => closeCardMenus(event.target.closest("[data-card-menu]")));
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  const menu = document.querySelector("[data-card-menu][open]");
+  if (!menu) return;
+  closeCardMenus(null);
+  menu.querySelector("summary").focus();
+});
 
 // Runs for the page and again for every board swapped in.
 htmx.onLoad(makeSortable);

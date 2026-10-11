@@ -107,7 +107,8 @@ jsDelivr, check that unpkg serves identical bytes, and update this table and
 `VENDORED` in `config/tests/test_design_system.py` together.
 
 **Drag and drop** (`static/js/board.js`) posts each drop to the same move
-endpoint as the Move buttons, with the Card's new Stage and position. The
+endpoint as the Move items in each Card's ⋯ menu
+(`components/card_menu.html`), with the Card's new Stage and position. The
 server answers with `components/board.html`, the board's totals and Stages
 fresh from the database, and htmx swaps it in. The page therefore always shows
 where the server actually put the Card. A failed save fetches the board again
@@ -123,6 +124,6 @@ through the `data-landed:` variant. In the board's last Stage it also carries
 styled in `assets/app.css`, coloured with the theme tokens, and removed on a
 timer. A timer is used rather than `animationend`, which a hidden tab suspends.
 The views set the mark, in the board fragment after a drag, or in the session
-for the page a Move button redirects to, so it plays once. Reduced motion skips
+for the page a Move item redirects to, so it plays once. Reduced motion skips
 the confetti, and the global override stills the landing animation.
 

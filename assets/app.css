@@ -174,3 +174,8 @@
 .card-placeholder > * {
   visibility: hidden;
 }
+
+/* Safari still draws a disclosure triangle on a summary with list-none. */
+[data-card-menu] > summary::-webkit-details-marker {
+  display: none;
+}
