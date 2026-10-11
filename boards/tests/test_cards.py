@@ -551,14 +551,14 @@ class EffortTests(TestCase):
         shown = '<span class="font-normal text-text-muted">Unestimated</span>'
         self.assertContains(self.client.get(self.url), shown, html=True)
         tile = self.client.get(reverse("board_detail", args=[self.board.pk]))
-        self.assertNotContains(tile, "Effort 0</span>")
+        self.assertNotContains(tile, '<span class="sr-only">Effort</span>')
 
         self.edit("0")
         self.card.refresh_from_db()
         self.assertEqual(self.card.effort, Decimal("0"))
         self.assertNotContains(self.client.get(self.url), shown, html=True)
         tile = self.client.get(reverse("board_detail", args=[self.board.pk]))
-        self.assertContains(tile, "<span>Effort 0</span>", html=True)
+        self.assertContains(tile, '⚡</span> <span class="sr-only">Effort</span>0</span>')
 
 
 class EffortTotalTests(TestCase):

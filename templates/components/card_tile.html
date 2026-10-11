@@ -10,13 +10,14 @@
 <li data-move-url="{% url 'card_move' board.pk card.pk %}" class="cursor-grab rounded-lg border {% if card.is_overdue %}border-danger{% else %}border-border{% endif %} bg-surface shadow-sm transition-colors hover:border-accent">
   <a href="{% url 'card_detail' board.pk card.pk %}" class="block p-3 pb-2">
     <span class="block font-semibold">{{ card.title }}</span>
-    <span class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-muted">
-      <span>{% if card.assignee %}{{ card.assignee.name }}{% else %}Unassigned{% endif %}</span>
+    <span class="mt-2 flex flex-col gap-1 text-xs text-text-muted">
+      {# Each emoji stands in for a label, so screen readers get the word instead. #}
+      <span><span aria-hidden="true">👤</span> <span class="sr-only">Assignee</span>{% if card.assignee %}{{ card.assignee.name }}{% else %}Unassigned{% endif %}</span>
+      {% if card.effort is not None %}
+        <span><span aria-hidden="true">⚡</span> <span class="sr-only">Effort</span>{{ card.effort|floatformat:"-1" }}</span>
+      {% endif %}
       {% if card.due_date %}
         <span{% if card.is_overdue %} class="font-semibold text-danger"{% endif %}>{% if card.is_overdue %}Overdue · {% endif %}Due {{ card.due_date|date:"j M Y" }}</span>
-      {% endif %}
-      {% if card.effort is not None %}
-        <span>Effort {{ card.effort|floatformat:"-1" }}</span>
       {% endif %}
     </span>
   </a>

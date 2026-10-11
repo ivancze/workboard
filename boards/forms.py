@@ -61,8 +61,8 @@ class CardForm(forms.ModelForm):
             "effort",
         ]
         help_texts = {
-            "description": "Markdown. HTML is shown as plain text.",
-            "contact_persons": "People outside the board, e.g. Dave, Priya from Acme.",
+            "description": "Markdown supported.",
+            "contact_persons": "People outside the board, e.g. Lando Hamilton po",
             "effort": "In steps of 0.5. Leave empty if Unestimated.",
         }
         widgets = {
