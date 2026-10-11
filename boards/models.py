@@ -246,6 +246,18 @@ class CardManager(models.Manager):
                 board=stage.board, stage=stage, position=end_of(stage.pk), **fields
             )
 
+    def create_in_first_stage(self, *, board, **fields):
+        """Create a Card at the bottom of the board's first Stage, where every
+        new Card starts. If that Stage is deleted before it can be locked,
+        another is first by then, so choose again.
+        """
+        while True:
+            stage = board.stages.order_by("position", "id").first()
+            try:
+                return self.create_at_end(stage=stage, **fields)
+            except Stage.DoesNotExist:
+                continue
+
 
 class Card(models.Model):
     """One unit of work, sitting in exactly one Stage, or in its board's

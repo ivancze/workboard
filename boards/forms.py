@@ -12,13 +12,6 @@ class BoardForm(forms.ModelForm):
         labels = {"name": "Board name"}
 
 
-class NewCardForm(forms.ModelForm):
-    class Meta:
-        model = Card
-        fields = ["title"]
-        labels = {"title": "Card title"}
-
-
 class StageForm(forms.Form):
     name = forms.CharField(max_length=50, label="Stage name")
 

@@ -1,7 +1,7 @@
 {% comment %}
-  One Stage and its Cards in Card order, with the form that adds a Card to it.
-  Needs `board`, `stage` annotated with its Effort totals, all the board's
-  `stages`, and the add-Card `form`.
+  One Stage and its Cards in Card order. Needs `board`, `stage` annotated with
+  its Effort totals, and all the board's `stages`. New Cards are added from
+  the board's Add card button, into the first Stage.
 {% endcomment %}
 <section class="flex min-h-96 w-80 shrink-0 flex-col gap-3 rounded-xl bg-sunken p-3">
   <div class="flex items-start gap-2 px-1">
@@ -24,12 +24,4 @@
       {% include "components/card_tile.html" %}
     {% endfor %}
   </ol>
-  <form method="post" action="{% url 'card_create' board.pk stage.pk %}" class="flex gap-2">
-    {% csrf_token %}
-    <label class="min-w-0 flex-1">
-      <span class="sr-only">{{ form.title.label }}</span>
-      {{ form.title }}
-    </label>
-    {% include "components/button.html" with label="Add card" variant="secondary" %}
-  </form>
 </section>

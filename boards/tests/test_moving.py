@@ -295,9 +295,7 @@ class LandingTests(TestCase):
         self.assertFalse(self.landed(self.drag(self.to_do, 1)))
 
     def test_adding_a_card_plays_nothing(self):
-        self.client.post(
-            reverse("card_create", args=[self.board.pk, self.done.pk]), {"title": "New"}
-        )
+        self.client.post(reverse("card_create", args=[self.board.pk]), {"title": "New"})
 
         self.assertFalse(self.landed(self.client.get(self.board_url).content.decode()))
 

@@ -23,11 +23,7 @@ urlpatterns = [
         views.stage_delete,
         name="stage_delete",
     ),
-    path(
-        "boards/<int:board_pk>/stages/<int:stage_pk>/cards/new/",
-        views.create_card,
-        name="card_create",
-    ),
+    path("boards/<int:board_pk>/cards/new/", views.card_create, name="card_create"),
     path(
         "boards/<int:board_pk>/cards/<int:pk>/", views.card_detail, name="card_detail"
     ),

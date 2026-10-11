@@ -11,7 +11,7 @@ from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST, require_safe
 
-from .forms import BoardForm, CardForm, MoveCardForm, NewCardForm, StageForm
+from .forms import BoardForm, CardForm, MoveCardForm, StageForm
 from .models import Board, Card, Stage
 
 
@@ -69,9 +69,6 @@ def board_context(board):
         "board": board,
         "stages": stages,
         "totals": totals,
-        # No auto ids: the form repeats once per Stage, and its label wraps its
-        # input instead.
-        "form": NewCardForm(auto_id=False),
     }
 
 
@@ -88,21 +85,23 @@ def board_detail(request, pk):
 
 
 @login_required
-def create_card(request, board_pk, stage_pk):
+def card_create(request, board_pk):
+    """A blank Card, with every field but only the title required. It goes to
+    the bottom of the board's first Stage, the start of the workflow."""
     board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
-    stage = get_object_or_404(board.stages, pk=stage_pk)
-    if request.method != "POST":
+    form = CardForm(request.POST or None, board=board)
+    if request.method == "POST" and form.is_valid():
+        card = Card.objects.create_in_first_stage(
+            board=board, creator=request.user, **form.cleaned_data
+        )
+        messages.success(request, f"Added {card.title} to {card.stage.name}.")
         return redirect("board_detail", pk=board.pk)
 
-    form = NewCardForm(request.POST)
-    if form.is_valid():
-        try:
-            Card.objects.create_at_end(
-                stage=stage, title=form.cleaned_data["title"], creator=request.user
-            )
-        except Stage.DoesNotExist:
-            raise Http404("That Stage has just been deleted.")
-    return redirect("board_detail", pk=board.pk)
+    return render(
+        request,
+        "boards/card_create.html",
+        {"board": board, "form": form, "first_stage": board.stages.first()},
+    )
 
 
 def get_card(request, board_pk, pk):

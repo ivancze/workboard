@@ -34,6 +34,7 @@ class EveryPageUsesTheSystemTests(TestCase):
             reverse("card_detail", args=[self.board.pk, self.card.pk]),
             reverse("card_edit", args=[self.board.pk, self.card.pk]),
             reverse("board_archive", args=[self.board.pk]),
+            reverse("card_create", args=[self.board.pk]),
             reverse("profile"),
             reverse("account_logout"),
         ]

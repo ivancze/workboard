@@ -14,7 +14,9 @@
     {% include "components/page_heading.html" with text=board.name %}
     {% url 'stage_list' board.pk as stages_url %}
     {% url 'board_archive' board.pk as archive_url %}
+    {% url 'card_create' board.pk as new_card_url %}
     <div class="flex shrink-0 gap-2 pt-1">
+      {% include "components/button.html" with label="Add card" href=new_card_url %}
       {% include "components/button.html" with label="Archive" href=archive_url variant="secondary" %}
       {% include "components/button.html" with label="Edit stages" href=stages_url variant="secondary" %}
     </div>

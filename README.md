@@ -13,8 +13,9 @@ To Do, In Progress and Done.
 reorder (↑ ↓) and delete Stages. Names are unique on a board. Only an empty
 Stage can be deleted, and a board always keeps at least one.
 
-**Cards.** Add a Card by typing a title at the foot of any Stage. Click a Card
-to open it, and *Edit* to change it:
+**Cards.** *Add card*, beside the board's name, opens a blank Card. Only the
+title is needed, and the Card goes to the bottom of the leftmost Stage. Click
+a Card to open it, and *Edit* to change it:
 
 - **Description**, written in Markdown
 - **Assignee**, one Member of the board, or Unassigned

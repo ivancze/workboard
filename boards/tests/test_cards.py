@@ -11,7 +11,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import User
-from boards.models import Board, Card, Membership
+from boards import models
+from boards.models import Board, Card, Membership, Stage
 
 
 def a_user(email="ada@example.com"):
@@ -30,47 +31,97 @@ class AddingACardTests(TestCase):
         self.board = Board.objects.create_with_owner(name="Housework", owner=self.ada)
         self.to_do, self.in_progress, _ = self.board.stages.all()
         self.client.force_login(self.ada)
+        self.url = reverse("card_create", args=[self.board.pk])
+        self.board_url = reverse("board_detail", args=[self.board.pk])
 
-    def add(self, stage, title):
-        return self.client.post(
-            reverse("card_create", args=[self.board.pk, stage.pk]), {"title": title}
+    def add(self, title, **fields):
+        return self.client.post(self.url, {"title": title, **fields})
+
+    def test_the_board_has_one_add_card_button_and_no_add_form_per_stage(self):
+        content = self.client.get(self.board_url).content.decode()
+
+        self.assertEqual(content.count(f'href="{self.url}"'), 1)
+        self.assertRegex(content, rf'<a href="{self.url}"[^>]*>Add card</a>')
+        self.assertNotIn("/cards/new/\" class=\"flex gap-2\"", content)
+        self.assertNotIn('name="title"', content)
+
+    def test_the_new_card_page_offers_every_field_blank(self):
+        content = self.client.get(self.url).content.decode()
+
+        for name in ["title", "description", "assignee", "contact_persons", "due_date", "effort"]:
+            self.assertIn(f'name="{name}"', content)
+        self.assertIn("It goes to the bottom of To Do.", content)
+
+    def test_a_new_card_goes_to_the_bottom_of_the_leftmost_stage(self):
+        a_card(self.in_progress, "Already here")
+        self.in_progress.shift(-1)  # leftmost now, though not created first
+
+        response = self.add("Buy milk")
+
+        self.assertRedirects(response, self.board_url, fetch_redirect_response=False)
+        self.assertEqual(
+            [(c.title, c.position) for c in self.in_progress.cards.all()],
+            [("Already here", 0), ("Buy milk", 1)],
+        )
+        self.assertContains(self.client.get(self.board_url), "Added Buy milk to In Progress.")
+
+    def test_every_field_can_be_filled_in_when_adding(self):
+        self.add(
+            "Buy milk",
+            description="Semi-skimmed",
+            assignee=self.ada.pk,
+            contact_persons="The milkman",
+            due_date="2026-11-01",
+            effort="1.5",
         )
 
-    def test_a_card_added_to_a_stage_appears_in_that_stage(self):
-        self.add(self.in_progress, "Buy milk")
-
         card = Card.objects.get()
-        self.assertEqual(card.stage, self.in_progress)
-        response = self.client.get(reverse("board_detail", args=[self.board.pk]))
-        content = response.content.decode()
-        self.assertLess(content.index("In Progress"), content.index("Buy milk"))
-        self.assertLess(content.index("Buy milk"), content.index("Done"))
-        self.assertContains(response, "No cards yet.", count=2)
+        self.assertEqual(
+            (card.description, card.assignee, card.contact_persons, card.due_date, card.effort),
+            ("Semi-skimmed", self.ada, "The milkman", date(2026, 11, 1), Decimal("1.5")),
+        )
 
     def test_the_adder_is_recorded_as_creator(self):
-        self.add(self.to_do, "Buy milk")
+        self.add("Buy milk")
 
         self.assertEqual(Card.objects.get().creator, self.ada)
 
-    def test_a_card_needs_a_title(self):
-        self.add(self.to_do, "")
+    def test_a_card_needs_a_title_and_keeps_what_was_typed(self):
+        response = self.add("", description="Semi-skimmed")
 
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Semi-skimmed")
         self.assertFalse(Card.objects.exists())
 
     def test_a_new_card_goes_to_the_end_of_its_stage(self):
         for title in ["First", "Second", "Third"]:
-            self.add(self.to_do, title)
+            self.add(title)
 
         self.assertEqual(
-            [c.title for c in self.to_do.cards.all()], ["First", "Second", "Third"]
+            [(c.title, c.position) for c in self.to_do.cards.all()],
+            [("First", 0), ("Second", 1), ("Third", 2)],
         )
-        self.assertEqual([c.position for c in self.to_do.cards.all()], [0, 1, 2])
 
     def test_card_order_is_counted_per_stage(self):
-        self.add(self.to_do, "First")
-        self.add(self.in_progress, "Elsewhere")
+        a_card(self.to_do, "First")
 
-        self.assertEqual(Card.objects.get(title="Elsewhere").position, 0)
+        self.assertEqual(a_card(self.in_progress, "Elsewhere").position, 0)
+
+    def test_a_first_stage_deleted_after_it_was_chosen_sends_it_to_the_next(self):
+        # Deleted between choosing the Stage and locking it, outside the
+        # transaction that then fails, so the delete isn't rolled back with it.
+        real = models.CardManager.create_at_end
+        pending = [lambda: Stage.objects.get(pk=self.to_do.pk).delete_if_empty()]
+
+        def create_at_end(manager, **fields):
+            if pending:
+                pending.pop()()
+            return real(manager, **fields)
+
+        with mock.patch.object(models.CardManager, "create_at_end", create_at_end):
+            self.add("Buy milk")
+
+        self.assertEqual(Card.objects.get().stage, self.in_progress)
 
     def test_the_board_shows_cards_in_card_order_not_creation_order(self):
         older = a_card(self.to_do, "Older")
@@ -309,13 +360,11 @@ class CardAccessTests(TestCase):
         self.graces_card.refresh_from_db()
         self.assertEqual(self.graces_card.title, "Hidden card")
 
-    def test_a_non_member_cannot_add_a_card_to_a_stage(self):
-        for board in [self.graces_board, self.adas_board]:
-            response = self.client.post(
-                reverse("card_create", args=[board.pk, self.graces_stage.pk]),
-                {"title": "Planted"},
-            )
-            self.assertEqual(response.status_code, 404)
+    def test_a_non_member_cannot_add_a_card(self):
+        url = reverse("card_create", args=[self.graces_board.pk])
+
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertEqual(self.client.post(url, {"title": "Planted"}).status_code, 404)
 
         self.assertFalse(Card.objects.filter(title="Planted").exists())
 

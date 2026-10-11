@@ -267,7 +267,7 @@ class StageAccessTests(TestCase):
             with self.subTest(url=url):
                 self.assertEqual(self.client.get(url).status_code, 405)
 
-    def test_moving_or_adding_into_a_deleted_stage_is_a_404(self):
+    def test_moving_into_a_deleted_stage_is_a_404(self):
         to_do, in_progress, _ = self.adas_board.stages.all()
         card = a_card(to_do)
         in_progress_pk = in_progress.pk
@@ -276,11 +276,8 @@ class StageAccessTests(TestCase):
         move = self.client.post(
             reverse("card_move", args=[self.adas_board.pk, card.pk]), {"stage": in_progress_pk}
         )
-        add = self.client.post(
-            reverse("card_create", args=[self.adas_board.pk, in_progress_pk]), {"title": "Lost"}
-        )
 
-        self.assertEqual((move.status_code, add.status_code), (404, 404))
+        self.assertEqual(move.status_code, 404)
 
 
 class DeletedStageTests(TestCase):
