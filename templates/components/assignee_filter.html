@@ -1,0 +1,18 @@
+{% comment %}
+  Narrows the board to one Assignee's Cards. A plain GET form, so the filter
+  lives in the URL: it survives a reload and can be shared. board.js applies
+  it as soon as a choice is made; without JavaScript, Apply does. Needs
+  `board`, `members` and `assignee_filter`.
+{% endcomment %}
+<form method="get" action="{% url 'board_detail' board.pk %}" data-filter class="flex items-center gap-2">
+  <label for="assignee-filter" class="text-sm font-semibold text-text-muted">Show</label>
+  <select id="assignee-filter" name="assignee" class="block rounded-md border border-control bg-surface px-3 py-2 text-sm text-text">
+    <option value=""{% if not assignee_filter.value %} selected{% endif %}>Everyone</option>
+    <option value="me"{% if assignee_filter.value == "me" %} selected{% endif %}>Mine</option>
+    <option value="unassigned"{% if assignee_filter.value == "unassigned" %} selected{% endif %}>Unassigned</option>
+    {% for member in members %}
+      <option value="{{ member.pk }}"{% if assignee_filter.value == member.pk|stringformat:"d" %} selected{% endif %}>{{ member.name }}</option>
+    {% endfor %}
+  </select>
+  <noscript>{% include "components/button.html" with label="Apply" variant="secondary" %}</noscript>
+</form>

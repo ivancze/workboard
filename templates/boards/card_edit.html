@@ -3,7 +3,8 @@
 {% block title %}Edit {{ card.title }} · {{ board.name }} · Workboard{% endblock %}
 
 {% block content %}
-  {% url 'card_detail' board.pk card.pk as card_url %}
+  {% url 'card_detail' board.pk card.pk as card_path %}
+  {% with card_url=card_path|add:filter_query %}
   <a href="{{ card_url }}" class="mb-2 inline-block text-sm text-text-muted hover:text-text">← {{ card.title }}</a>
   {% include "components/page_heading.html" with text="Edit card" %}
 
@@ -17,4 +18,5 @@
       </div>
     </form>
   </section>
+  {% endwith %}
 {% endblock %}

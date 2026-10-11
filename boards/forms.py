@@ -25,9 +25,13 @@ class StageForm(forms.Form):
 
 class MoveCardForm(forms.Form):
     stage = forms.ModelChoiceField(queryset=None)
-    # Where in the Stage, counting from 0. Left out by the Move buttons, which
-    # send a Card to the bottom; sent by drag and drop.
-    position = forms.IntegerField(min_value=0, required=False)
+    # Where a drop landed, as the id of the Card just below it (`before`) or,
+    # at the bottom, just above it (`after`). Never a position: with Cards
+    # hidden by a filter, or a stale page, the index on screen isn't the
+    # Card's place in the Stage. Left out by the Move buttons, which send a
+    # Card to the bottom.
+    before = forms.IntegerField(min_value=1, required=False)
+    after = forms.IntegerField(min_value=1, required=False)
 
     def __init__(self, *args, board, **kwargs):
         super().__init__(*args, **kwargs)

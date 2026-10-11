@@ -8,8 +8,10 @@ from django.db.models import Count, Prefetch, Q, Sum
 from django.http import Http404, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.decorators.http import require_POST, require_safe
+
+from accounts.models import User
 
 from .forms import BoardForm, CardForm, InviteForm, MoveCardForm, StageForm
 from .models import Board, Card, Membership, Stage, lock_membership
@@ -49,9 +51,57 @@ def create_board(request):
     return redirect("board_detail", pk=board.pk)
 
 
-def board_context(board):
+def filter_query(request):
+    """The board's filter as a query string to carry along ("?assignee=me"),
+    or "" with none. Every way back to the board keeps it."""
+    value = request.GET.get("assignee", "")
+    return f"?{urlencode({'assignee': value})}" if value else ""
+
+
+def board_url(board, request):
+    return reverse("board_detail", args=[board.pk]) + filter_query(request)
+
+
+class AssigneeFilter:
+    """The board narrowed to one Assignee's Cards: `?assignee=me`, the viewer;
+    `unassigned`; or a Member's id. Hidden Cards are only out of view, and
+    the board's totals still count them.
+
+    A value that names no Member of this board, such as someone since
+    removed, filters nothing and sets `unknown`, so the board says so.
+    """
+
+    def __init__(self, request, board):
+        self.value = request.GET.get("assignee", "")
+        self.lookup = None
+        self.unknown = False
+        if self.value == "me":
+            self.lookup = {"assignee": request.user}
+        elif self.value == "unassigned":
+            self.lookup = {"assignee__isnull": True}
+        elif self.value:
+            member = (
+                board.memberships.filter(user_id=self.value, user__isnull=False).first()
+                if self.value.isdigit()
+                else None
+            )
+            if member:
+                self.lookup = {"assignee_id": member.user_id}
+            else:
+                self.value, self.unknown = "", True
+
+    def cards(self):
+        return Q(**self.lookup)
+
+    def stage_cards(self):
+        return Q(**{f"cards__{field}": value for field, value in self.lookup.items()})
+
+
+def board_context(board, request):
     """Everything the board's Stages and totals need, for the page and for
-    the fragment that replaces them after a drag."""
+    the fragment that replaces them after a drag, narrowed by its filter."""
+    shown = AssigneeFilter(request, board)
+    cards = Card.objects.select_related("assignee")
     # Effort totals are summed by the database, so a large board costs the
     # same two queries as a small one. Each total travels with the count of
     # Unestimated Cards it could not include.
@@ -60,18 +110,38 @@ def board_context(board):
     stages = board.stages.annotate(
         effort_total=Sum("cards__effort"),
         unestimated=Count("cards", filter=Q(cards__effort__isnull=True)),
-    ).order_by("position", "id").prefetch_related(
-        Prefetch("cards", queryset=Card.objects.select_related("assignee"))
-    )
-    totals = board.cards.filter(archived_at__isnull=True).aggregate(
+        card_count=Count("cards"),
+    ).order_by("position", "id")
+    on_board = board.cards.filter(archived_at__isnull=True)
+    totals = on_board.aggregate(
         effort_total=Sum("effort"),
         unestimated=Count("pk", filter=Q(effort__isnull=True)),
     )
+    shown_totals = None
+    if shown.lookup:
+        # Beside the board's totals, never instead of them: filtered figures
+        # carry their own label, so they can't pass for the board's.
+        cards = cards.filter(shown.cards())
+        here = shown.stage_cards()
+        stages = stages.annotate(
+            shown_effort=Sum("cards__effort", filter=here),
+            shown_unestimated=Count("cards", filter=here & Q(cards__effort__isnull=True)),
+            shown_count=Count("cards", filter=here),
+        )
+        shown_totals = on_board.filter(shown.cards()).aggregate(
+            effort_total=Sum("effort"),
+            unestimated=Count("pk", filter=Q(effort__isnull=True)),
+        )
 
     return {
         "board": board,
-        "stages": stages,
+        "stages": stages.prefetch_related(Prefetch("cards", queryset=cards)),
         "totals": totals,
+        "shown_totals": shown_totals,
+        "assignee_filter": shown,
+        "members": User.objects.filter(memberships__board=board).order_by(
+            "display_name", "email"
+        ),
     }
 
 
@@ -80,7 +150,11 @@ def board_detail(request, pk):
     # Scoped by membership, so a non-member gets a 404 rather than a 403: the
     # response does not reveal whether the board exists at all.
     board = get_object_or_404(Board.objects.for_user(request.user), pk=pk)
-    context = board_context(board)
+    context = board_context(board, request)
+    if context["assignee_filter"].unknown:
+        messages.info(
+            request, "That person is not a Member of this board, so every Card is shown."
+        )
     # Left by a Move button's redirect, for the next board page only: a reload
     # plays nothing. A Card is on one board, so another board ignores it.
     context["landed"] = request.session.pop("landed", None)
@@ -104,7 +178,7 @@ def card_create(request, board_pk):
             pass  # the form now says why
         else:
             messages.success(request, f"Added {card.title} to {card.stage.name}.")
-            return redirect("board_detail", pk=board.pk)
+            return redirect(board_url(board, request))
 
     return render(
         request,
@@ -187,7 +261,9 @@ def card_edit(request, board_pk, pk):
             if Card.objects.filter(pk=card.pk).exists():
                 raise
             raise Http404("That Card has just been deleted.")
-        return redirect("card_detail", board_pk=board.pk, pk=card.pk)
+        return redirect(
+            reverse("card_detail", args=[board.pk, card.pk]) + filter_query(request)
+        )
 
     return render(
         request, "boards/card_edit.html", {"board": board, "card": card, "form": form}
@@ -202,12 +278,14 @@ def card_move(request, board_pk, pk):
     if "stage" in form.errors:
         raise Http404("No such Stage on this board.")
     if not form.is_valid():
-        return HttpResponseBadRequest("Position must be a whole number from 0.")
+        return HttpResponseBadRequest("A neighbouring Card must be named by its id.")
 
     target = form.cleaned_data["stage"]
     origin = card.stage_id
     try:
-        card.move_to(target, form.cleaned_data["position"])
+        card.move_to(
+            target, before=form.cleaned_data["before"], after=form.cleaned_data["after"]
+        )
     except Stage.DoesNotExist:
         raise Http404("That Stage has just been deleted.")
     except Card.DoesNotExist:
@@ -224,11 +302,13 @@ def card_move(request, board_pk, pk):
     # database, to replace what the page shows. A plain form gets a redirect.
     if request.headers.get("HX-Request"):
         return render(
-            request, "components/board.html", {**board_context(board), "landed": landed}
+            request,
+            "components/board.html",
+            {**board_context(board, request), "landed": landed},
         )
     if landed:
         request.session["landed"] = landed
-    return redirect("board_detail", pk=board.pk)
+    return redirect(board_url(board, request))
 
 
 @require_POST
@@ -242,7 +322,7 @@ def card_archive(request, board_pk, pk):
     except Card.DoesNotExist:
         raise Http404("That Card has just been deleted.")
     messages.success(request, f"Archived {card.title}.")
-    return back_to(request, reverse("board_detail", args=[board.pk]))
+    return back_to(request, board_url(board, request))
 
 
 @require_POST
@@ -254,7 +334,7 @@ def card_restore(request, board_pk, pk):
     except Card.DoesNotExist:
         raise Http404("That Card has just been deleted.")
     messages.success(request, f"Restored {card.title} to {card.stage.name}.")
-    return back_to(request, reverse("board_detail", args=[board.pk]))
+    return back_to(request, board_url(board, request))
 
 
 @require_POST
@@ -263,7 +343,7 @@ def card_delete(request, board_pk, pk):
     board, card = get_card(request, board_pk, pk)
     card.delete()
     messages.success(request, f"Deleted {card.title}.")
-    return back_to(request, reverse("board_detail", args=[board.pk]))
+    return back_to(request, board_url(board, request))
 
 
 @require_safe
@@ -457,7 +537,7 @@ def stage_archive_cards(request, board_pk, pk):
             request,
             f"Archived {archived} Card{'s' if archived != 1 else ''} from {stage.name}.",
         )
-    return redirect("board_detail", pk=board.pk)
+    return redirect(board_url(board, request))
 
 
 @require_POST

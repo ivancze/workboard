@@ -12,9 +12,9 @@
   <a href="{% url 'home' %}" class="mb-2 inline-block text-sm text-text-muted hover:text-text">← Your boards</a>
   <div class="flex items-start justify-between gap-4">
     {% include "components/page_heading.html" with text=board.name %}
-    {% url 'card_create' board.pk as new_card_url %}
+    {% url 'card_create' board.pk as card_create_url %}
     <div class="flex shrink-0 gap-2 pt-1">
-      {% include "components/button.html" with label="Add card" href=new_card_url %}
+      {% include "components/button.html" with label="Add card" href=card_create_url|add:filter_query %}
       {% include "components/board_menu.html" %}
     </div>
   </div>

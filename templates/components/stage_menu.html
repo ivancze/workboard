@@ -1,12 +1,14 @@
 {% comment %}
   A Stage's actions, behind a ⋯ button in its header. Needs `board` and
-  `stage`, with its Cards prefetched.
+  `stage`, annotated with its Card count.
 
   "Archive all Cards" asks first, stating how many, and posts that count: if
   the Stage holds a different number by then, nothing is archived. A Stage
-  with no Cards shows the item disabled. Menus behave as in card_menu.html.
+  with no Cards shows the item disabled. The count is of every Card in the
+  Stage, including any a filter hides, and the dialog says so.
+  Menus behave as in card_menu.html.
 {% endcomment %}
-{% with held=stage.cards.all|length %}
+{% with held=stage.card_count %}
 <details data-menu class="relative shrink-0">
   <summary aria-label="Actions for {{ stage.name }}" class="flex size-8 cursor-pointer list-none items-center justify-center rounded-md text-text-muted transition-colors hover:bg-surface hover:text-text">
     <svg class="size-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
@@ -22,9 +24,14 @@
   </div>
 </details>
 {% if held %}
-  {% url 'stage_archive_cards' board.pk stage.pk as archive_url %}
+  {% url 'stage_archive_cards' board.pk stage.pk as stage_archive_url %}
+  {% with archive_url=stage_archive_url|add:filter_query %}
   {% with pk=stage.pk|stringformat:"d" count=held|stringformat:"d" plural=held|pluralize %}{% with dialog_id="archive-stage-"|add:pk question="Archive "|add:count|add:" Card"|add:plural|add:" from "|add:stage.name|add:"?" %}
-    {% include "components/confirm_dialog.html" with id=dialog_id action=archive_url confirm_label="Archive" note="Each can be restored from the board's archive, back to this Stage." expected=held variant="" %}
-  {% endwith %}{% endwith %}
+    {% if assignee_filter.lookup and stage.shown_count != held %}
+      {% include "components/confirm_dialog.html" with id=dialog_id action=archive_url confirm_label="Archive" note="This includes Cards hidden by the filter. Each can be restored from the board's archive, back to this Stage." expected=held variant="" %}
+    {% else %}
+      {% include "components/confirm_dialog.html" with id=dialog_id action=archive_url confirm_label="Archive" note="Each can be restored from the board's archive, back to this Stage." expected=held variant="" %}
+    {% endif %}
+  {% endwith %}{% endwith %}{% endwith %}
 {% endif %}
 {% endwith %}

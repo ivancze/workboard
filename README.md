@@ -43,6 +43,12 @@ count of the Unestimated Cards it leaves out.
 use its ⋯ menu, which moves it to the bottom of the Stage you pick. A Card
 arriving in the board's last Stage gets confetti.
 
+**Filtering.** *Show*, beside the board's totals, narrows the board to one
+Member's Cards, to Unassigned ones, or to *Mine*. The choice is in the page's
+address, so it survives a reload and can be shared. Hidden Cards are only out
+of view: the totals still count the whole board, with the shown figures
+labelled *Shown* beside them, and dragging still works.
+
 **Archive.** Archiving is how finished work leaves the board. Choose *Archive*
 from a Card's ⋯ menu, or on the Card's page. The Card disappears from the
 board and its totals, but nothing is lost:

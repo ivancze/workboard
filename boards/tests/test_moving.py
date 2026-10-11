@@ -128,7 +128,9 @@ class MovingACardTests(TestCase):
 
 
 class DragAndDropTests(TestCase):
-    """A drop sends the Card's new Stage and its position there, from 0."""
+    """A drop sends the Card's new Stage and the Card it landed beside:
+    `before`, the one just below it, or `after`, the one just above it when
+    it is the last. Neither means an empty Stage, so the bottom."""
 
     def setUp(self):
         self.ada = a_user()
@@ -140,11 +142,18 @@ class DragAndDropTests(TestCase):
             a_card(self.done, title)
         self.client.force_login(self.ada)
 
-    def drop(self, title, stage, position, **headers):
-        card = Card.objects.get(title=title)
+    def pk(self, title):
+        return Card.objects.get(title=title).pk
+
+    def drop(self, title, stage, before=None, after=None, query="", **headers):
+        """Neighbours by title, or by id for a Card not on this board."""
+        beside = {}
+        for name, neighbour in [("before", before), ("after", after)]:
+            if neighbour is not None:
+                beside[name] = self.pk(neighbour) if isinstance(neighbour, str) else neighbour
         return self.client.post(
-            reverse("card_move", args=[self.board.pk, card.pk]),
-            {"stage": stage.pk, "position": position},
+            reverse("card_move", args=[self.board.pk, self.pk(title)]) + query,
+            {"stage": stage.pk, **beside},
             headers=headers,
         )
 
@@ -154,60 +163,93 @@ class DragAndDropTests(TestCase):
         return [t for t, _ in order]
 
     def test_dragging_down_within_a_stage(self):
-        self.drop("A", self.to_do, 2)
+        self.drop("A", self.to_do, after="C")
 
         self.assertEqual(self.titles(self.to_do), ["B", "C", "A", "D"])
 
     def test_dragging_up_within_a_stage(self):
-        self.drop("D", self.to_do, 1)
+        self.drop("D", self.to_do, before="B")
 
         self.assertEqual(self.titles(self.to_do), ["A", "D", "B", "C"])
 
     def test_dragging_to_the_top_and_bottom_of_its_stage(self):
-        self.drop("C", self.to_do, 0)
+        self.drop("C", self.to_do, before="A")
         self.assertEqual(self.titles(self.to_do), ["C", "A", "B", "D"])
 
-        self.drop("A", self.to_do, 3)
+        self.drop("A", self.to_do, after="D")
         self.assertEqual(self.titles(self.to_do), ["C", "B", "D", "A"])
 
     def test_dropping_where_it_already_is_changes_nothing(self):
-        self.drop("B", self.to_do, 1)
+        self.drop("B", self.to_do, before="C")
 
         self.assertEqual(self.titles(self.to_do), ["A", "B", "C", "D"])
 
     def test_a_card_dropped_into_another_stage_lands_where_it_was_dropped(self):
-        self.drop("B", self.done, 1)
+        self.drop("B", self.done, before="Y")
 
         self.assertEqual(self.titles(self.done), ["X", "B", "Y"])
         self.assertEqual(self.titles(self.to_do), ["A", "C", "D"])
 
-    def test_a_card_dropped_at_the_top_of_another_stage(self):
-        self.drop("D", self.done, 0)
+    def test_a_card_dropped_at_the_top_and_bottom_of_another_stage(self):
+        self.drop("D", self.done, before="X")
+        self.drop("A", self.done, after="Y")
 
-        self.assertEqual(self.titles(self.done), ["D", "X", "Y"])
+        self.assertEqual(self.titles(self.done), ["D", "X", "Y", "A"])
 
     def test_a_card_dropped_into_an_empty_stage(self):
-        self.drop("A", self.in_progress, 0)
+        self.drop("A", self.in_progress)
 
         self.assertEqual(self.titles(self.in_progress), ["A"])
         self.assertEqual(self.titles(self.to_do), ["B", "C", "D"])
 
-    def test_a_position_past_the_end_means_the_end(self):
-        self.drop("A", self.to_do, 99)
-        self.drop("B", self.done, 99)
+    def test_a_drop_beside_a_card_that_has_since_left_the_stage_goes_to_the_bottom(self):
+        # The page still showed C in To Do; someone had moved it meanwhile.
+        Card.objects.get(title="C").move_to(self.done)
 
-        self.assertEqual(self.titles(self.to_do), ["C", "D", "A"])
-        self.assertEqual(self.titles(self.done), ["X", "Y", "B"])
+        response = self.drop("A", self.to_do, before="C")
 
-    def test_a_negative_or_malformed_position_is_refused(self):
-        for position in ["-1", "first", "1.5"]:
-            with self.subTest(position=position):
-                self.assertEqual(self.drop("A", self.done, position).status_code, 400)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.titles(self.to_do), ["B", "D", "A"])
+
+    def test_a_stale_page_still_lands_beside_the_card_it_showed(self):
+        # The page showed A B C D; B has since gone. Dropping D above C must
+        # put it above C, not at whatever index the stale page counted.
+        Card.objects.get(title="B").move_to(self.done)
+
+        self.drop("D", self.to_do, before="C")
+
+        self.assertEqual(self.titles(self.to_do), ["A", "D", "C"])
+
+    def test_a_neighbour_from_another_board_counts_as_none(self):
+        other = Board.objects.create_with_owner(name="Elsewhere", owner=self.ada)
+        stranger = a_card(other.stages.first(), "Stranger")
+
+        self.drop("A", self.done, before=stranger.pk)
+
+        self.assertEqual(self.titles(self.done), ["X", "Y", "A"])
+        self.assertEqual(card_order(other.stages.first()), [("Stranger", 0)])
+
+    def test_with_cards_hidden_a_drop_lands_beside_the_visible_one(self):
+        # Filtered to Unassigned, To Do shows only A and D: B and C are Ada's.
+        Card.objects.filter(title__in=["B", "C"]).update(assignee=self.ada)
+
+        self.drop("D", self.to_do, before="A", query="?assignee=unassigned")
+        self.assertEqual(self.titles(self.to_do), ["D", "A", "B", "C"])
+
+        self.drop("D", self.to_do, after="A", query="?assignee=unassigned")
+        self.assertEqual(self.titles(self.to_do), ["A", "D", "B", "C"])
+
+    def test_a_malformed_neighbour_is_refused(self):
+        url = reverse("card_move", args=[self.board.pk, self.pk("A")])
+        for value in ["-1", "0", "first", "1.5"]:
+            with self.subTest(value=value):
+                response = self.client.post(url, {"stage": self.done.pk, "before": value})
+                self.assertEqual(response.status_code, 400)
 
         self.assertEqual(self.titles(self.to_do), ["A", "B", "C", "D"])
 
     def test_a_drag_gets_the_fresh_board_back_instead_of_a_redirect(self):
-        response = self.drop("A", self.done, 0, HX_Request="true")
+        response = self.drop("A", self.done, before="X", HX_Request="true")
 
         self.assertEqual(response.status_code, 200)
         content = response.content.decode()
@@ -249,10 +291,10 @@ class LandingTests(TestCase):
         )
         return self.client.get(self.board_url).content.decode()
 
-    def drag(self, stage, position=0):
+    def drag(self, stage, **beside):
         return self.client.post(
             reverse("card_move", args=[self.board.pk, self.card.pk]),
-            {"stage": stage.pk, "position": position},
+            {"stage": stage.pk, **beside},
             headers={"HX-Request": "true"},
         ).content.decode()
 
@@ -262,8 +304,7 @@ class LandingTests(TestCase):
         return re.search(r'\sdata-landed[\s>]', content) is not None
 
     def tile(self, content, card):
-        url = reverse("card_move", args=[self.board.pk, card.pk])
-        return re.search(rf'<li data-move-url="{url}"[^>]*>', content).group()
+        return re.search(rf'<li data-card-id="{card.pk}"[^>]*>', content).group()
 
     def test_a_card_moved_to_another_stage_is_marked_once(self):
         content = self.press(self.in_progress)
@@ -292,7 +333,7 @@ class LandingTests(TestCase):
         self.assertIn("data-celebrate", self.press(self.in_progress))
 
     def test_reordering_within_a_stage_plays_nothing(self):
-        self.assertFalse(self.landed(self.drag(self.to_do, 1)))
+        self.assertFalse(self.landed(self.drag(self.to_do, after=self.other.pk)))
 
     def test_adding_a_card_plays_nothing(self):
         self.client.post(reverse("card_create", args=[self.board.pk]), {"title": "New"})
@@ -456,6 +497,19 @@ class ConcurrentCardOrderTests(TransactionTestCase):
         )
         self.assertContiguous(self.to_do, self.to_do.cards.count())
         self.assertContiguous(self.done, self.done.cards.count())
+
+    def test_cards_dropped_beside_each_other_at_once_stay_contiguous(self):
+        cards = [a_card(self.to_do, f"Card {i}") for i in range(6)]
+        anchor = a_card(self.done, "Anchor")
+
+        self.run_together(
+            *[lambda card=card: card.move_to(self.to_do, before=cards[0].pk) for card in cards[3:]],
+            *[lambda card=card: card.move_to(self.done, after=anchor.pk) for card in cards[1:3]],
+        )
+
+        self.assertContiguous(self.to_do, self.to_do.cards.count())
+        self.assertContiguous(self.done, self.done.cards.count())
+        self.assertEqual(self.to_do.cards.count() + self.done.cards.count(), 7)
 
     def test_the_database_refuses_two_cards_in_one_position(self):
         """The backstop if code ever gets Card order wrong: checked at commit."""

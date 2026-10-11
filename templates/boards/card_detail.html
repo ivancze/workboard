@@ -7,24 +7,24 @@
   {% if card.archived_at %}
     <a href="{% url 'board_archive' board.pk %}" class="mb-2 inline-block text-sm text-text-muted hover:text-text">← {{ board.name }} archive</a>
   {% else %}
-    <a href="{% url 'board_detail' board.pk %}" class="mb-2 inline-block text-sm text-text-muted hover:text-text">← {{ board.name }}</a>
+    <a href="{% url 'board_detail' board.pk %}{{ filter_query }}" class="mb-2 inline-block text-sm text-text-muted hover:text-text">← {{ board.name }}</a>
   {% endif %}
   <div class="flex items-start justify-between gap-4">
     {% include "components/page_heading.html" with text=card.title %}
     {% url 'card_edit' board.pk card.pk as edit_url %}
     {# Archive and Restore come back to this page, which then shows the change. #}
     <div class="flex shrink-0 gap-2 pt-1">
-      {% include "components/button.html" with label="Edit" href=edit_url variant="secondary" %}
+      {% include "components/button.html" with label="Edit" href=edit_url|add:filter_query variant="secondary" %}
       {% if card.archived_at %}
-        <form method="post" action="{% url 'card_restore' board.pk card.pk %}">
+        <form method="post" action="{% url 'card_restore' board.pk card.pk %}{{ filter_query }}">
           {% csrf_token %}
-          <input type="hidden" name="next" value="{{ request.path }}">
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
           {% include "components/button.html" with label="Restore" %}
         </form>
       {% else %}
-        <form method="post" action="{% url 'card_archive' board.pk card.pk %}">
+        <form method="post" action="{% url 'card_archive' board.pk card.pk %}{{ filter_query }}">
           {% csrf_token %}
-          <input type="hidden" name="next" value="{{ request.path }}">
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
           {% include "components/button.html" with label="Archive" variant="secondary" %}
         </form>
       {% endif %}

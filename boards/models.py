@@ -456,13 +456,19 @@ class Card(models.Model):
     def __str__(self):
         return self.title
 
-    def move_to(self, stage, position=None):
+    def move_to(self, stage, position=None, *, before=None, after=None):
         """Move this Card to `position` in `stage`, which may be its own Stage.
 
         Without a position it goes to the bottom of another Stage, and stays
         put in its own. A position past either end is taken as that end. Card
         order stays contiguous in every Stage touched: the Cards between the
         old place and the new shift by one to make room or close the gap.
+
+        A drop names a neighbour instead: `before`, the id of the Card it
+        lands directly above, or `after`, the one it lands directly below.
+        That is resolved under the locks, so it holds however stale the page
+        was, and whatever Cards a filter hid. A neighbour no longer in the
+        Stage sends the Card to the bottom.
 
         Every write to Card order holds the lock of each Stage it touches, so
         these locks alone keep concurrent moves and additions from
@@ -476,7 +482,8 @@ class Card(models.Model):
                 origin = Card.objects.values_list("stage_id", flat=True).get(pk=self.pk)
                 if origin is None:
                     raise Card.DoesNotExist("This Card was archived.")
-                if origin == stage.pk and position is None:
+                beside = before is not None or after is not None
+                if origin == stage.pk and position is None and not beside:
                     return
                 lock_stages(origin, stage.pk)
                 card = Card.objects.get(pk=self.pk)
@@ -484,6 +491,14 @@ class Card(models.Model):
                     continue  # moved by someone else before the lock; start over
 
                 siblings = Card.objects.filter(stage_id=stage.pk).exclude(pk=card.pk)
+                if beside:
+                    order = list(siblings.values_list("pk", flat=True))
+                    anchor = before if before is not None else after
+                    position = (
+                        order.index(anchor) + (0 if before is not None else 1)
+                        if anchor in order
+                        else len(order)
+                    )
                 if origin == stage.pk:
                     target = min(position, end_of(stage.pk) - 1)
                     if target > card.position:

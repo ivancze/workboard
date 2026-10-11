@@ -1,5 +1,5 @@
-// Drag and drop for Card order. A drop posts the Card's new Stage and position
-// to the same endpoint the Move buttons use. The server answers with the whole
+// Drag and drop for Card order. A drop posts the Card's new Stage and the Card
+// beside it to the same endpoint the Move buttons use. The server answers with the whole
 // board, fresh from the database, which replaces the page's copy: totals stay
 // right, and the page always shows where the server actually put the Card.
 // If the save fails, the board is fetched again for the same reason.
@@ -16,10 +16,17 @@ function makeSortable(root) {
       preventOnFilter: false,
       onEnd(event) {
         if (event.from === event.to && event.oldIndex === event.newIndex) return;
+        // The drop names its neighbour, not an index: with a filter hiding
+        // Cards, the index on screen isn't the Card's place in the Stage.
+        const below = event.item.nextElementSibling;
+        const above = event.item.previousElementSibling;
+        const values = { stage: event.to.dataset.stage };
+        if (below) values.before = below.dataset.cardId;
+        else if (above) values.after = above.dataset.cardId;
         htmx.ajax("POST", event.item.dataset.moveUrl, {
           target: "#board",
           swap: "outerHTML",
-          values: { stage: event.to.dataset.stage, position: event.newIndex },
+          values,
         });
       },
     });
@@ -104,6 +111,12 @@ function placeMenu(event) {
 
 document.addEventListener("toggle", placeMenu, true); // toggle doesn't bubble
 document.addEventListener("scroll", () => closeMenus(null), true);
+
+// The Assignee filter applies as soon as a choice is made. Delegated, so it
+// survives the board being swapped in after a drag.
+document.addEventListener("change", (event) => {
+  if (event.target.closest("[data-filter]")) event.target.form.requestSubmit();
+});
 
 // Runs for the page and again for every board swapped in.
 htmx.onLoad(makeSortable);

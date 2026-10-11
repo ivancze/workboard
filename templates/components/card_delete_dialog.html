@@ -5,5 +5,5 @@
 {% endcomment %}
 {% url 'card_delete' board.pk card.pk as delete_url %}
 {% with pk=card.pk|stringformat:"d" %}{% with dialog_id="delete-card-"|add:pk question="Delete "|add:card.title|add:"?" %}
-  {% include "components/confirm_dialog.html" with id=dialog_id action=delete_url confirm_label="Delete Card" variant="danger" note="This can't be undone. To keep the Card but take it off the board, archive it instead." %}
+  {% include "components/confirm_dialog.html" with id=dialog_id action=delete_url|add:filter_query confirm_label="Delete Card" variant="danger" note="This can't be undone. To keep the Card but take it off the board, archive it instead." %}
 {% endwith %}{% endwith %}

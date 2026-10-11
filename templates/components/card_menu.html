@@ -18,7 +18,7 @@
   </summary>
   <div data-menu-panel class="absolute right-0 z-10 mt-1 w-52 rounded-lg border border-border bg-surface p-1 shadow-lg">
     {% if stages|length > 1 %}
-      <form method="post" action="{% url 'card_move' board.pk card.pk %}" aria-label="Move {{ card.title }} to">
+      <form method="post" action="{% url 'card_move' board.pk card.pk %}{{ filter_query }}" aria-label="Move {{ card.title }} to">
         {% csrf_token %}
         <p class="px-2 py-1 text-xs font-semibold text-text-muted">Move to</p>
         {% for other in stages %}
@@ -32,7 +32,7 @@
         Move <span class="text-xs">No other Stage</span>
       </button>
     {% endif %}
-    <form method="post" action="{% url 'card_archive' board.pk card.pk %}" class="mt-1 border-t border-border pt-1">
+    <form method="post" action="{% url 'card_archive' board.pk card.pk %}{{ filter_query }}" class="mt-1 border-t border-border pt-1">
       {% csrf_token %}
       <button type="submit" aria-label="Archive {{ card.title }}" class="block w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-sunken">Archive</button>
     </form>

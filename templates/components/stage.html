@@ -1,18 +1,25 @@
 {% comment %}
   One Stage and its Cards in Card order. Needs `board`, `stage` annotated with
-  its Effort totals, and all the board's `stages`. New Cards are added from
-  the board's Add card button, into the first Stage.
+  its Effort totals and Card count, and all the board's `stages`; with a
+  filter, also its shown figures and `assignee_filter`. New Cards are added
+  from the board's Add card button, into the first Stage.
 {% endcomment %}
 <section class="flex min-h-96 w-80 shrink-0 flex-col gap-3 rounded-xl bg-sunken p-3">
   <div class="flex items-start gap-2 px-1">
     <div class="min-w-0 flex-1">
       <h2 class="font-condensed text-2xl tracking-wide">{{ stage.name }}</h2>
       {% include "components/effort_total.html" with total=stage.effort_total unestimated=stage.unestimated %}
+      {% if assignee_filter.lookup %}
+        {% include "components/effort_total.html" with label="Shown:" total=stage.shown_effort unestimated=stage.shown_unestimated %}
+      {% endif %}
     </div>
     {% include "components/stage_menu.html" %}
   </div>
-  {% if not stage.cards.all %}
+  {% if not stage.card_count %}
     <p class="px-1 text-sm text-text-muted">No cards yet.</p>
+  {% elif not stage.cards.all %}
+    {# Not "No cards yet.", which would be untrue. It still takes drops. #}
+    <p class="px-1 text-sm text-text-muted">{{ stage.card_count }} Card{{ stage.card_count|pluralize }}, none matching the filter.</p>
   {% endif %}
   {% comment %}
     Always present, even empty, so a Card can be dropped into an empty Stage.

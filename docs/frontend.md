@@ -108,8 +108,11 @@ jsDelivr, check that unpkg serves identical bytes, and update this table and
 
 **Drag and drop** (`static/js/board.js`) posts each drop to the same move
 endpoint as the Move items in each Card's ⋯ menu
-(`components/card_menu.html`), with the Card's new Stage and position. The
-server answers with `components/board.html`, the board's totals and Stages
+(`components/card_menu.html`), with the Card's new Stage and the Card it
+landed beside: `before`, the tile just below it, or `after`, the one just
+above when it is last. Never an index, which a filter hiding Cards, or a stale
+page, would make wrong; the server resolves the neighbour under the Stage
+locks. The server answers with `components/board.html`, the board's totals and Stages
 fresh from the database, and htmx swaps it in. The page therefore always shows
 where the server actually put the Card. A failed save fetches the board again
 for the same reason. Every Stage keeps its `<ol data-card-list>` even when it
