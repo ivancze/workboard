@@ -33,6 +33,7 @@ class EveryPageUsesTheSystemTests(TestCase):
             reverse("board_detail", args=[self.board.pk]),
             reverse("card_detail", args=[self.board.pk, self.card.pk]),
             reverse("card_edit", args=[self.board.pk, self.card.pk]),
+            reverse("board_archive", args=[self.board.pk]),
             reverse("profile"),
             reverse("account_logout"),
         ]
@@ -141,7 +142,12 @@ BACKGROUNDS = ["canvas", "surface", "sunken"]
 # 4.5:1 for text.
 TEXT_PAIRS = [
     (fg, bg) for fg in ["text", "text-muted", "accent", "danger"] for bg in BACKGROUNDS
-] + [("on-accent", "accent"), ("on-accent", "accent-hover")]
+] + [
+    ("on-accent", "accent"),
+    ("on-accent", "accent-hover"),
+    ("on-danger", "danger"),
+    ("on-danger", "danger-hover"),
+]
 # 3:1 for the parts of a control that identify it, and for the focus ring.
 NON_TEXT_PAIRS = [(fg, bg) for fg in ["control", "focus"] for bg in BACKGROUNDS]
 

@@ -11,8 +11,8 @@ function makeSortable(root) {
       animation: 150,
       // Where the Card will land shows as an empty outline (assets/app.css).
       ghostClass: "card-placeholder",
-      // The Card's menu stays clickable rather than dragging.
-      filter: "[data-card-menu]",
+      // The Card's menu and its dialogs stay clickable rather than dragging.
+      filter: "[data-menu], dialog",
       preventOnFilter: false,
       onEnd(event) {
         if (event.from === event.to && event.oldIndex === event.newIndex) return;
@@ -64,20 +64,24 @@ function celebrate(root) {
   setTimeout(() => document.querySelectorAll(".confetti").forEach((piece) => piece.remove()), 1500);
 }
 
-// An open Card menu closes on a click outside it, or on Escape, which returns
-// focus to its ⋯ button. Opening another menu is a click outside this one.
-function closeCardMenus(keep) {
-  document.querySelectorAll("[data-card-menu][open]").forEach((menu) => {
+// A Card's or a Stage's ⋯ menu closes on a click outside it, or on Escape,
+// which returns focus to its ⋯ button. Opening another menu is a click
+// outside this one, and an item that opens a dialog closes the menu behind it.
+function closeMenus(keep) {
+  document.querySelectorAll("[data-menu][open]").forEach((menu) => {
     if (menu !== keep) menu.open = false;
   });
 }
 
-document.addEventListener("click", (event) => closeCardMenus(event.target.closest("[data-card-menu]")));
+document.addEventListener("click", (event) => {
+  const opensDialog = event.target.closest("[commandfor]");
+  closeMenus(opensDialog ? null : event.target.closest("[data-menu]"));
+});
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
-  const menu = document.querySelector("[data-card-menu][open]");
+  const menu = document.querySelector("[data-menu][open]");
   if (!menu) return;
-  closeCardMenus(null);
+  closeMenus(null);
   menu.querySelector("summary").focus();
 });
 
@@ -85,10 +89,10 @@ document.addEventListener("keydown", (event) => {
 // bottom, so an open menu is pinned to the window instead: below its ⋯
 // button, or above it when there is no room below. Scrolling closes it rather
 // than leaving it behind.
-function placeCardMenu(event) {
+function placeMenu(event) {
   const menu = event.target;
-  if (!menu.matches("[data-card-menu]") || !menu.open) return;
-  const panel = menu.querySelector("[data-card-menu-panel]");
+  if (!menu.matches("[data-menu]") || !menu.open) return;
+  const panel = menu.querySelector("[data-menu-panel]");
   const button = menu.querySelector("summary").getBoundingClientRect();
   const below = button.bottom + 4;
   const fits = below + panel.offsetHeight <= window.innerHeight;
@@ -98,8 +102,8 @@ function placeCardMenu(event) {
   panel.style.left = `${button.right - panel.offsetWidth}px`;
 }
 
-document.addEventListener("toggle", placeCardMenu, true); // toggle doesn't bubble
-document.addEventListener("scroll", () => closeCardMenus(null), true);
+document.addEventListener("toggle", placeMenu, true); // toggle doesn't bubble
+document.addEventListener("scroll", () => closeMenus(null), true);
 
 // Runs for the page and again for every board swapped in.
 htmx.onLoad(makeSortable);

@@ -70,4 +70,17 @@
       <p class="text-sm text-text-muted">No description.</p>
     {% endif %}
   </section>
+
+  {# Deliberately quiet, below everything: Archive is how work ends. #}
+  <div class="mt-8 flex justify-end">
+    {% with pk=card.pk|stringformat:"d" %}{% with delete_id="delete-card-"|add:pk %}
+      {% include "components/button.html" with label="Delete Card…" type="button" commandfor=delete_id variant="ghost" %}
+    {% endwith %}{% endwith %}
+  </div>
+  {% if card.archived_at %}
+    {% url 'board_archive' board.pk as archive_url %}
+    {% include "components/card_delete_dialog.html" with next=archive_url %}
+  {% else %}
+    {% include "components/card_delete_dialog.html" %}
+  {% endif %}
 {% endblock %}

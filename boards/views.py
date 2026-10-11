@@ -3,6 +3,7 @@ import copy
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.db import DatabaseError, transaction
 from django.db.models import Count, Prefetch, Q, Sum
 from django.http import Http404, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
@@ -145,7 +146,17 @@ def card_edit(request, board_pk, pk):
     if request.method == "POST" and form.is_valid():
         # Only the form's own fields. A full save would write back the Stage
         # and position as loaded, undoing a move made while this was open.
-        form.instance.save(update_fields=[*form.Meta.fields, "updated_at"])
+        try:
+            # Its own savepoint, so a failure leaves the request's
+            # transaction usable for the check below.
+            with transaction.atomic():
+                form.instance.save(update_fields=[*form.Meta.fields, "updated_at"])
+        except DatabaseError:
+            # Django's answer when the row to update is gone: deleted while
+            # this edit was open.
+            if Card.objects.filter(pk=card.pk).exists():
+                raise
+            raise Http404("That Card has just been deleted.")
         return redirect("card_detail", board_pk=board.pk, pk=card.pk)
 
     return render(
@@ -198,6 +209,8 @@ def card_archive(request, board_pk, pk):
         card.archive()
     except Stage.DoesNotExist:
         raise Http404("That Card's Stage has just been deleted.")
+    except Card.DoesNotExist:
+        raise Http404("That Card has just been deleted.")
     messages.success(request, f"Archived {card.title}.")
     return back_to(request, reverse("board_detail", args=[board.pk]))
 
@@ -206,8 +219,20 @@ def card_archive(request, board_pk, pk):
 @login_required
 def card_restore(request, board_pk, pk):
     board, card = get_card(request, board_pk, pk)
-    card.restore()
+    try:
+        card.restore()
+    except Card.DoesNotExist:
+        raise Http404("That Card has just been deleted.")
     messages.success(request, f"Restored {card.title} to {card.stage.name}.")
+    return back_to(request, reverse("board_detail", args=[board.pk]))
+
+
+@require_POST
+@login_required
+def card_delete(request, board_pk, pk):
+    board, card = get_card(request, board_pk, pk)
+    card.delete()
+    messages.success(request, f"Deleted {card.title}.")
     return back_to(request, reverse("board_detail", args=[board.pk]))
 
 
@@ -291,6 +316,31 @@ def stage_delete(request, board_pk, pk):
     except ValidationError as error:
         return render_stages(request, board, failed=stage, refusal=error.message)
     return redirect("stage_list", board_pk=board.pk)
+
+
+@require_POST
+@login_required
+def stage_archive_cards(request, board_pk, pk):
+    board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
+    stage = get_object_or_404(board.stages, pk=pk)
+    try:
+        expected = int(request.POST.get("expected", ""))
+    except ValueError:
+        expected = 0
+    if expected < 1:
+        return HttpResponseBadRequest("Expected must be the number of Cards confirmed.")
+    try:
+        archived = stage.archive_cards(expected)
+    except ValidationError as error:
+        messages.error(request, error.message)
+    except Stage.DoesNotExist:
+        raise Http404("That Stage has just been deleted.")
+    else:
+        messages.success(
+            request,
+            f"Archived {archived} Card{'s' if archived != 1 else ''} from {stage.name}.",
+        )
+    return redirect("board_detail", pk=board.pk)
 
 
 @require_POST

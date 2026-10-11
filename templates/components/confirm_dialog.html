@@ -1,0 +1,21 @@
+{% comment %}
+  A confirmation before an action that is hard to undo. Any button with
+  `commandfor` set to this `id` (and `command="show-modal"`, button.html's
+  default) opens it, with no JavaScript; Cancel and Escape close it.
+
+  Needs `id`, `question`, `action` (the URL it posts to) and `confirm_label`.
+  Optional: `note`, a line under the question; `variant`, the confirm
+  button's (primary by default); `next`, the page to return to; `expected`,
+  posted as is. Never put it inside another form.
+{% endcomment %}
+<dialog id="{{ id }}" aria-labelledby="{{ id }}-question" class="m-auto w-full max-w-md cursor-auto rounded-xl border border-border bg-surface p-6 text-left text-text shadow-lg backdrop:bg-scrim">
+  <h2 id="{{ id }}-question" class="text-lg font-semibold break-words">{{ question }}</h2>
+  {% if note %}<p class="mt-2 text-sm text-text-muted">{{ note }}</p>{% endif %}
+  <form method="post" action="{{ action }}" class="mt-6 flex justify-end gap-2">
+    {% csrf_token %}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+    {% if expected %}<input type="hidden" name="expected" value="{{ expected }}">{% endif %}
+    {% include "components/button.html" with label="Cancel" type="button" commandfor=id command="close" variant="secondary" %}
+    {% include "components/button.html" with label=confirm_label type="submit" variant=variant %}
+  </form>
+</dialog>

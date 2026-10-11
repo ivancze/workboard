@@ -4,9 +4,12 @@
   `stages`, and the add-Card `form`.
 {% endcomment %}
 <section class="flex min-h-96 w-80 shrink-0 flex-col gap-3 rounded-xl bg-sunken p-3">
-  <div class="px-1">
-    <h2 class="font-condensed text-2xl tracking-wide">{{ stage.name }}</h2>
-    {% include "components/effort_total.html" with total=stage.effort_total unestimated=stage.unestimated %}
+  <div class="flex items-start gap-2 px-1">
+    <div class="min-w-0 flex-1">
+      <h2 class="font-condensed text-2xl tracking-wide">{{ stage.name }}</h2>
+      {% include "components/effort_total.html" with total=stage.effort_total unestimated=stage.unestimated %}
+    </div>
+    {% include "components/stage_menu.html" %}
   </div>
   {% if not stage.cards.all %}
     <p class="px-1 text-sm text-text-muted">No cards yet.</p>

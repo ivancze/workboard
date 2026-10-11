@@ -6,14 +6,17 @@
   two clicks to move a Card, and no JavaScript. With only one Stage, Move is
   shown but disabled, so the menu's contents don't shift as Stages come and
   go. Archive takes the Card off the board, back to this board page.
+  Delete is last and quiet, so the destructive path is never the handy one,
+  and it asks first in a dialog that names the Card. The dialog sits outside
+  the menu, which hides its contents when closed.
   static/js/board.js closes an open menu on a click elsewhere or Escape, and
   pins it to the window so the Stage row's scrolling can't clip it.
 {% endcomment %}
-<details data-card-menu class="absolute top-2 right-2">
+<details data-menu class="absolute top-2 right-2">
   <summary aria-label="Actions for {{ card.title }}" class="flex size-8 cursor-pointer list-none items-center justify-center rounded-md text-text-muted transition-colors hover:bg-sunken hover:text-text">
     <svg class="size-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
   </summary>
-  <div data-card-menu-panel class="absolute right-0 z-10 mt-1 w-52 rounded-lg border border-border bg-surface p-1 shadow-lg">
+  <div data-menu-panel class="absolute right-0 z-10 mt-1 w-52 rounded-lg border border-border bg-surface p-1 shadow-lg">
     {% if stages|length > 1 %}
       <form method="post" action="{% url 'card_move' board.pk card.pk %}" aria-label="Move {{ card.title }} to">
         {% csrf_token %}
@@ -33,5 +36,7 @@
       {% csrf_token %}
       <button type="submit" aria-label="Archive {{ card.title }}" class="block w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-sunken">Archive</button>
     </form>
+    <button type="button" commandfor="delete-card-{{ card.pk }}" command="show-modal" aria-label="Delete {{ card.title }}" class="block w-full rounded-md px-2 py-1.5 text-left text-xs text-text-muted transition-colors hover:bg-sunken hover:text-danger">Delete…</button>
   </div>
 </details>
+{% include "components/card_delete_dialog.html" %}

@@ -117,13 +117,23 @@ is empty, so a Card can be dropped into it. While dragging, the spot where the
 Card will land is an empty dashed outline: Sortable's placeholder, given the
 `card-placeholder` class, styled in `assets/app.css`.
 
-**The Card menu** (`components/card_menu.html`) is a `<details>` dropdown, so
-it works without JavaScript. `board.js` closes it on a click elsewhere or
-Escape, and pins an open menu to the window (`position: fixed`), below its ⋯
-button or above it when there is no room below. The Stage row scrolls
-sideways, and that also clips anything overflowing its bottom, so a menu left
-inside it would be cut off on the lowest Card. Scrolling closes an open menu
-rather than leaving it behind.
+**The ⋯ menus** on each Card (`components/card_menu.html`) and each Stage
+(`components/stage_menu.html`) are `<details data-menu>` dropdowns, so they
+work without JavaScript. `board.js` closes one on a click elsewhere or Escape,
+and pins an open menu to the window (`position: fixed`), below its ⋯ button
+or above it when there is no room below. The Stage row scrolls sideways, and
+that also clips anything overflowing its bottom, so a menu left inside it
+would be cut off on the lowest Card. Scrolling closes an open menu rather than
+leaving it behind, and so does choosing an item that opens a dialog.
+
+**Confirmation dialogs** (`components/confirm_dialog.html`) are native
+`<dialog>` elements, opened by a button with `commandfor="<dialog id>"` and
+`command="show-modal"`, so they need no JavaScript: Cancel and Escape close
+them. Invoker commands need Chrome 135, Firefox 144 or Safari 26.2; an older
+browser ignores the button. Keep a dialog outside any `<details>` menu, which
+hides its contents when closed, and outside any other form. The confirm
+button takes a `variant`: `danger` (with the `danger`, `on-danger` and
+`danger-hover` tokens) for what can't be undone.
 
 **Landing and confetti.** A Card arriving from another Stage carries
 `data-landed`, and the `animate-land` animation (defined in `@theme`) plays

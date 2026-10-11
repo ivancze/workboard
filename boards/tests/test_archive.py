@@ -226,6 +226,130 @@ class ArchivingACardTests(TestCase):
                 Card.objects.filter(pk=card.pk).update(archived_at=timezone.now())
 
 
+class ArchivingAStageTests(TestCase):
+    def setUp(self):
+        self.ada = a_user()
+        self.board = Board.objects.create_with_owner(name="Housework", owner=self.ada)
+        self.to_do, self.in_progress, self.done = self.board.stages.all()
+        self.client.force_login(self.ada)
+        self.board_url = reverse("board_detail", args=[self.board.pk])
+
+    def archive_stage(self, stage, expected):
+        return self.client.post(
+            reverse("stage_archive_cards", args=[self.board.pk, stage.pk]),
+            {"expected": expected},
+        )
+
+    def page(self):
+        return " ".join(self.client.get(self.board_url).content.decode().split())
+
+    def test_a_stage_with_cards_offers_archive_all_confirmed_with_the_count(self):
+        for title in ["One", "Two", "Three"]:
+            a_card(self.done, title)
+        a_card(self.to_do, "Single")
+
+        content = self.page()
+
+        self.assertIn(f'commandfor="archive-stage-{self.done.pk}"', content)
+        self.assertIn("Archive 3 Cards from Done?</h2>", content)
+        self.assertIn("Archive 1 Card from To Do?</h2>", content)
+        action = reverse("stage_archive_cards", args=[self.board.pk, self.done.pk])
+        self.assertRegex(
+            content, rf'<form method="post" action="{action}"[^>]*>.*?name="expected" value="3"'
+        )
+
+    def test_a_stage_with_no_cards_does_not_offer_it(self):
+        content = self.page()
+
+        self.assertNotIn(f'commandfor="archive-stage-{self.done.pk}"', content)
+        self.assertNotIn("stages/{self.done.pk}/archive/", content)
+        self.assertIn("Archive all Cards <span class=\"text-xs\">No Cards</span>", content)
+
+    def test_archiving_a_stage_archives_every_card_it_holds_and_nothing_else(self):
+        cards = [a_card(self.done, title) for title in ["One", "Two", "Three"]]
+        a_card(self.to_do, "Elsewhere")
+
+        response = self.archive_stage(self.done, 3)
+
+        self.assertRedirects(response, self.board_url, fetch_redirect_response=False)
+        self.assertEqual(self.done.cards.count(), 0)
+        self.assertEqual(card_order(self.to_do), [("Elsewhere", 0)])
+        for card in cards:
+            card.refresh_from_db()
+            self.assertEqual((card.archived_from, card.stage, card.position), (self.done, None, None))
+        self.assertIn("Archived 3 Cards from Done.", self.page())
+
+    def test_the_emptied_stage_can_be_deleted_at_once(self):
+        a_card(self.done, "One")
+        self.archive_stage(self.done, 1)
+
+        self.done.delete_if_empty()
+
+        self.assertFalse(Stage.objects.filter(pk=self.done.pk).exists())
+
+    def test_each_card_appears_in_the_archive_and_restores_to_the_stage(self):
+        first, second = a_card(self.done, "One"), a_card(self.done, "Two")
+        self.archive_stage(self.done, 2)
+
+        archive = self.client.get(reverse("board_archive", args=[self.board.pk]))
+        self.assertContains(archive, "One")
+        self.assertContains(archive, "Two")
+        second.restore()
+        first.restore()
+
+        self.assertEqual(card_order(self.done), [("Two", 0), ("One", 1)])
+
+    def test_a_count_that_changed_since_it_was_confirmed_archives_nothing(self):
+        for title in ["One", "Two", "Three"]:
+            a_card(self.done, title)
+
+        response = self.archive_stage(self.done, 2)
+
+        self.assertRedirects(response, self.board_url, fetch_redirect_response=False)
+        self.assertEqual(self.done.cards.count(), 3)
+        self.assertIn("Done now holds 3 Cards, not 2. Nothing was archived.", self.page())
+
+    def test_a_missing_or_meaningless_count_is_refused(self):
+        a_card(self.done, "One")
+
+        for expected in ["", "zero", "0", "-1"]:
+            with self.subTest(expected=expected):
+                self.assertEqual(self.archive_stage(self.done, expected).status_code, 400)
+        self.assertEqual(self.done.cards.count(), 1)
+
+    def test_it_needs_a_post_and_a_stage_on_this_board(self):
+        other = Board.objects.create_with_owner(name="Elsewhere", owner=self.ada)
+        a_card(other.stages.first(), "Not here")
+
+        get = self.client.get(reverse("stage_archive_cards", args=[self.board.pk, self.done.pk]))
+        wrong_board = self.client.post(
+            reverse("stage_archive_cards", args=[self.board.pk, other.stages.first().pk]),
+            {"expected": 1},
+        )
+
+        self.assertEqual((get.status_code, wrong_board.status_code), (405, 404))
+        self.assertEqual(other.stages.first().cards.count(), 1)
+
+    def test_a_card_added_just_before_the_lock_refuses_the_whole_action(self):
+        a_card(self.done, "One")
+        real = models.lock_stages
+        pending = [lambda: a_card(self.done, "Added meanwhile")]
+
+        def lock_stages(*ids):
+            if pending:
+                pending.pop()()
+            return real(*ids)
+
+        with mock.patch.object(models, "lock_stages", lock_stages):
+            response = self.archive_stage(self.done, 1)
+
+        # The staged addition shares the refused transaction, so it is rolled
+        # back with it: what matters is that "One" was not archived.
+        self.assertRedirects(response, self.board_url, fetch_redirect_response=False)
+        self.assertIn("Done now holds 2 Cards, not 1. Nothing was archived.", self.page())
+        self.assertEqual(card_order(self.done), [("One", 0)])
+
+
 class ArchiveAccessTests(TestCase):
     def setUp(self):
         self.ada = a_user()
@@ -250,6 +374,16 @@ class ArchiveAccessTests(TestCase):
         )
         self.card.refresh_from_db()
         self.assertIsNotNone(self.card.archived_at)
+
+    def test_a_non_member_cannot_archive_a_stage(self):
+        stage = self.board.stages.first()
+
+        response = self.client.post(
+            reverse("stage_archive_cards", args=[self.board.pk, stage.pk]), {"expected": 1}
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(stage.cards.count(), 1)
 
     def test_a_card_is_not_reachable_through_another_board(self):
         """Even one the person is a Member of."""
@@ -430,4 +564,31 @@ class ConcurrentArchiveTests(TransactionTestCase):
                 # The delete won: the Card went to the first Stage instead.
                 self.assertIsNone(delete)
                 self.assertEqual(card.stage, self.to_do)
+            Card.objects.all().delete()
+
+
+    def test_a_stage_archived_while_cards_arrive_archives_all_or_nothing(self):
+        for _ in range(5):
+            for i in range(3):
+                a_card(self.done, f"Card {i}")
+            mover = a_card(self.to_do, "Mover")
+
+            archive, add, move = self.run_together(
+                lambda: Stage.objects.get(pk=self.done.pk).archive_cards(3),
+                lambda: a_card(self.done, "New"),
+                lambda: Card.objects.get(pk=mover.pk).move_to(self.done),
+            )
+
+            self.assertEqual((add, move), (None, None))
+            on_board = self.done.cards.count()
+            if archive is None:
+                # Archived first: the two arrivals are all that's left.
+                self.assertEqual(on_board, 2)
+                self.assertEqual(Card.objects.filter(archived_from=self.done).count(), 3)
+            else:
+                # An arrival got in first: the count no longer matched.
+                self.assertIn("Nothing was archived", str(archive))
+                self.assertGreaterEqual(on_board, 4)
+                self.assertFalse(Card.objects.filter(archived_at__isnull=False).exists())
+            self.assertContiguous(self.done)
             Card.objects.all().delete()

@@ -5,7 +5,7 @@
 {% block content %}
   <a href="{% url 'board_detail' board.pk %}" class="mb-2 inline-block text-sm text-text-muted hover:text-text">← {{ board.name }}</a>
   {% include "components/page_heading.html" with text="Archive" %}
-  <p class="mt-1 text-sm text-text-muted">Cards taken off this board, most recently archived first. Each stays editable, and Restore puts it back at the bottom of the Stage it left.</p>
+  <p class="mt-1 text-sm text-text-muted">Cards taken off this board, most recently archived first. Each stays editable, and Restore puts it back at the bottom of the Stage it left. Delete is for mistakes, and can't be undone.</p>
 
   {% if cards %}
     <ul class="mt-6 flex flex-col gap-3">
@@ -18,11 +18,17 @@
               {% if card.archived_from %}{{ card.archived_from.name }}{% else %}a deleted Stage, so restores to {{ first_stage.name }}{% endif %}
             </p>
           </div>
-          <form method="post" action="{% url 'card_restore' board.pk card.pk %}" class="shrink-0">
-            {% csrf_token %}
-            <input type="hidden" name="next" value="{{ request.path }}">
-            {% include "components/button.html" with label="Restore" aria_label="Restore "|add:card.title variant="secondary" %}
-          </form>
+          <div class="flex shrink-0 items-center gap-1">
+            {% with pk=card.pk|stringformat:"d" %}{% with delete_id="delete-card-"|add:pk %}
+              {% include "components/button.html" with label="Delete…" type="button" commandfor=delete_id aria_label="Delete "|add:card.title variant="ghost" %}
+            {% endwith %}{% endwith %}
+            <form method="post" action="{% url 'card_restore' board.pk card.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.path }}">
+              {% include "components/button.html" with label="Restore" aria_label="Restore "|add:card.title variant="secondary" %}
+            </form>
+          </div>
+          {% include "components/card_delete_dialog.html" with next=request.path %}
         </li>
       {% endfor %}
     </ul>

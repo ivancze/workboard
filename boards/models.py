@@ -187,6 +187,33 @@ class Stage(models.Model):
                 raise ValidationError("A board needs at least one Stage.")
             self.delete()
 
+    def archive_cards(self, expected):
+        """Archive every Card in this Stage, if it holds the `expected` number:
+        the count the person confirmed. A Card added or moved in since then
+        refuses the whole action, so nothing is archived that they didn't
+        agree to. Returns how many were archived.
+
+        One update under the Stage lock. The Stage ends empty, so there is no
+        gap to close.
+        """
+        with transaction.atomic():
+            lock_stages(self.pk)
+            held = self.cards.count()
+            if held != expected:
+                raise ValidationError(
+                    f"{self.name} now holds {held} Card{'s' if held != 1 else ''}, "
+                    f"not {expected}. Nothing was archived."
+                )
+            now = timezone.now()
+            self.cards.update(
+                stage=None,
+                position=None,
+                archived_at=now,
+                archived_from=self,
+                updated_at=now,
+            )
+            return held
+
 
 def lock_stages(*stage_ids):
     """Lock Stages for the rest of the transaction, so their Card order can be
@@ -432,6 +459,37 @@ class Card(models.Model):
                 break
 
         self.refresh_from_db(fields=["stage", "position", "archived_at", "archived_from"])
+
+    def delete(self, *args, **kwargs):
+        """Destroy this Card for good. On the board, the Cards below it move
+        up to close the gap, under the Stage lock as for a move. An archived
+        Card is outside Card order, so it needs no lock. Deleting a Card that
+        is already gone does nothing.
+        """
+        while True:
+            with transaction.atomic():
+                origin = Card.objects.filter(pk=self.pk).values_list("stage_id", flat=True).first()
+                if origin is None:
+                    # Archived, or gone. Checked again as the row is deleted:
+                    # a Card restored meanwhile is skipped and taken again from
+                    # the top, so its Stage isn't left with a gap.
+                    deleted, _ = Card.objects.filter(pk=self.pk, stage__isnull=True).delete()
+                    if deleted or not Card.objects.filter(pk=self.pk).exists():
+                        break
+                    continue
+                lock_stages(origin)
+                position = (
+                    Card.objects.filter(pk=self.pk, stage_id=origin)
+                    .values_list("position", flat=True)
+                    .first()
+                )
+                if position is None:
+                    continue  # moved, archived or deleted before the lock; start over
+                Card.objects.filter(pk=self.pk).delete()
+                Card.objects.filter(stage_id=origin, position__gt=position).update(
+                    position=F("position") - 1
+                )
+                break
 
     @property
     def is_overdue(self):

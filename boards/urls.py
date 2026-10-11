@@ -47,5 +47,15 @@ urlpatterns = [
         views.card_restore,
         name="card_restore",
     ),
+    path(
+        "boards/<int:board_pk>/cards/<int:pk>/delete/",
+        views.card_delete,
+        name="card_delete",
+    ),
+    path(
+        "boards/<int:board_pk>/stages/<int:pk>/archive/",
+        views.stage_archive_cards,
+        name="stage_archive_cards",
+    ),
     path("boards/<int:board_pk>/archive/", views.board_archive, name="board_archive"),
 ]

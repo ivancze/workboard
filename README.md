@@ -40,5 +40,11 @@ board and its totals, but nothing is lost:
 - *Restore* puts it back at the bottom of the Stage it left. If that Stage has
   since been deleted, it goes to the board's first Stage.
 - A Stage holding only archived Cards can be deleted.
+- To clear a whole Stage at once, choose *Archive all Cards* from the ⋯ menu
+  in its header. It asks first, saying how many Cards it will archive.
+
+**Deleting a Card.** *Delete…* is at the bottom of a Card's ⋯ menu, on the
+Card's page and in the archive. It asks first and can't be undone, so it's
+for mistakes. Archive finished work instead.
 
 **Theme.** The button in the header switches between System, Light and Dark.

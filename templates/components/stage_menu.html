@@ -1,0 +1,30 @@
+{% comment %}
+  A Stage's actions, behind a ⋯ button in its header. Needs `board` and
+  `stage`, with its Cards prefetched.
+
+  "Archive all Cards" asks first, stating how many, and posts that count: if
+  the Stage holds a different number by then, nothing is archived. A Stage
+  with no Cards shows the item disabled. Menus behave as in card_menu.html.
+{% endcomment %}
+{% with held=stage.cards.all|length %}
+<details data-menu class="relative shrink-0">
+  <summary aria-label="Actions for {{ stage.name }}" class="flex size-8 cursor-pointer list-none items-center justify-center rounded-md text-text-muted transition-colors hover:bg-surface hover:text-text">
+    <svg class="size-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+  </summary>
+  <div data-menu-panel class="absolute right-0 z-10 mt-1 w-52 rounded-lg border border-border bg-surface p-1 shadow-lg">
+    {% if held %}
+      <button type="button" commandfor="archive-stage-{{ stage.pk }}" command="show-modal" class="block w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-sunken">Archive all Cards</button>
+    {% else %}
+      <button type="button" disabled class="flex w-full cursor-not-allowed items-baseline justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm text-text-muted opacity-60">
+        Archive all Cards <span class="text-xs">No Cards</span>
+      </button>
+    {% endif %}
+  </div>
+</details>
+{% if held %}
+  {% url 'stage_archive_cards' board.pk stage.pk as archive_url %}
+  {% with pk=stage.pk|stringformat:"d" count=held|stringformat:"d" plural=held|pluralize %}{% with dialog_id="archive-stage-"|add:pk question="Archive "|add:count|add:" Card"|add:plural|add:" from "|add:stage.name|add:"?" %}
+    {% include "components/confirm_dialog.html" with id=dialog_id action=archive_url confirm_label="Archive" note="Each can be restored from the board's archive, back to this Stage." expected=held variant="" %}
+  {% endwith %}{% endwith %}
+{% endif %}
+{% endwith %}
