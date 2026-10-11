@@ -19,6 +19,15 @@ class NewCardForm(forms.ModelForm):
         labels = {"title": "Card title"}
 
 
+class MoveCardForm(forms.Form):
+    stage = forms.ModelChoiceField(queryset=None)
+
+    def __init__(self, *args, board, **kwargs):
+        super().__init__(*args, **kwargs)
+        # A Stage of another board is simply not a valid choice.
+        self.fields["stage"].queryset = board.stages.all()
+
+
 class DateInput(forms.DateInput):
     """The browser's date picker. It submits ISO dates, so render them too."""
 

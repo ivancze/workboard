@@ -60,6 +60,14 @@ from a board already scoped that way. Scoping at the query **fails closed**: a
 forgotten check yields a 404 rather than another team's board. See
 [ADR 0003](docs/adr/0003-membership-scoped-queries.md).
 
+## Writing Card order
+
+Anything that adds, moves, archives or deletes a Card rewrites Card order.
+Lock every Stage it touches with `lock_stages` before reading or writing any
+Card: locking a Card first deadlocks against a concurrent move. A deferred
+unique constraint on (Stage, position) catches what the code gets wrong, at
+commit.
+
 ## Settings that look like mistakes
 
 - `HTTPS_ONLY` is its own flag rather than `not DEBUG`, because Django forces

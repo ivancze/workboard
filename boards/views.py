@@ -2,10 +2,11 @@ import copy
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Prefetch, Q, Sum
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_safe
+from django.views.decorators.http import require_POST, require_safe
 
-from .forms import BoardForm, CardForm, NewCardForm
+from .forms import BoardForm, CardForm, MoveCardForm, NewCardForm
 from .models import Board, Card
 
 
@@ -115,9 +116,23 @@ def card_edit(request, board_pk, pk):
     # Card the page names in its heading.
     form = CardForm(request.POST or None, instance=copy.copy(card), board=board)
     if request.method == "POST" and form.is_valid():
-        form.save()
+        # Only the form's own fields. A full save would write back the Stage
+        # and position as loaded, undoing a move made while this was open.
+        form.instance.save(update_fields=[*form.Meta.fields, "updated_at"])
         return redirect("card_detail", board_pk=board.pk, pk=card.pk)
 
     return render(
         request, "boards/card_edit.html", {"board": board, "card": card, "form": form}
     )
+
+
+@require_POST
+@login_required
+def card_move(request, board_pk, pk):
+    board, card = get_card(request, board_pk, pk)
+    form = MoveCardForm(request.POST, board=board)
+    if not form.is_valid():
+        raise Http404("No such Stage on this board.")
+
+    card.move_to(form.cleaned_data["stage"])
+    return redirect("board_detail", pk=board.pk)

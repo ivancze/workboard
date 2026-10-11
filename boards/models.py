@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.validators import MinValueValidator, StepValueValidator
 from django.db import models, transaction
+from django.db.models import F
 from django.utils import timezone
 
 # Every board starts with these, in this order. Boards are expected to diverge
@@ -117,6 +118,21 @@ class Stage(models.Model):
         return self.name
 
 
+def lock_stages(*stage_ids):
+    """Lock Stages for the rest of the transaction, so their Card order can be
+    rewritten without another request interleaving.
+
+    Always locked in id order: two requests locking the same pair can then only
+    queue behind each other, never wait on each other forever.
+    """
+    list(Stage.objects.select_for_update().filter(pk__in=stage_ids).order_by("pk"))
+
+
+def end_of(stage_id):
+    last = Card.objects.filter(stage_id=stage_id).aggregate(last=models.Max("position"))
+    return 0 if last["last"] is None else last["last"] + 1
+
+
 class CardManager(models.Manager):
     def create_at_end(self, *, stage, **fields):
         """Create a Card at the bottom of its Stage's Card order.
@@ -124,9 +140,9 @@ class CardManager(models.Manager):
         A new Card has not been prioritised by anyone yet, so it waits below
         the Cards that have.
         """
-        last = stage.cards.aggregate(last=models.Max("position"))["last"]
-        position = 0 if last is None else last + 1
-        return self.create(stage=stage, position=position, **fields)
+        with transaction.atomic():
+            lock_stages(stage.pk)
+            return self.create(stage=stage, position=end_of(stage.pk), **fields)
 
 
 class Card(models.Model):
@@ -174,9 +190,49 @@ class Card(models.Model):
     class Meta:
         # Card order is set by hand and read as priority; `id` only breaks ties.
         ordering = ["position", "id"]
+        constraints = [
+            # The backstop for Card order. Deferred to commit, because closing
+            # a gap shifts positions one row at a time through duplicates.
+            models.UniqueConstraint(
+                fields=["stage", "position"],
+                name="one_card_per_position_per_stage",
+                deferrable=models.Deferrable.DEFERRED,
+            )
+        ]
 
     def __str__(self):
         return self.title
+
+    def move_to(self, stage):
+        """Move this Card to the bottom of another Stage of its board.
+
+        Both Stages' Card order stays contiguous: the old Stage closes the gap,
+        and the new one gains the next position. Every write to Card order
+        holds the lock of each Stage it touches, so these locks alone keep
+        concurrent moves and additions from interleaving.
+        """
+        while True:
+            with transaction.atomic():
+                # Stages are locked before any Card. Locking the Card first
+                # deadlocks: closing the gap rewrites other Cards, which a
+                # concurrent move may hold while it waits for these Stages.
+                origin = Card.objects.values_list("stage_id", flat=True).get(pk=self.pk)
+                if origin == stage.pk:
+                    return
+                lock_stages(origin, stage.pk)
+                card = Card.objects.get(pk=self.pk)
+                if card.stage_id != origin:
+                    continue  # moved by someone else before the lock; start over
+
+                Card.objects.filter(
+                    stage_id=origin, position__gt=card.position
+                ).update(position=F("position") - 1)
+                card.stage = stage
+                card.position = end_of(stage.pk)
+                card.save(update_fields=["stage", "position", "updated_at"])
+                break
+
+        self.stage, self.position = card.stage, card.position
 
     @property
     def is_overdue(self):
