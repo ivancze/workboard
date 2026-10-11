@@ -113,6 +113,107 @@ class MovingACardTests(TestCase):
         self.assertEqual(response.status_code, 405)
 
 
+class DragAndDropTests(TestCase):
+    """A drop sends the Card's new Stage and its position there, from 0."""
+
+    def setUp(self):
+        self.ada = a_user()
+        self.board = Board.objects.create_with_owner(name="Housework", owner=self.ada)
+        self.to_do, self.in_progress, self.done = self.board.stages.all()
+        for title in ["A", "B", "C", "D"]:
+            a_card(self.to_do, title)
+        for title in ["X", "Y"]:
+            a_card(self.done, title)
+        self.client.force_login(self.ada)
+
+    def drop(self, title, stage, position, **headers):
+        card = Card.objects.get(title=title)
+        return self.client.post(
+            reverse("card_move", args=[self.board.pk, card.pk]),
+            {"stage": stage.pk, "position": position},
+            headers=headers,
+        )
+
+    def titles(self, stage):
+        order = card_order(stage)
+        self.assertEqual([p for _, p in order], list(range(len(order))))
+        return [t for t, _ in order]
+
+    def test_dragging_down_within_a_stage(self):
+        self.drop("A", self.to_do, 2)
+
+        self.assertEqual(self.titles(self.to_do), ["B", "C", "A", "D"])
+
+    def test_dragging_up_within_a_stage(self):
+        self.drop("D", self.to_do, 1)
+
+        self.assertEqual(self.titles(self.to_do), ["A", "D", "B", "C"])
+
+    def test_dragging_to_the_top_and_bottom_of_its_stage(self):
+        self.drop("C", self.to_do, 0)
+        self.assertEqual(self.titles(self.to_do), ["C", "A", "B", "D"])
+
+        self.drop("A", self.to_do, 3)
+        self.assertEqual(self.titles(self.to_do), ["C", "B", "D", "A"])
+
+    def test_dropping_where_it_already_is_changes_nothing(self):
+        self.drop("B", self.to_do, 1)
+
+        self.assertEqual(self.titles(self.to_do), ["A", "B", "C", "D"])
+
+    def test_a_card_dropped_into_another_stage_lands_where_it_was_dropped(self):
+        self.drop("B", self.done, 1)
+
+        self.assertEqual(self.titles(self.done), ["X", "B", "Y"])
+        self.assertEqual(self.titles(self.to_do), ["A", "C", "D"])
+
+    def test_a_card_dropped_at_the_top_of_another_stage(self):
+        self.drop("D", self.done, 0)
+
+        self.assertEqual(self.titles(self.done), ["D", "X", "Y"])
+
+    def test_a_card_dropped_into_an_empty_stage(self):
+        self.drop("A", self.in_progress, 0)
+
+        self.assertEqual(self.titles(self.in_progress), ["A"])
+        self.assertEqual(self.titles(self.to_do), ["B", "C", "D"])
+
+    def test_a_position_past_the_end_means_the_end(self):
+        self.drop("A", self.to_do, 99)
+        self.drop("B", self.done, 99)
+
+        self.assertEqual(self.titles(self.to_do), ["C", "D", "A"])
+        self.assertEqual(self.titles(self.done), ["X", "Y", "B"])
+
+    def test_a_negative_or_malformed_position_is_refused(self):
+        for position in ["-1", "first", "1.5"]:
+            with self.subTest(position=position):
+                self.assertEqual(self.drop("A", self.done, position).status_code, 400)
+
+        self.assertEqual(self.titles(self.to_do), ["A", "B", "C", "D"])
+
+    def test_a_drag_gets_the_fresh_board_back_instead_of_a_redirect(self):
+        response = self.drop("A", self.done, 0, HX_Request="true")
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertTrue(content.lstrip().startswith('<div id="board"'))
+        self.assertNotIn("<html", content)
+        # Totals come back too: Done had two Unestimated Cards and gained one.
+        self.assertRegex(content, r"Done</h2>\s*<p[^>]*>Effort <span[^>]*>0</span> · 3 unestimated")
+        self.assertLess(content.index(">A<"), content.index(">X<"))
+
+    def test_the_board_page_loads_drag_and_drop_and_sends_csrf_with_htmx(self):
+        content = self.client.get(
+            reverse("board_detail", args=[self.board.pk])
+        ).content.decode()
+
+        for script in ["vendor/htmx.min.js", "vendor/Sortable.min.js", "js/board.js"]:
+            self.assertIn(f'src="/static/{script}"', content)
+        self.assertIn("hx-headers='{\"X-CSRFToken\": ", content)
+        self.assertEqual(content.count("data-card-list"), 3)  # empty Stages too
+
+
 class MoveAccessTests(TestCase):
     def setUp(self):
         self.ada = a_user()
@@ -241,6 +342,20 @@ class ConcurrentCardOrderTests(TransactionTestCase):
 
         self.assertContiguous(self.done, 6)
         self.assertContiguous(self.to_do, 0)
+
+    def test_cards_reordered_at_the_same_moment_stay_contiguous(self):
+        cards = [a_card(self.to_do, f"Card {i}") for i in range(6)]
+
+        self.run_together(
+            *[lambda card=card, i=i: card.move_to(self.to_do, 5 - i) for i, card in enumerate(cards)],
+            *[lambda card=card: card.move_to(self.done, 0) for card in cards[:2]],
+        )
+
+        self.assertEqual(
+            len(self.to_do.cards.all()) + len(self.done.cards.all()), 6
+        )
+        self.assertContiguous(self.to_do, self.to_do.cards.count())
+        self.assertContiguous(self.done, self.done.cards.count())
 
     def test_the_database_refuses_two_cards_in_one_position(self):
         """The backstop if code ever gets Card order wrong: checked at commit."""

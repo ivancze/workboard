@@ -2,7 +2,7 @@ import copy
 
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Prefetch, Q, Sum
-from django.http import Http404
+from django.http import Http404, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST, require_safe
 
@@ -41,12 +41,9 @@ def create_board(request):
     return redirect("board_detail", pk=board.pk)
 
 
-@login_required
-def board_detail(request, pk):
-    # Scoped by membership, so a non-member gets a 404 rather than a 403: the
-    # response does not reveal whether the board exists at all.
-    board = get_object_or_404(Board.objects.for_user(request.user), pk=pk)
-
+def board_context(board):
+    """Everything the board's Stages and totals need, for the page and for
+    the fragment that replaces them after a drag."""
     # Effort totals are summed by the database, so a large board costs the
     # same two queries as a small one. Each total travels with the count of
     # Unestimated Cards it could not include.
@@ -61,18 +58,22 @@ def board_detail(request, pk):
         unestimated=Count("pk", filter=Q(effort__isnull=True)),
     )
 
-    return render(
-        request,
-        "boards/board_detail.html",
-        {
-            "board": board,
-            "stages": stages,
-            "totals": totals,
-            # No auto ids: the form repeats once per Stage, and its label
-            # wraps its input instead.
-            "form": NewCardForm(auto_id=False),
-        },
-    )
+    return {
+        "board": board,
+        "stages": stages,
+        "totals": totals,
+        # No auto ids: the form repeats once per Stage, and its label wraps its
+        # input instead.
+        "form": NewCardForm(auto_id=False),
+    }
+
+
+@login_required
+def board_detail(request, pk):
+    # Scoped by membership, so a non-member gets a 404 rather than a 403: the
+    # response does not reveal whether the board exists at all.
+    board = get_object_or_404(Board.objects.for_user(request.user), pk=pk)
+    return render(request, "boards/board_detail.html", board_context(board))
 
 
 @login_required
@@ -131,8 +132,14 @@ def card_edit(request, board_pk, pk):
 def card_move(request, board_pk, pk):
     board, card = get_card(request, board_pk, pk)
     form = MoveCardForm(request.POST, board=board)
-    if not form.is_valid():
+    if "stage" in form.errors:
         raise Http404("No such Stage on this board.")
+    if not form.is_valid():
+        return HttpResponseBadRequest("Position must be a whole number from 0.")
 
-    card.move_to(form.cleaned_data["stage"])
+    card.move_to(form.cleaned_data["stage"], form.cleaned_data["position"])
+    # A drag sends this with htmx and gets the board back, fresh from the
+    # database, to replace what the page shows. A plain form gets a redirect.
+    if request.headers.get("HX-Request"):
+        return render(request, "components/board.html", board_context(board))
     return redirect("board_detail", pk=board.pk)

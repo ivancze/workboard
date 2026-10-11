@@ -1,3 +1,4 @@
+import hashlib
 import re
 from pathlib import Path
 
@@ -167,3 +168,20 @@ class ContrastTests(TestCase):
 
     def test_controls_and_focus_meet_aa(self):
         self.check(NON_TEXT_PAIRS, 3)
+
+
+# Vendored scripts, pinned by checksum. To upgrade, download the new release,
+# cross-check it against a second CDN, and update the version and hash here and
+# in docs/frontend.md.
+VENDORED = {
+    "htmx.min.js": "d6fdc75f204e6bdefa99b69bf1e6d4ac69b8a364f77929f45c13476b4000f717",
+    "Sortable.min.js": "bf4241bc73fef7f11c59a283a69fe8051cdd31c6d8ff5a2b9ba219e7831fcf76",
+}
+
+
+class VendoredScriptTests(TestCase):
+    def test_vendored_scripts_are_the_pinned_releases(self):
+        for name, expected in VENDORED.items():
+            with self.subTest(name=name):
+                content = Path(settings.BASE_DIR, "static", "vendor", name).read_bytes()
+                self.assertEqual(hashlib.sha256(content).hexdigest(), expected)

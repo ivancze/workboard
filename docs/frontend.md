@@ -86,3 +86,31 @@ stylesheet loads, so the first paint is already correct.
 While judging the themes, turn off dark-mode browser extensions for localhost.
 Dark Reader, for one, forces `color-scheme: dark` and repaints the page, which
 makes the app's own colours impossible to see.
+
+## Scripts
+
+Pages work without JavaScript; scripts only make them quicker to use. Every
+page loads htmx from `base.html`, which sends Django's CSRF token as a header
+through `hx-headers` on `<body>`. A page adds its own scripts in
+`{% block scripts %}`.
+
+**Vendored, not fetched.** Third-party scripts live in `static/vendor/`, served
+by the app rather than from a CDN at runtime:
+
+| File | Version | SHA-256 |
+|---|---|---|
+| `htmx.min.js` | htmx 2.0.11 | `d6fdc75f204e6bdefa99b69bf1e6d4ac69b8a364f77929f45c13476b4000f717` |
+| `Sortable.min.js` | SortableJS 1.15.7 | `bf4241bc73fef7f11c59a283a69fe8051cdd31c6d8ff5a2b9ba219e7831fcf76` |
+
+A test checks both hashes. To upgrade, download the new release from
+jsDelivr, check that unpkg serves identical bytes, and update this table and
+`VENDORED` in `config/tests/test_design_system.py` together.
+
+**Drag and drop** (`static/js/board.js`) posts each drop to the same move
+endpoint as the Move buttons, with the Card's new Stage and position. The
+server answers with `components/board.html`, the board's totals and Stages
+fresh from the database, and htmx swaps it in. The page therefore always shows
+where the server actually put the Card. A failed save fetches the board again
+for the same reason. Every Stage keeps its `<ol data-card-list>` even when it
+is empty, so a Card can be dropped into it.
+

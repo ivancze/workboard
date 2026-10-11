@@ -8,15 +8,15 @@
     <h2 class="font-condensed text-2xl tracking-wide">{{ stage.name }}</h2>
     {% include "components/effort_total.html" with total=stage.effort_total unestimated=stage.unestimated %}
   </div>
-  {% if stage.cards.all %}
-    <ol class="flex flex-col gap-2">
-      {% for card in stage.cards.all %}
-        {% include "components/card_tile.html" %}
-      {% endfor %}
-    </ol>
-  {% else %}
+  {% if not stage.cards.all %}
     <p class="px-1 text-sm text-text-muted">No cards yet.</p>
   {% endif %}
+  {# Always present, even empty, so a Card can be dropped into an empty Stage. #}
+  <ol data-card-list data-stage="{{ stage.pk }}" class="flex min-h-4 flex-col gap-2">
+    {% for card in stage.cards.all %}
+      {% include "components/card_tile.html" %}
+    {% endfor %}
+  </ol>
   <form method="post" action="{% url 'card_create' board.pk stage.pk %}" class="flex gap-2">
     {% csrf_token %}
     <label class="min-w-0 flex-1">

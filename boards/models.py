@@ -203,13 +203,17 @@ class Card(models.Model):
     def __str__(self):
         return self.title
 
-    def move_to(self, stage):
-        """Move this Card to the bottom of another Stage of its board.
+    def move_to(self, stage, position=None):
+        """Move this Card to `position` in `stage`, which may be its own Stage.
 
-        Both Stages' Card order stays contiguous: the old Stage closes the gap,
-        and the new one gains the next position. Every write to Card order
-        holds the lock of each Stage it touches, so these locks alone keep
-        concurrent moves and additions from interleaving.
+        Without a position it goes to the bottom of another Stage, and stays
+        put in its own. A position past either end is taken as that end. Card
+        order stays contiguous in every Stage touched: the Cards between the
+        old place and the new shift by one to make room or close the gap.
+
+        Every write to Card order holds the lock of each Stage it touches, so
+        these locks alone keep concurrent moves and additions from
+        interleaving.
         """
         while True:
             with transaction.atomic():
@@ -217,18 +221,34 @@ class Card(models.Model):
                 # deadlocks: closing the gap rewrites other Cards, which a
                 # concurrent move may hold while it waits for these Stages.
                 origin = Card.objects.values_list("stage_id", flat=True).get(pk=self.pk)
-                if origin == stage.pk:
+                if origin == stage.pk and position is None:
                     return
                 lock_stages(origin, stage.pk)
                 card = Card.objects.get(pk=self.pk)
                 if card.stage_id != origin:
                     continue  # moved by someone else before the lock; start over
 
-                Card.objects.filter(
-                    stage_id=origin, position__gt=card.position
-                ).update(position=F("position") - 1)
+                siblings = Card.objects.filter(stage_id=stage.pk).exclude(pk=card.pk)
+                if origin == stage.pk:
+                    target = min(position, end_of(stage.pk) - 1)
+                    if target > card.position:
+                        siblings.filter(
+                            position__gt=card.position, position__lte=target
+                        ).update(position=F("position") - 1)
+                    elif target < card.position:
+                        siblings.filter(
+                            position__gte=target, position__lt=card.position
+                        ).update(position=F("position") + 1)
+                else:
+                    Card.objects.filter(
+                        stage_id=origin, position__gt=card.position
+                    ).update(position=F("position") - 1)
+                    end = end_of(stage.pk)
+                    target = end if position is None else min(position, end)
+                    siblings.filter(position__gte=target).update(position=F("position") + 1)
+
                 card.stage = stage
-                card.position = end_of(stage.pk)
+                card.position = target
                 card.save(update_fields=["stage", "position", "updated_at"])
                 break
 

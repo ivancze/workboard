@@ -21,6 +21,9 @@ class NewCardForm(forms.ModelForm):
 
 class MoveCardForm(forms.Form):
     stage = forms.ModelChoiceField(queryset=None)
+    # Where in the Stage, counting from 0. Left out by the Move buttons, which
+    # send a Card to the bottom; sent by drag and drop.
+    position = forms.IntegerField(min_value=0, required=False)
 
     def __init__(self, *args, board, **kwargs):
         super().__init__(*args, **kwargs)

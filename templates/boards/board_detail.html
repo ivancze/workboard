@@ -1,19 +1,15 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}{{ board.name }} · Workboard{% endblock %}
 {% block width %}max-w-none{% endblock %}
+{% block scripts %}
+  <script src="{% static 'vendor/Sortable.min.js' %}" defer></script>
+  <script src="{% static 'js/board.js' %}" defer></script>
+{% endblock %}
 
 {% block content %}
   <a href="{% url 'home' %}" class="mb-2 inline-block text-sm text-text-muted hover:text-text">← Your boards</a>
   {% include "components/page_heading.html" with text=board.name %}
-  <div class="mt-2">
-    {% include "components/effort_total.html" with total=totals.effort_total unestimated=totals.unestimated %}
-  </div>
-
-  {# Stages scroll sideways rather than wrapping, so a narrow screen stays usable. #}
-  <div class="mt-6 flex items-start gap-4 overflow-x-auto pb-4">
-    {% for stage in stages %}
-      {% include "components/stage.html" %}
-    {% endfor %}
-  </div>
+  {% include "components/board.html" %}
 {% endblock %}

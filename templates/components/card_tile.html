@@ -7,7 +7,7 @@
   Move offers one button per other Stage, each submitting the form by itself:
   two clicks to move a Card, and no JavaScript.
 {% endcomment %}
-<li class="rounded-lg border {% if card.is_overdue %}border-danger{% else %}border-border{% endif %} bg-surface shadow-sm transition-colors hover:border-accent">
+<li data-move-url="{% url 'card_move' board.pk card.pk %}" class="cursor-grab rounded-lg border {% if card.is_overdue %}border-danger{% else %}border-border{% endif %} bg-surface shadow-sm transition-colors hover:border-accent">
   <a href="{% url 'card_detail' board.pk card.pk %}" class="block p-3 pb-2">
     <span class="block font-semibold">{{ card.title }}</span>
     <span class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-muted">

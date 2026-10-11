@@ -1,0 +1,17 @@
+{% comment %}
+  The board's totals and its Stages: everything a move can change. A drag
+  replaces this whole element with a fresh copy from the server, so it needs
+  the context from `board_context`.
+{% endcomment %}
+<div id="board" data-board-url="{% url 'board_detail' board.pk %}">
+  <div class="mt-2">
+    {% include "components/effort_total.html" with total=totals.effort_total unestimated=totals.unestimated %}
+  </div>
+
+  {# Stages scroll sideways rather than wrapping, so a narrow screen stays usable. #}
+  <div class="mt-6 flex items-start gap-4 overflow-x-auto pb-4">
+    {% for stage in stages %}
+      {% include "components/stage.html" %}
+    {% endfor %}
+  </div>
+</div>

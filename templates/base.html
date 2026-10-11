@@ -20,8 +20,11 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400..800&family=Poppins:wght@600;700;800&family=Bebas+Neue&display=swap">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <script src="{% static 'js/theme.js' %}" defer></script>
+  <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
+  {% block scripts %}{% endblock %}
 </head>
-<body class="min-h-screen bg-canvas text-text antialiased">
+{# htmx sends the CSRF token as a header, since its requests carry no form. #}
+<body class="min-h-screen bg-canvas text-text antialiased" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
   <header class="border-b border-border bg-surface">
     <div class="flex items-center gap-4 px-6 py-3">
       <a href="{% url 'home' %}" class="font-condensed text-3xl tracking-wide">Workboard</a>
