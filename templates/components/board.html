@@ -22,7 +22,7 @@
     from its first Stage rather than being cut off on the left. Stages stretch
     to the tallest one, so every Stage offers the same room to drop into.
   {% endcomment %}
-  <div class="mt-6 overflow-x-auto pb-4">
+  <div data-stage-row class="mt-6 overflow-x-auto pb-4">
     <div class="mx-auto flex w-max items-stretch gap-4">
       {% for stage in stages %}
         {% include "components/stage.html" %}

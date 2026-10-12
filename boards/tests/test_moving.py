@@ -269,6 +269,19 @@ class DragAndDropTests(TestCase):
         self.assertIn("hx-headers='{\"X-CSRFToken\": ", content)
         self.assertEqual(content.count("data-card-list"), 3)  # empty Stages too
 
+    def test_the_board_page_has_what_a_refresh_on_return_needs(self):
+        content = self.client.get(
+            reverse("board_detail", args=[self.board.pk])
+        ).content.decode()
+
+        # board.js fetches data-board-url and swaps in its #board; the failure
+        # note sits outside it, so a swap cannot remove it.
+        note = content.index('<p id="refresh-failed" role="status" hidden')
+        self.assertLess(note, content.index('<div id="board"'))
+        self.assertIn("This board could not be refreshed", content)
+        self.assertIn(f'data-board-url="{reverse("board_detail", args=[self.board.pk])}"', content)
+        self.assertIn("data-stage-row", content[content.index('<div id="board"'):])
+
 
 class LandingTests(TestCase):
     """The board marks a Card that just arrived from another Stage, and

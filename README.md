@@ -57,6 +57,10 @@ address, so it survives a reload and can be shared. Hidden Cards are only out
 of view: the totals still count the whole board, with the shown figures
 labelled *Shown* beside them, and dragging still works.
 
+**Staying current.** Changes others make don't appear live. A board catches up
+when you come back to its tab or window, keeping your filter. It waits while
+you're dragging or have a menu open, and says so if it can't refresh.
+
 **Archive.** Archiving is how finished work leaves the board. Choose *Archive*
 from a Card's ⋯ menu, or on the Card's page. The Card disappears from the
 board and its totals, but nothing is lost:

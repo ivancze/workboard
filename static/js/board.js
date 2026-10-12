@@ -14,6 +14,9 @@ function makeSortable(root) {
       // The Card's menu and its dialogs stay clickable rather than dragging.
       filter: "[data-menu], dialog",
       preventOnFilter: false,
+      onStart() {
+        drags++;
+      },
       onEnd(event) {
         if (event.from === event.to && event.oldIndex === event.newIndex) return;
         // The drop names its neighbour, not an index: with a filter hiding
@@ -116,6 +119,60 @@ document.addEventListener("scroll", () => closeMenus(null), true);
 // survives the board being swapped in after a drag.
 document.addEventListener("change", (event) => {
   if (event.target.closest("[data-filter]")) event.target.form.requestSubmit();
+});
+
+// The board is fetched again when you come back to its tab or its window, so a
+// tab left open for hours shows the current state (ADR 0001). Nothing is
+// fetched while the tab is hidden, and nothing on a timer. A refresh never
+// interrupts you: none is sent during a drag, with a menu or dialog open, or
+// while a move is being saved, whose answer is a fresh board anyway; and one
+// that comes back after any of those has begun is dropped. Coming back again
+// catches up.
+let drags = 0;
+let refresh = null; // the refresh in flight, with the drag count when it was sent
+
+function interrupting() {
+  return Sortable.dragged || document.querySelector("[data-menu][open], dialog[open]");
+}
+
+function refreshBoard() {
+  // htmx sends one request at a time, marking the body while it is out.
+  if (document.hidden || document.body.classList.contains("htmx-request") || interrupting()) return;
+  const board = document.getElementById("board");
+  refresh = { drags };
+  htmx
+    .ajax("GET", board.dataset.boardUrl, { target: "#board", select: "#board", swap: "outerHTML" })
+    .catch(() => refreshFailed(true))
+    .finally(() => (refresh = null));
+}
+
+// Says so, rather than leaving an old board looking current: the board may
+// have been deleted, you may have been removed or signed out, or be offline.
+function refreshFailed(failed) {
+  document.getElementById("refresh-failed").hidden = !failed;
+}
+
+document.addEventListener("htmx:beforeSwap", (event) => {
+  if (!refresh) return;
+  const { isError, serverResponse } = event.detail;
+  // A redirect to sign in arrives as a page without a board.
+  const fresh = !isError && new DOMParser().parseFromString(serverResponse, "text/html").getElementById("board");
+  refreshFailed(!fresh);
+  if (!fresh || drags !== refresh.drags || interrupting()) event.detail.shouldSwap = false;
+});
+
+document.addEventListener("visibilitychange", refreshBoard);
+window.addEventListener("focus", refreshBoard);
+
+// A board swapped in would start its Stage row scrolled back to the first
+// Stage. Keep it where it was.
+let rowScroll = 0;
+document.addEventListener("htmx:beforeSwap", () => {
+  rowScroll = document.querySelector("[data-stage-row]").scrollLeft;
+});
+document.addEventListener("htmx:afterSwap", () => {
+  document.querySelector("[data-stage-row]").scrollLeft = rowScroll;
+  refreshFailed(false);
 });
 
 // Runs for the page and again for every board swapped in.

@@ -120,6 +120,20 @@ is empty, so a Card can be dropped into it. While dragging, the spot where the
 Card will land is an empty dashed outline: Sortable's placeholder, given the
 `card-placeholder` class, styled in `assets/app.css`.
 
+**Refresh on return** (`board.js`, ticket 18, ADR 0001). When the tab becomes
+visible or the window regains focus, `board.js` fetches `#board`'s
+`data-board-url`, which carries the filter, and swaps in the `#board` from the
+page that comes back, as after a failed drop. There is no timer and no open
+connection, and a hidden tab requests nothing. A refresh is not sent while a
+drag (`Sortable.dragged`), an open ⋯ menu or dialog, or another htmx request
+is in progress. All htmx requests here queue on `<body>`, so a refresh never
+overtakes a move. An answer arriving after a drag has started, or with a menu
+or dialog open, is dropped rather than swapped, and the next return catches up.
+An error, or a page without a board (a redirect to sign in), leaves the board as
+it is and shows `#refresh-failed`, which sits outside `#board` so no swap
+removes it. Any board swap keeps the Stage row's sideways scroll
+(`data-stage-row`).
+
 **The ⋯ menus** on each Card (`components/card_menu.html`), each Stage
 (`components/stage_menu.html`) and the board (`components/board_menu.html`) are `<details data-menu>` dropdowns, so they
 work without JavaScript. `board.js` closes one on a click elsewhere or Escape,
