@@ -39,7 +39,8 @@ a Card to open it, and *Edit* to change it:
 - **Description**, written in Markdown
 - **Assignee**, one Member of the board, or Unassigned
 - **Contact persons**, free text for people outside the board
-- **Due date**, for reference only. A Card past its date is marked Overdue
+- **Due date**, for reference only. A Card due today gets an orange outline,
+  and one past its date is marked Overdue in red
 - **Effort**, a number in steps of 0.5, in whatever unit your team uses. Leave
   it empty if it hasn't been estimated
 

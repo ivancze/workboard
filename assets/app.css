@@ -33,6 +33,7 @@
   --color-danger: light-dark(#c42121, #f87878);
   --color-on-danger: light-dark(#ffffff, #111114); /* text on danger */
   --color-danger-hover: light-dark(#a51b1b, #fa9a9a);
+  --color-warning: light-dark(#d4700f, #f0a05a); /* due today: noticed, not alarming */
   --color-scrim: light-dark(rgb(0 0 0 / 0.4), rgb(0 0 0 / 0.6)); /* behind a dialog */
   --color-focus: light-dark(#4f46e5, #8b93f8);
 

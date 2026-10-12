@@ -1,5 +1,6 @@
-<select name="{{ widget.name }}" class="block w-full rounded-md border border-control bg-surface px-3 py-2 text-sm text-text"{% include "django/forms/widgets/attrs.html" %}>{% for group_name, group_choices, group_index in widget.optgroups %}{% if group_name %}
+{# Our own chevron, inset from the edge, in place of the browser's arrow. #}
+<div class="relative"><select name="{{ widget.name }}" class="block w-full appearance-none rounded-md border border-control bg-surface py-2 pr-10 pl-3 text-sm text-text"{% include "django/forms/widgets/attrs.html" %}>{% for group_name, group_choices, group_index in widget.optgroups %}{% if group_name %}
   <optgroup label="{{ group_name }}">{% endif %}{% for option in group_choices %}
   {% include option.template_name with widget=option %}{% endfor %}{% if group_name %}
   </optgroup>{% endif %}{% endfor %}
-</select>
+</select><svg class="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>

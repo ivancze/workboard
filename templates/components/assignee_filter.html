@@ -6,7 +6,9 @@
 {% endcomment %}
 <form method="get" action="{% url 'board_detail' board.pk %}" data-filter class="flex items-center gap-2">
   <label for="assignee-filter" class="text-sm font-semibold text-text-muted">Show</label>
-  <select id="assignee-filter" name="assignee" class="block rounded-md border border-control bg-surface px-3 py-2 text-sm text-text">
+  {# The browser's arrow sat against the edge; this one keeps its distance. #}
+  <div class="relative">
+  <select id="assignee-filter" name="assignee" class="block appearance-none rounded-md border border-control bg-surface py-2 pr-10 pl-3 text-sm text-text">
     <option value=""{% if not assignee_filter.value %} selected{% endif %}>Everyone</option>
     <option value="me"{% if assignee_filter.value == "me" %} selected{% endif %}>Mine</option>
     <option value="unassigned"{% if assignee_filter.value == "unassigned" %} selected{% endif %}>Unassigned</option>
@@ -14,5 +16,7 @@
       <option value="{{ member.pk }}"{% if assignee_filter.value == member.pk|stringformat:"d" %} selected{% endif %}>{{ member.name }}</option>
     {% endfor %}
   </select>
+  <svg class="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+  </div>
   <noscript>{% include "components/button.html" with label="Apply" variant="secondary" %}</noscript>
 </form>

@@ -480,14 +480,15 @@ class DueDateTests(TestCase):
         self.assertContains(self.client.get(self.edit_url), 'value="2026-10-14"')
 
     def test_the_date_shown_is_the_date_entered_in_any_timezone(self):
-        Card.objects.filter(pk=self.card.pk).update(due_date=date(2026, 10, 14))
+        # Years away, so the tile never reads "Due today" on the day it runs.
+        Card.objects.filter(pk=self.card.pk).update(due_date=date(2099, 10, 14))
 
         # Twenty-six hours apart: a date that shifted with the timezone would
         # show as the 13th or the 15th in one of them.
         for tz in ["Pacific/Pago_Pago", "Pacific/Kiritimati"]:
             with self.subTest(tz=tz), override_settings(TIME_ZONE=tz):
-                self.assertContains(self.client.get(self.url), "14 October 2026")
-                self.assertContains(self.client.get(self.board_url), "Due 14 Oct 2026")
+                self.assertContains(self.client.get(self.url), "14 October 2099")
+                self.assertContains(self.client.get(self.board_url), "Due 14 Oct 2099")
 
     def test_a_card_past_its_due_date_is_emphasised(self):
         a_card(self.stage, "Late one", due_date=timezone.localdate() - timedelta(days=1))
@@ -501,6 +502,38 @@ class DueDateTests(TestCase):
         a_card(self.stage, "Today", due_date=timezone.localdate())
 
         self.assertNotContains(self.client.get(self.board_url), "Overdue")
+
+    def test_a_card_due_today_is_outlined_in_orange_and_says_so(self):
+        today = a_card(self.stage, "Today", due_date=timezone.localdate())
+        a_card(self.stage, "Tomorrow", due_date=timezone.localdate() + timedelta(days=1))
+        a_card(self.stage, "Late one", due_date=timezone.localdate() - timedelta(days=1))
+
+        response = self.client.get(self.board_url)
+
+        self.assertContains(response, "border-warning", count=1)
+        self.assertContains(response, "border-danger", count=1)
+        self.assertContains(response, f"Due today · {timezone.localdate():%-d %b %Y}", count=1)
+        tile = re.search(rf'<li data-card-id="{today.pk}"[^>]*>', response.content.decode()).group()
+        self.assertIn("border-warning", tile)
+        page = self.client.get(reverse("card_detail", args=[self.board.pk, today.pk]))
+        self.assertContains(page, " · Today")
+
+    def test_an_archived_card_due_today_is_not_highlighted(self):
+        card = a_card(self.stage, "Today", due_date=timezone.localdate())
+        card.archive()
+
+        self.assertFalse(card.is_due_today)
+        page = self.client.get(reverse("card_detail", args=[self.board.pk, card.pk]))
+        self.assertNotContains(page, " · Today")
+
+    @override_settings(TIME_ZONE="Asia/Kuala_Lumpur")
+    def test_due_today_is_judged_by_the_teams_date_not_utc(self):
+        # 01:00 on the 14th in Kuala Lumpur is still the 13th in UTC.
+        just_after_midnight = datetime(2026, 10, 13, 17, 0, tzinfo=timezone.UTC)
+        Card.objects.filter(pk=self.card.pk).update(due_date=date(2026, 10, 14))
+
+        with mock.patch("django.utils.timezone.now", return_value=just_after_midnight):
+            self.assertContains(self.client.get(self.board_url), "border-warning")
 
     def test_a_card_without_a_due_date_is_never_overdue(self):
         self.assertIsNone(self.card.due_date)

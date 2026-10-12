@@ -685,6 +685,12 @@ class Card(models.Model):
                 break
 
     @property
+    def is_due_today(self):
+        """Due today, by the team's date, and still on the board. Not yet
+        overdue, but worth noticing."""
+        return self.archived_at is None and self.due_date == timezone.localdate()
+
+    @property
     def is_overdue(self):
         """Its Due date has passed. A Card due today is not yet overdue, and
         an archived Card never is: archiving is how work stops being overdue.

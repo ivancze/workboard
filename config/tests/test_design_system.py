@@ -150,7 +150,10 @@ TEXT_PAIRS = [
     ("on-danger", "danger-hover"),
 ]
 # 3:1 for the parts of a control that identify it, and for the focus ring.
-NON_TEXT_PAIRS = [(fg, bg) for fg in ["control", "focus"] for bg in BACKGROUNDS]
+NON_TEXT_PAIRS = [(fg, bg) for fg in ["control", "focus"] for bg in BACKGROUNDS] + [
+    # The due-today outline is a Card's only marker besides its words.
+    ("warning", "surface"),
+]
 
 
 class ContrastTests(TestCase):
