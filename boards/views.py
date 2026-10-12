@@ -13,7 +13,14 @@ from django.views.decorators.http import require_POST, require_safe
 
 from accounts.models import User
 
-from .forms import BoardForm, CardForm, InviteForm, MoveCardForm, StageForm
+from .forms import (
+    BoardForm,
+    CardForm,
+    DeleteBoardForm,
+    InviteForm,
+    MoveCardForm,
+    StageForm,
+)
 from .models import Board, Card, Membership, Stage, lock_membership
 
 
@@ -158,6 +165,7 @@ def board_detail(request, pk):
     # Left by a Move button's redirect, for the next board page only: a reload
     # plays nothing. A Card is on one board, so another board ignores it.
     context["landed"] = request.session.pop("landed", None)
+    context["is_owner"] = board.is_owner(request.user)
     return render(request, "boards/board_detail.html", context)
 
 
@@ -176,6 +184,8 @@ def card_create(request, board_pk):
                 )
         except Membership.DoesNotExist:
             pass  # the form now says why
+        except Board.DoesNotExist:
+            raise Http404("That board has just been deleted.")
         else:
             messages.success(request, f"Added {card.title} to {card.stage.name}.")
             return redirect(board_url(board, request))
@@ -382,6 +392,7 @@ def render_members(request, board, *, invite_form=None, status=200):
         .select_related("user")
         .order_by("-role", "user__display_name", "user__email")
     ]
+    others = len(members) - 1
     return render(
         request,
         "boards/members.html",
@@ -390,6 +401,8 @@ def render_members(request, board, *, invite_form=None, status=200):
             "members": members,
             "pending": board.memberships.filter(user__isnull=True).order_by("created_at"),
             "is_owner": board.is_owner(request.user),
+            "others": others,
+            "mine_assigned": assigned.get(request.user.pk, 0),
             "invite_form": invite_form or InviteForm(),
         },
         status=status,
@@ -445,6 +458,72 @@ def member_remove(request, board_pk, pk):
             )
             messages.success(request, f"Removed {membership.user.name}.{unassigned}")
     return redirect("board_members", board_pk=board.pk)
+
+
+@require_POST
+@login_required
+def member_make_owner(request, board_pk, pk):
+    board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
+    require_owner(board, request.user)
+    try:
+        new_owner = board.hand_over(request.user, pk)
+    except ValidationError as error:
+        messages.error(request, error.message)
+    else:
+        messages.success(request, f"{new_owner.user.name} is now the Owner.")
+    return redirect("board_members", board_pk=board.pk)
+
+
+@require_POST
+@login_required
+def board_leave(request, board_pk):
+    """A Member leaves of their own accord, exactly as if removed. The Owner
+    can't: a board must keep one, so they hand over first, or delete it."""
+    board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
+    membership = board.memberships.get(user=request.user)
+    if membership.role == Membership.Role.OWNER:
+        messages.error(request, "The Owner cannot leave. Make someone else Owner first, or delete the board.")
+        return redirect("board_members", board_pk=board.pk)
+    try:
+        cleared = membership.remove()
+    except ValidationError as error:
+        # Made Owner while this was on its way.
+        messages.error(request, error.message)
+        return redirect("board_members", board_pk=board.pk)
+    unassigned = (
+        f" {cleared} Card{'s' if cleared != 1 else ''} assigned to you there "
+        f"{'are' if cleared != 1 else 'is'} now unassigned." if cleared else ""
+    )
+    messages.success(request, f"You left {board.name}.{unassigned}")
+    return redirect("home")
+
+
+@login_required
+def board_delete(request, board_pk):
+    """The one place that deliberately slows the Owner down: the whole board
+    goes, with no undo, only once its name is typed exactly."""
+    board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
+    require_owner(board, request.user)
+    form = DeleteBoardForm(request.POST or None, board=board)
+    if request.method == "POST" and form.is_valid():
+        name = board.name
+        board.destroy()
+        messages.success(request, f"Deleted the board {name}.")
+        return redirect("home")
+    return render(
+        request,
+        "boards/board_delete.html",
+        {
+            "board": board,
+            "form": form,
+            "cards": board.cards.filter(archived_at__isnull=True).count(),
+            "archived": board.cards.filter(archived_at__isnull=False).count(),
+            "stages": board.stages.count(),
+            "members": board.memberships.filter(user__isnull=False).count(),
+            "pending": board.memberships.filter(user__isnull=True).count(),
+        },
+        status=400 if form.is_bound else 200,
+    )
 
 
 def render_stages(request, board, *, failed=None, failed_form=None, refusal=None, add_form=None):

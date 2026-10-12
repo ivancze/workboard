@@ -88,11 +88,63 @@ class Board(models.Model):
                 raise ValidationError(f"{email} has already been invited.")
             return self.memberships.create(email=email)
 
+    def hand_over(self, owner, membership_pk):
+        """Make the Member `membership_pk` this board's Owner, and `owner`, who
+        must be the Owner, a plain Member. Refuses with the reason otherwise.
+
+        Both memberships are locked: the Owner's first, so two hand-overs take
+        turns and the second finds its sender no longer Owner, then the new
+        Owner's, so they can't be removed or leave halfway. The old Owner
+        steps down first: the database allows one Owner per board, and there
+        is never a moment with none committed.
+        """
+        with transaction.atomic():
+            mine = (
+                self.memberships.select_for_update()
+                .filter(user=owner, role=Membership.Role.OWNER)
+                .first()
+            )
+            if mine is None:
+                raise ValidationError("Only the Owner can hand over ownership.")
+            theirs = (
+                self.memberships.select_for_update()
+                .filter(pk=membership_pk, user__isnull=False)
+                .exclude(pk=mine.pk)
+                .first()
+            )
+            if theirs is None:
+                raise ValidationError("They are no longer a Member of this board.")
+            mine.role, theirs.role = Membership.Role.MEMBER, Membership.Role.OWNER
+            mine.save(update_fields=["role"])
+            theirs.save(update_fields=["role"])
+            return theirs
+
+    def destroy(self):
+        """Delete this board and everything in it: its Cards, archived ones
+        included, its Stages and its Memberships, Pending ones included.
+
+        Cards are PROTECTed from their board and Stage, so they are deleted
+        here on purpose, first. The board and all its Stages are locked
+        before that, so no Card can be added, moved or restored into the
+        board while it goes; those requests find the Stages gone.
+        """
+        with transaction.atomic():
+            self.lock()
+            lock_stages(*self.stages.values_list("pk", flat=True))
+            self.cards.all().delete()
+            self.delete()
+
     def lock(self):
         """Lock this board for the rest of the transaction. Taken before any
         Stage lock by everything that adds or deletes Stages, so those take
-        turns: two deletes at once could otherwise leave no Stage at all."""
-        Board.objects.select_for_update().get(pk=self.pk)
+        turns: two deletes at once could otherwise leave no Stage at all.
+
+        NO KEY UPDATE, not plain FOR UPDATE: it still excludes every other
+        board lock, but not the key-share lock Postgres takes on the board
+        when a Card or Membership row pointing at it is written. Otherwise
+        deleting a board deadlocks against a Card being added: the add holds
+        its Stage and waits on the board, and the delete the other way round."""
+        Board.objects.select_for_update(no_key=True).get(pk=self.pk)
 
     def check_stage_name_free(self, name, *, exclude=None):
         """Stage names are unique on a board, ignoring case, so the Move
@@ -166,6 +218,13 @@ class Membership(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["board", "user"], name="one_membership_per_user_per_board"
+            ),
+            # The other half, at least one, is up to the code: hand_over
+            # promotes in the same transaction that demotes.
+            models.UniqueConstraint(
+                fields=["board"],
+                condition=models.Q(role="owner"),
+                name="one_owner_per_board",
             ),
             models.UniqueConstraint(
                 Lower("email"),
@@ -358,6 +417,8 @@ class CardManager(models.Manager):
         """
         while True:
             stage = board.stages.order_by("position", "id").first()
+            if stage is None:
+                raise Board.DoesNotExist("The board was deleted.")
             try:
                 return self.create_at_end(stage=stage, **fields)
             except Stage.DoesNotExist:

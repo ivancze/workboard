@@ -17,8 +17,15 @@
         {% if membership.role == "owner" %}
           <span class="shrink-0 text-sm font-semibold text-text-muted">Owner</span>
         {% elif is_owner %}
+          {% with pk=membership.pk|stringformat:"d" %}{% with owner_dialog_id="make-owner-"|add:pk %}
+            <div class="flex shrink-0 gap-1">
+              {% include "components/button.html" with label="Make Owner…" type="button" commandfor=owner_dialog_id aria_label="Make "|add:membership.user.name|add:" the Owner" variant="ghost" %}
+              {% include "components/button.html" with label="Remove…" type="button" commandfor="remove-member-"|add:pk aria_label="Remove "|add:membership.user.name variant="ghost" %}
+            </div>
+            {% url 'member_make_owner' board.pk membership.pk as make_owner_url %}
+            {% include "components/confirm_dialog.html" with id=owner_dialog_id question="Make "|add:membership.user.name|add:" the Owner?" note="You'll become a Member, and only they will be able to invite and remove people, hand ownership on, or delete the board." action=make_owner_url confirm_label="Make Owner" variant="" %}
+          {% endwith %}{% endwith %}
           {% with pk=membership.pk|stringformat:"d" %}{% with dialog_id="remove-member-"|add:pk %}
-            {% include "components/button.html" with label="Remove…" type="button" commandfor=dialog_id aria_label="Remove "|add:membership.user.name variant="ghost" %}
             {% url 'member_remove' board.pk membership.pk as remove_url %}
             {% with count=assigned|stringformat:"d" plural=assigned|pluralize %}
               {% if assigned %}
@@ -54,6 +61,31 @@
       </ul>
     </section>
   {% endif %}
+
+  <section class="mt-10">
+    <h2 class="font-condensed text-3xl tracking-wide text-text-muted">Leave this board</h2>
+    {% if is_owner %}
+      {# The Owner can't leave: a board keeps exactly one. #}
+      {% if others %}
+        <p class="mt-3 text-sm text-text-muted">As Owner, you can't leave. Make someone else Owner first, with Make Owner above.</p>
+      {% else %}
+        <p class="mt-3 text-sm text-text-muted">You're the only Member, so there is no one to hand it to. <a href="{% url 'board_delete' board.pk %}" class="font-semibold text-accent hover:underline">Delete the board</a> instead.</p>
+      {% endif %}
+    {% else %}
+      <p class="mt-3 text-sm text-text-muted">You'll lose access at once. Only the Owner can invite you back.</p>
+      <div class="mt-3">
+        {% include "components/button.html" with label="Leave board…" type="button" commandfor="leave-board" variant="secondary" %}
+      </div>
+      {% url 'board_leave' board.pk as leave_url %}
+      {% if mine_assigned %}
+        {% with count=mine_assigned|stringformat:"d" plural=mine_assigned|pluralize %}
+          {% include "components/confirm_dialog.html" with id="leave-board" question="Leave "|add:board.name|add:"?" note="You'll lose access at once. The "|add:count|add:" Card"|add:plural|add:" assigned to you will become unassigned; Cards you created still credit you." action=leave_url confirm_label="Leave" variant="danger" %}
+        {% endwith %}
+      {% else %}
+        {% include "components/confirm_dialog.html" with id="leave-board" question="Leave "|add:board.name|add:"?" note="You'll lose access at once. Only the Owner can invite you back." action=leave_url confirm_label="Leave" variant="danger" %}
+      {% endif %}
+    {% endif %}
+  </section>
 
   {% if is_owner %}
     <section class="mt-10 rounded-xl border border-border bg-surface p-6">

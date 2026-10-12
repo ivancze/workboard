@@ -19,6 +19,20 @@ class InviteForm(forms.Form):
     )
 
 
+class DeleteBoardForm(forms.Form):
+    # Not stripped: "exactly" means exactly.
+    name = forms.CharField(label="Board name", strip=False)
+
+    def __init__(self, *args, board, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.board = board
+
+    def clean_name(self):
+        if self.cleaned_data["name"] != self.board.name:
+            raise forms.ValidationError("That does not match the board name. Nothing was deleted.")
+        return self.cleaned_data["name"]
+
+
 class StageForm(forms.Form):
     name = forms.CharField(max_length=50, label="Stage name")
 

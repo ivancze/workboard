@@ -69,7 +69,10 @@ unique constraint on (Stage, position) catches what the code gets wrong, at
 commit.
 
 Locks are always taken in the same order: the board (`Board.lock`, only for
-adding or deleting Stages, and for invitations), then Stages, then Cards. `lock_stages` raises
+adding or deleting Stages, for invitations, and for deleting the board), then
+Stages, then Cards. `Board.lock` is `FOR NO KEY UPDATE`: a plain `FOR UPDATE`
+blocks the key-share lock Postgres takes on the board whenever a Card is
+inserted, and deleting a board then deadlocks against a Card being added. `lock_stages` raises
 `Stage.DoesNotExist` if a Stage was deleted first. A Card's Stage and its
 board are both PROTECT, so nothing that deletes a Stage, or a board, can take
 Cards with it by accident.

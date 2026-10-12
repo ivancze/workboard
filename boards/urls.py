@@ -59,6 +59,13 @@ urlpatterns = [
         "boards/<int:board_pk>/members/invite/", views.member_invite, name="member_invite"
     ),
     path(
+        "boards/<int:board_pk>/members/<int:pk>/make-owner/",
+        views.member_make_owner,
+        name="member_make_owner",
+    ),
+    path("boards/<int:board_pk>/leave/", views.board_leave, name="board_leave"),
+    path("boards/<int:board_pk>/delete/", views.board_delete, name="board_delete"),
+    path(
         "boards/<int:board_pk>/members/<int:pk>/remove/",
         views.member_remove,
         name="member_remove",

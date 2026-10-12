@@ -19,7 +19,14 @@ signed in with, so a mistyped invitation is easy to spot.
 
 The Owner can also remove a Member. They lose access at once, and Cards
 assigned to them become unassigned, though Cards they created still credit
-them.
+them. A Member can leave a board the same way, from *Members*.
+
+Every board has exactly one Owner. To step down, or before leaving, the Owner
+hands ownership to another Member with *Make Owner*.
+
+**Deleting a board.** Only the Owner can, from *Delete board…* in the board's
+⋯ menu. It deletes every Card, archived ones included, with no undo, so it
+asks you to type the board's name exactly first.
 
 **Stages.** *Edit stages* lets you add, rename,
 reorder (↑ ↓) and delete Stages. Names are unique on a board. Only an empty
