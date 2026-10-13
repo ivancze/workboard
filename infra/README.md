@@ -170,8 +170,9 @@ Only `main` should be left.
 
 ## Releasing an image by hand
 
-The pipeline does this on every push to `main`. By hand, it's for the first
-image, or a release when the pipeline can't run. Commit first: the image is
+The pipeline (`.github/workflows/deploy.yml`) does this on every push to
+`main`, adding a smoke check and a rollback. By hand, it's for the first image,
+or a release when the pipeline can't run. Commit first: the image is
 tagged with the commit, so uncommitted changes would ship under a tag that
 doesn't contain them.
 
@@ -190,16 +191,19 @@ gcloud run jobs update workboard-migrate --region=asia-southeast1 --image="$IMAG
 gcloud run jobs execute workboard-migrate --region=asia-southeast1 --wait
 gcloud run jobs update workboard-manage --region=asia-southeast1 --image="$IMAGE"
 gcloud run services update workboard --region=asia-southeast1 --image="$IMAGE"
+gcloud run services update-traffic workboard --region=asia-southeast1 --to-latest
 ```
 
 The order is the point. Migrations run to completion on the new image before
 the service gets it, so new code never meets an old schema. A failed migration
-stops there, with the old revision still serving. `--provenance=false` keeps
+stops there, with the old revision still serving. The last line matters
+after a rollback: traffic is then pinned to a named revision, and a new one
+gets none until it's sent there. `--provenance=false` keeps
 the build to a single image, so the registry's keep-5 rule counts releases
 rather than build metadata.
 
 `terraform plan` still reports no changes afterwards, because Terraform
-ignores the image on the service and both jobs.
+ignores the image on the service and both jobs, and the service's traffic.
 
 ## Running a management command
 

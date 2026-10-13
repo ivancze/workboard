@@ -95,8 +95,10 @@ resource "google_cloud_run_v2_service" "workboard" {
     }
   }
 
+  # The pipeline owns which image runs and which revision takes traffic. An
+  # apply after a rollback must not send traffic back to the broken revision.
   lifecycle {
-    ignore_changes = [template[0].containers[0].image, client, client_version]
+    ignore_changes = [template[0].containers[0].image, traffic, client, client_version]
   }
 
   depends_on = [google_secret_manager_secret_iam_member.runtime]
