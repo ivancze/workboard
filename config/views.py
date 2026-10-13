@@ -2,6 +2,7 @@ import sys
 
 import django
 from django.db import connection
+from django.http import HttpResponse
 from django.shortcuts import render
 
 
@@ -27,3 +28,13 @@ def health(request):
             "python_version": sys.version.split()[0],
         },
     )
+
+
+def liveness(request):
+    """Answer Render's health check without touching the database.
+
+    Render probes every few seconds, and any query keeps Neon's compute from
+    suspending, which on the free plan's CU-hours runs out mid-month. The
+    pre-deploy migrate has already proved the database is reachable.
+    """
+    return HttpResponse("ok", content_type="text/plain")

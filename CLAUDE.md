@@ -46,12 +46,9 @@ partials. Read [docs/frontend.md](docs/frontend.md) before writing markup.
 `.env` holds the local URL, pointing at the `db` service. Production credentials
 live in Render and nowhere else.
 
-Two **fingerprints** tell you where you are, and both have been wrong before:
-
-- `/healthz` prints the server version. `(Debian ...)` is the local container;
-  a bare commit hash like `(7d7ea2a)` is Neon.
-- The test suite takes under a second locally. Nine seconds means every query
-  is crossing the network to Singapore.
+`/healthz` prints the server version, which tells you where you are.
+`(Debian ...)` is the local container; a bare commit hash like `(7d7ea2a)` is
+Neon.
 
 ## Reading boards
 
@@ -122,6 +119,8 @@ board; reach archived Cards, or a board's Cards in general, through
 - [docs/v2-features.md](docs/v2-features.md) and
   [docs/v2-infrastructure.md](docs/v2-infrastructure.md) — what was cut from v1
   and why. Check here before building something that feels missing.
-- `.scratch/workboard-v1/issues/` — the 19 tickets, in dependency order, each
-  with acceptance criteria and a record of what was verified. Deliberately
-  uncommitted: they are local working notes, not a repo artefact.
+- `.scratch/workboard-v1/issues/` — the v1 tickets (01–19, plus lettered
+  follow-ups such as 05a), in dependency order, each with acceptance criteria,
+  a record of what was verified, and the commit that landed it. v1 is closed;
+  only 19, the nightly backup, is deferred. Deliberately uncommitted: they are
+  local working notes, not a repo artefact.
