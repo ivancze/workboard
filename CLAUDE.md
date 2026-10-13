@@ -46,9 +46,15 @@ partials. Read [docs/frontend.md](docs/frontend.md) before writing markup.
 `.env` holds the local URL, pointing at the `db` service. Production credentials
 live in Render and nowhere else.
 
-`/health` prints the server version, which tells you where you are.
-`(Debian ...)` is the local container; a bare commit hash like `(7d7ea2a)` is
-Neon.
+`/health` prints the server version, which tells you where you are. Look at
+what follows the version number:
+
+- `PostgreSQL 17.11 (Debian 17.11-1.pgdg13+2) on ...` is the local container.
+- `PostgreSQL 17.11 (7d7ea2a) on ...`, a bare commit hash, is Neon.
+- `PostgreSQL 17.11 on x86_64-pc-linux-gnu, compiled by Debian clang ...`,
+  nothing in brackets, is Cloud SQL. "Debian" appears later in its string
+  too, so don't match on that word alone. The pipeline's smoke check matches
+  `PostgreSQL [0-9.]+ on `.
 
 ## Reading boards
 
