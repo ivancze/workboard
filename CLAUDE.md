@@ -46,7 +46,7 @@ partials. Read [docs/frontend.md](docs/frontend.md) before writing markup.
 `.env` holds the local URL, pointing at the `db` service. Production credentials
 live in Render and nowhere else.
 
-`/healthz` prints the server version, which tells you where you are.
+`/health` prints the server version, which tells you where you are.
 `(Debian ...)` is the local container; a bare commit hash like `(7d7ea2a)` is
 Neon.
 

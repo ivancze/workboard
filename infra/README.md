@@ -186,10 +186,10 @@ Then, from the repository root:
 ```
 IMAGE=asia-southeast1-docker.pkg.dev/prj-app-workboard/workboard/workboard:$(git rev-parse HEAD)
 docker buildx build --platform linux/amd64 --provenance=false -t "$IMAGE" --push .
-gcloud run jobs update workboard-migrate --image="$IMAGE"
-gcloud run jobs execute workboard-migrate --wait
-gcloud run jobs update workboard-manage --image="$IMAGE"
-gcloud run services update workboard --image="$IMAGE"
+gcloud run jobs update workboard-migrate --region=asia-southeast1 --image="$IMAGE"
+gcloud run jobs execute workboard-migrate --region=asia-southeast1 --wait
+gcloud run jobs update workboard-manage --region=asia-southeast1 --image="$IMAGE"
+gcloud run services update workboard --region=asia-southeast1 --image="$IMAGE"
 ```
 
 The order is the point. Migrations run to completion on the new image before
@@ -207,8 +207,9 @@ ignores the image on the service and both jobs.
 database, with `--args` replacing the default `showmigrations`:
 
 ```
-gcloud run jobs execute workboard-manage --wait
-gcloud run jobs execute workboard-manage --wait --args='^|^shell|-c|from accounts.models import User; print(User.objects.count())'
+gcloud run jobs execute workboard-manage --region=asia-southeast1 --wait
+gcloud run jobs execute workboard-manage --region=asia-southeast1 --wait \
+  --args='^|^shell|-c|from accounts.models import User; print(User.objects.count())'
 ```
 
 The `^|^` prefix makes `|` the separator, so the code can contain commas. To

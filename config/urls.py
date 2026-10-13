@@ -3,7 +3,8 @@ from django.urls import include, path
 from . import views
 
 urlpatterns = [
-    path("healthz", views.health, name="health"),
+    # Not /healthz: Cloud Run's front end keeps that exact path for itself.
+    path("health", views.health, name="health"),
     path("livez", views.liveness, name="liveness"),
     path("accounts/", include("allauth.urls")),
     path("", include("accounts.urls")),
