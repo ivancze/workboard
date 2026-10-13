@@ -49,7 +49,20 @@ Raise `CONN_MAX_AGE` if the database ever stops being billed for uptime.
    startup work and needs no writable filesystem.
 3. `migrate` runs as the **pre-deploy command**, after the image is built and
    before traffic moves to it. New code therefore never queries an old schema.
-4. Render switches traffic once `/healthz` responds.
+4. Render switches traffic once `/livez` responds.
+
+## Why the health check skips the database
+
+Render probes the health check path every few seconds, for as long as the
+service runs. `/healthz` queries the database, so pointing Render at it keeps
+Neon's compute from ever reaching its five idle minutes: about 182 CU-hours a
+month at 0.25 CU, against the free plan's 100, and the database is suspended
+mid-month. `/livez` answers without a query or a connection.
+
+The cost is that Render no longer notices the database going away while the
+service runs. Step 3 already proves the database reachable and migrated before
+traffic moves, so a deploy with a broken `DATABASE_URL` still never goes live.
+`/healthz` remains for checking by hand which database a server reached.
 
 Because migrations run while the *old* code is still serving, a migration that
 removes something the old code reads will break during that window. Every
