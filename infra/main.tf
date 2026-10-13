@@ -2,12 +2,16 @@
 # from this directory; see README.md.
 
 terraform {
-  required_version = ">= 1.9"
+  required_version = ">= 1.11" # write-only arguments
 
   required_providers {
     google = {
       source  = "hashicorp/google"
       version = "~> 7.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.7"
     }
   }
 

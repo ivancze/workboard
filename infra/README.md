@@ -94,15 +94,16 @@ terraform init
 terraform plan
 ```
 
-The first plan adds 15 resources: 14 APIs and the budget. Then:
+On a new project the plan only adds: nothing to change, nothing to destroy.
+Then:
 
 ```
 terraform apply
 ```
 
-Enabling the APIs takes a minute or two. Enabling Compute Engine also creates
-a `default` network and a default service account in the project. Nothing uses
-either.
+This takes 15 minutes or so, most of it the Cloud SQL instance. Enabling
+Compute Engine also creates a `default` network and a default service account
+in the project. Step 8 removes the network.
 
 ### 6. Check
 
@@ -116,3 +117,53 @@ The bucket holds `default.tfstate`, the budget is listed, and the last plan
 reports no changes. The budget also appears in the console under Billing →
 Budgets & alerts, where its alerts go to the billing account's
 administrators.
+
+### 7. The application's secrets
+
+Terraform writes `DATABASE_URL` itself, with a password nobody sees. The other
+three come from you. Each value goes straight into Secret Manager, so it never
+appears on screen or in shell history.
+
+A fresh `SECRET_KEY`:
+
+```
+python3 -c 'import secrets, sys; sys.stdout.write(secrets.token_urlsafe(50))' \
+  | gcloud secrets versions add SECRET_KEY --data-file=-
+```
+
+The sign-in client's ID and secret are the ones Render has, under the
+service's Environment. Run this once for each. It waits for you to paste the
+value and press Enter:
+
+```
+printf 'Value: '; read -rs VALUE; echo
+printf '%s' "$VALUE" | gcloud secrets versions add GOOGLE_OAUTH_CLIENT_ID --data-file=-
+unset VALUE
+```
+
+Then the same for `GOOGLE_OAUTH_CLIENT_SECRET`. To check, without printing any
+value:
+
+```
+for s in DATABASE_URL SECRET_KEY GOOGLE_OAUTH_CLIENT_ID GOOGLE_OAUTH_CLIENT_SECRET; do
+  printf '%s: ' "$s"; gcloud secrets versions list "$s" --filter=state=enabled --format="value(name)" | wc -l
+done
+```
+
+Each should have exactly 1.
+
+### 8. Remove the default network
+
+Google made it when Compute Engine was enabled. Nothing uses it, and its
+firewall rules let SSH, RDP and ping in from anywhere. The rules go first,
+since the network can't be deleted while they use it. Each command asks for
+confirmation:
+
+```
+gcloud compute firewall-rules delete default-allow-icmp default-allow-internal \
+  default-allow-rdp default-allow-ssh
+gcloud compute networks delete default
+gcloud compute networks list
+```
+
+Only `main` should be left.
