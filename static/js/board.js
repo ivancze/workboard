@@ -2,7 +2,8 @@
 // beside it to the same endpoint the Move buttons use. The server answers with the whole
 // board, fresh from the database, which replaces the page's copy: totals stay
 // right, and the page always shows where the server actually put the Card.
-// If the save fails, the board is fetched again for the same reason.
+// If the save fails, the board is fetched again for the same reason. The drop
+// animates at once, without waiting for that answer (see land).
 
 function makeSortable(root) {
   root.querySelectorAll("[data-card-list]").forEach((list) => {
@@ -26,6 +27,7 @@ function makeSortable(root) {
         const values = { stage: event.to.dataset.stage };
         if (below) values.before = below.dataset.cardId;
         else if (above) values.after = above.dataset.cardId;
+        if (event.from !== event.to) land(event.item, event.to);
         htmx.ajax("POST", event.item.dataset.moveUrl, {
           target: "#board",
           swap: "outerHTML",
@@ -47,14 +49,39 @@ function restoreBoard(event) {
   });
 }
 
+// A Card dropped in another Stage pulses, and in the board's last Stage it
+// also celebrates, straight away rather than a round trip later with the
+// server's board. That board replaces the Card mid-pulse, so the pulse is
+// picked up again where it was once the board is swapped in (continueLanding).
+// A Move from the menu loads a whole page, whose Card the server marks instead.
+let landing = null; // the Card pulsing, and when it began
+
+function land(card, list) {
+  card.setAttribute("data-landed", "");
+  landing = { id: card.dataset.cardId, began: performance.now() };
+  const lists = document.querySelectorAll("[data-card-list]");
+  if (list === lists[lists.length - 1]) celebrate(card);
+}
+
+function continueLanding() {
+  if (!landing) return;
+  const card = document.querySelector(`[data-card-id="${landing.id}"]`);
+  // A negative delay starts the animation part-way through; once it is past
+  // the end, nothing plays.
+  if (card) {
+    card.style.animationDelay = `-${performance.now() - landing.began}ms`;
+    card.setAttribute("data-landed", "");
+  }
+  landing = null;
+}
+
 // A Card that landed in the board's last Stage throws confetti: a burst of
 // small pieces in the theme's colours, flying up and out, then falling away.
 // The animation is 1s (assets/app.css); the pieces are removed after 1.5s.
 const CONFETTI_COLOURS = ["--color-accent", "--color-danger", "--color-accent-hover", "--color-text-muted"];
 
-function celebrate(root) {
-  const card = root.querySelector("[data-celebrate]");
-  if (!card || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+function celebrate(card) {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const { left, top, width } = card.getBoundingClientRect();
   for (let i = 0; i < 40; i++) {
     const piece = document.createElement("span");
@@ -173,10 +200,14 @@ document.addEventListener("htmx:beforeSwap", () => {
 document.addEventListener("htmx:afterSwap", () => {
   document.querySelector("[data-stage-row]").scrollLeft = rowScroll;
   refreshFailed(false);
+  continueLanding();
 });
 
 // Runs for the page and again for every board swapped in.
 htmx.onLoad(makeSortable);
-htmx.onLoad(celebrate);
+htmx.onLoad((root) => {
+  const card = root.querySelector("[data-celebrate]");
+  if (card) celebrate(card);
+});
 document.addEventListener("htmx:responseError", restoreBoard);
 document.addEventListener("htmx:sendError", restoreBoard);
