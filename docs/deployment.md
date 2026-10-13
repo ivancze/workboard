@@ -83,7 +83,8 @@ across two deploys.
 `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` are **not** configured. Settings read
 Render's own `RENDER_EXTERNAL_HOSTNAME`, so the deployed hostname is never
 hardcoded — which matters because Render appends a suffix when the requested
-subdomain is already taken.
+subdomain is already taken. Any other host lists its addresses in
+`PUBLIC_HOSTNAMES`, which feeds both settings the same way.
 
 `HTTPS_ONLY` is a flag of its own rather than being derived from `DEBUG`,
 because Django forces `DEBUG` off while running tests and an SSL redirect would

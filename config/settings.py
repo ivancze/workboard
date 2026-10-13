@@ -14,11 +14,14 @@ DEBUG = env.bool("DEBUG", default=False)
 # the requested subdomain is already taken by someone else.
 RENDER_HOSTNAME = env("RENDER_EXTERNAL_HOSTNAME", default="")
 
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
-CSRF_TRUSTED_ORIGINS = []
+# Every other provider lists the addresses the site is served on here, comma
+# separated: Cloud Run's, Firebase's, and later the custom domain.
+PUBLIC_HOSTNAMES = env.list("PUBLIC_HOSTNAMES", default=[])
 if RENDER_HOSTNAME:
-    ALLOWED_HOSTS.append(RENDER_HOSTNAME)
-    CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_HOSTNAME}")
+    PUBLIC_HOSTNAMES.append(RENDER_HOSTNAME)
+
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[]) + PUBLIC_HOSTNAMES
+CSRF_TRUSTED_ORIGINS = [f"https://{hostname}" for hostname in PUBLIC_HOSTNAMES]
 
 DATABASES = {"default": env.db("DATABASE_URL")}
 

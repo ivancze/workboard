@@ -167,3 +167,54 @@ gcloud compute networks list
 ```
 
 Only `main` should be left.
+
+## Releasing an image by hand
+
+The pipeline does this on every push to `main`. By hand, it's for the first
+image, or a release when the pipeline can't run. Commit first: the image is
+tagged with the commit, so uncommitted changes would ship under a tag that
+doesn't contain them.
+
+Once per Mac, let Docker push to the registry:
+
+```
+gcloud auth configure-docker asia-southeast1-docker.pkg.dev
+```
+
+Then, from the repository root:
+
+```
+IMAGE=asia-southeast1-docker.pkg.dev/prj-app-workboard/workboard/workboard:$(git rev-parse HEAD)
+docker buildx build --platform linux/amd64 --provenance=false -t "$IMAGE" --push .
+gcloud run jobs update workboard-migrate --image="$IMAGE"
+gcloud run jobs execute workboard-migrate --wait
+gcloud run jobs update workboard-manage --image="$IMAGE"
+gcloud run services update workboard --image="$IMAGE"
+```
+
+The order is the point. Migrations run to completion on the new image before
+the service gets it, so new code never meets an old schema. A failed migration
+stops there, with the old revision still serving. `--provenance=false` keeps
+the build to a single image, so the registry's keep-5 rule counts releases
+rather than build metadata.
+
+`terraform plan` still reports no changes afterwards, because Terraform
+ignores the image on the service and both jobs.
+
+## Running a management command
+
+`workboard-manage` runs any `manage.py` command against the production
+database, with `--args` replacing the default `showmigrations`:
+
+```
+gcloud run jobs execute workboard-manage --wait
+gcloud run jobs execute workboard-manage --wait --args='^|^shell|-c|from accounts.models import User; print(User.objects.count())'
+```
+
+The `^|^` prefix makes `|` the separator, so the code can contain commas. To
+read the output:
+
+```
+gcloud logging read 'resource.type="cloud_run_job" AND resource.labels.job_name="workboard-manage"' \
+  --freshness=15m --order=asc --format="value(textPayload)"
+```
