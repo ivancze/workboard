@@ -61,6 +61,9 @@ resource "google_cloud_run_v2_service" "workboard" {
           cpu    = "1"
           memory = "512Mi"
         }
+        # CPU only while handling a request, so an idle instance costs
+        # nothing. It's the default only when no limits are set.
+        cpu_idle = true
       }
 
       # Not HTTP: a probe arrives without the public hostname, which
