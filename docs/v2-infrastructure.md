@@ -1,5 +1,9 @@
 # Infrastructure options for v2
 
+**Decided:** a variant of Option A, with the database moving to Cloud SQL as
+well. See [ADR 0004](adr/0004-cloud-run-and-cloud-sql-behind-firebase.md). The
+rest of this page is the reasoning as it stood before that decision.
+
 Nothing here is decided. v1 deliberately deferred all infrastructure learning
 (see ticket 05 of the grilling: a weekend to a pilot, infra when release cadence
 justifies it), and this records the two candidate directions so the reasoning
