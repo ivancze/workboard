@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- The light theme's text token, copied: a favicon can't read the stylesheet. -->
+  <rect width="32" height="32" rx="7" fill="#18181b"/>
+  <!-- Three Stages holding different numbers of Cards. Every edge is on an even
+       coordinate, so at 16px each lands on a whole pixel and stays sharp. -->
+  <g fill="#ffffff">
+    <rect x="6" y="6" width="4" height="20" rx="1"/>
+    <rect x="14" y="6" width="4" height="14" rx="1"/>
+    <rect x="22" y="6" width="4" height="8" rx="1"/>
+  </g>
+</svg>
