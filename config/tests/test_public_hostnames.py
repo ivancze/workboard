@@ -1,31 +1,10 @@
-import json
-import os
-import subprocess
-import sys
-
 from django.test import SimpleTestCase
 
-READ_HOSTS = (
-    "import json; from django.conf import settings; "
-    "print(json.dumps([settings.ALLOWED_HOSTS, settings.CSRF_TRUSTED_ORIGINS]))"
-)
+from .fresh_settings import settings_with
 
 
 def hosts_with(**variables):
-    """Settings are read once per process, so each case starts a fresh one."""
-    environment = {
-        key: value
-        for key, value in os.environ.items()
-        if key not in {"ALLOWED_HOSTS", "PUBLIC_HOSTNAMES", "RENDER_EXTERNAL_HOSTNAME"}
-    }
-    output = subprocess.run(
-        [sys.executable, "-c", READ_HOSTS],
-        env=environment | {"DJANGO_SETTINGS_MODULE": "config.settings"} | variables,
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout
-    return json.loads(output)
+    return settings_with(["ALLOWED_HOSTS", "CSRF_TRUSTED_ORIGINS"], **variables)
 
 
 class PublicHostnameTests(SimpleTestCase):

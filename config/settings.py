@@ -23,6 +23,12 @@ if RENDER_HOSTNAME:
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[]) + PUBLIC_HOSTNAMES
 CSRF_TRUSTED_ORIGINS = [f"https://{hostname}" for hostname in PUBLIC_HOSTNAMES]
 
+# Firebase Hosting passes requests to Cloud Run addressed to Cloud Run's own
+# hostname, with the one the browser used in X-Forwarded-Host. Sign-in builds
+# Google's callback address from the host, so behind Firebase it has to come
+# from that header. ALLOWED_HOSTS still checks whatever it says.
+USE_X_FORWARDED_HOST = env.bool("USE_X_FORWARDED_HOST", default=False)
+
 DATABASES = {"default": env.db("DATABASE_URL")}
 
 # No persistent connections by default. Neon bills compute by the hour and
@@ -143,6 +149,15 @@ HTTPS_ONLY = env.bool("HTTPS_ONLY", default=False)
 SECURE_SSL_REDIRECT = HTTPS_ONLY
 SESSION_COOKIE_SECURE = HTTPS_ONLY
 CSRF_COOKIE_SECURE = HTTPS_ONLY
+
+# Firebase Hosting, in front of Cloud Run, forwards one cookie only, and it must
+# be named __session. So the CSRF token and messages live in the session rather
+# than cookies of their own, and nothing may add another cookie. Render keeps
+# Django's name until the custom domain switch, since renaming the cookie signs
+# everyone out. See docs/deployment.md.
+SESSION_COOKIE_NAME = env("SESSION_COOKIE_NAME", default="sessionid")
+CSRF_USE_SESSIONS = True
+MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
 # Deliberately an hour, not a year: HSTS cannot be revoked for the hostname
 # once a browser has seen it, so a short window stays recoverable.
 SECURE_HSTS_SECONDS = 3600 if HTTPS_ONLY else 0

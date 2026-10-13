@@ -3,6 +3,7 @@ data "google_project" "this" {}
 locals {
   # Cloud Run's address for a service is fixed by its name, project and region.
   run_hostname = "workboard-${data.google_project.this.number}.${local.region}.run.app"
+  web_hostname = "${local.project}.web.app"
 
   # Terraform creates the service and jobs with Google's sample image. Every
   # real image after that is deployed outside Terraform, which ignores it.
@@ -78,7 +79,16 @@ resource "google_cloud_run_v2_service" "workboard" {
       }
       env {
         name  = "PUBLIC_HOSTNAMES"
-        value = local.run_hostname
+        value = "${local.run_hostname},${local.web_hostname}"
+      }
+      # The only cookie Firebase Hosting forwards.
+      env {
+        name  = "SESSION_COOKIE_NAME"
+        value = "__session"
+      }
+      env {
+        name  = "USE_X_FORWARDED_HOST"
+        value = "True"
       }
       dynamic "env" {
         for_each = google_secret_manager_secret.app

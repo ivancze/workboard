@@ -16,7 +16,8 @@ permissions:
 env:
   REGION: asia-southeast1
   IMAGE: asia-southeast1-docker.pkg.dev/prj-app-workboard/workboard/workboard:${{ github.sha }}
-  SITE: https://workboard-678236888289.asia-southeast1.run.app
+  # Through Firebase Hosting, the way Members reach it.
+  SITE: https://prj-app-workboard.web.app
 
 jobs:
   test:
@@ -74,7 +75,7 @@ jobs:
         id: previous
         run: |
           revision=$(gcloud run services describe workboard --region="$REGION" --format='value(status.traffic[0].revisionName)')
-          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+          echo "revision=$revision" | tee -a "$GITHUB_OUTPUT"
 
       # A failure here ends the run before the deploy, so the previous revision
       # keeps serving against a schema it already understands.

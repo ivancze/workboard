@@ -697,6 +697,9 @@ class EffortTotalTests(TestCase):
 
     def test_the_board_costs_the_same_queries_however_many_cards_it_has(self):
         a_card(self.to_do, "Only")
+        # The first page after signing in also saves the CSRF token into the
+        # session, which is not what this measures.
+        self.client.get(self.url)
         with CaptureQueriesContext(connection) as few:
             self.client.get(self.url)
 

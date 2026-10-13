@@ -9,6 +9,11 @@ terraform {
       source  = "hashicorp/google"
       version = "~> 7.0"
     }
+    # Firebase Hosting's resources exist only in the beta provider.
+    google-beta = {
+      source  = "hashicorp/google-beta"
+      version = "~> 7.0"
+    }
     random = {
       source  = "hashicorp/random"
       version = "~> 3.7"
@@ -34,6 +39,13 @@ provider "google" {
 
   # Signed in as a person rather than a service account, some APIs (budgets
   # among them) refuse a call that doesn't name a project to bill it to.
+  user_project_override = true
+  billing_project       = local.project
+}
+
+provider "google-beta" {
+  project               = local.project
+  region                = local.region
   user_project_override = true
   billing_project       = local.project
 }

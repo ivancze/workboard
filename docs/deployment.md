@@ -94,6 +94,28 @@ HSTS is set to one hour, not a year. A browser that has seen an HSTS header
 will refuse plain HTTP for that hostname until it expires, and that cannot be
 revoked — an hour stays recoverable.
 
+## One cookie only
+
+On Google Cloud, Firebase Hosting sits in front of Cloud Run, and it forwards
+exactly one cookie: the one named `__session`. Every other cookie still reaches
+the browser, but never comes back to the server, so anything kept in one
+silently vanishes. The application therefore keeps everything in the session:
+
+- **CSRF tokens:** `CSRF_USE_SESSIONS`. htmx reads the token from the page,
+  never from a cookie.
+- **Messages:** session storage.
+- **The session cookie's name:** `SESSION_COOKIE_NAME`. Cloud Run sets
+  `__session`. Render keeps Django's `sessionid` until the custom domain
+  switch, because renaming the cookie signs everyone out.
+
+**Don't add a cookie.** Put the value in the session instead.
+`config/tests/test_cookies.py` sends a form and reads its message with every
+other cookie stripped, as Firebase would.
+
+Firebase also hands Cloud Run requests addressed to Cloud Run's own hostname,
+so `USE_X_FORWARDED_HOST` is on there. Sign-in then builds Google's callback
+address from the host the browser used.
+
 ## Static files
 
 Collected at build time and served by whitenoise. Files are compressed but not
