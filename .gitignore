@@ -14,3 +14,22 @@ static/css/
 .terraform/
 *.tfstate*
 terraform.tfvars
+
+# Terraform: anything that can hold values or credentials
+*.tfvars
+*.tfvars.json
+*.tfplan
+*.plan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Google Cloud credentials, should one ever land in the repo
+*-key.json
+*credentials*.json
+service-account*.json
