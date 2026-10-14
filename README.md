@@ -44,8 +44,8 @@ a Card to open it, and *Edit* to change it:
 - **Contact persons**, free text for people outside the board
 - **Due date**, for reference only. A Card due today gets an orange outline,
   and one past its date is marked Overdue in red
-- **Effort**, a number in steps of 0.5, in whatever unit your team uses. Leave
-  it empty if it hasn't been estimated
+- **Effort**, a number in steps of 0.1, in whatever unit your team uses:
+  hours, days or a score. Leave it empty if it hasn't been estimated
 
 **Effort totals.** The board and each Stage show their total Effort, with a
 count of the Unestimated Cards it leaves out.

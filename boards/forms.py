@@ -86,12 +86,15 @@ class CardForm(forms.ModelForm):
         help_texts = {
             "description": "Markdown supported.",
             "contact_persons": "People outside the board, e.g. Lando Hamilton po",
-            "effort": "In steps of 0.5. Leave empty if Unestimated.",
+            "effort": (
+                "How much work this Card represents, in a unit your team agrees on:"
+                " hours, days or a score. Leave empty if Unestimated."
+            ),
         }
         widgets = {
             "due_date": DateInput(),
             # Stepper arrows. The model's validators are what enforce these.
-            "effort": forms.NumberInput(attrs={"min": "0", "step": "0.5"}),
+            "effort": forms.NumberInput(attrs={"min": "0", "step": "0.1"}),
         }
 
     def __init__(self, *args, board, **kwargs):

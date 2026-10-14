@@ -671,8 +671,13 @@ class EffortTests(TestCase):
     def edit(self, effort):
         return self.client.post(self.edit_url, {"title": "Buy milk", "effort": effort})
 
-    def test_effort_is_saved_in_steps_of_a_half_with_no_small_ceiling(self):
-        for typed, saved in [("2.5", Decimal("2.5")), ("0", Decimal("0")), ("100000", Decimal("100000"))]:
+    def test_effort_is_saved_in_steps_of_a_tenth_with_no_small_ceiling(self):
+        for typed, saved in [
+            ("2.3", Decimal("2.3")),
+            ("0.1", Decimal("0.1")),
+            ("0", Decimal("0")),
+            ("100000", Decimal("100000")),
+        ]:
             with self.subTest(typed=typed):
                 self.edit(typed)
                 self.card.refresh_from_db()
@@ -682,10 +687,17 @@ class EffortTests(TestCase):
         response = self.client.get(self.edit_url)
 
         self.assertContains(response, 'type="number" name="effort"')
-        self.assertContains(response, 'step="0.5"')
+        self.assertContains(response, 'step="0.1"')
 
-    def test_values_off_the_half_step_are_rejected(self):
-        for typed in ["0.3", "1.25"]:
+    def test_the_field_says_the_unit_is_the_teams_own(self):
+        self.assertContains(
+            self.client.get(self.edit_url),
+            "How much work this Card represents, in a unit your team agrees on:"
+            " hours, days or a score. Leave empty if Unestimated.",
+        )
+
+    def test_values_finer_than_a_tenth_are_rejected(self):
+        for typed in ["0.05", "1.25"]:
             with self.subTest(typed=typed):
                 response = self.edit(typed)
                 self.assertEqual(response.status_code, 200)

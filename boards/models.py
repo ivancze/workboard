@@ -480,7 +480,7 @@ class Card(models.Model):
     # A label only: it never moves a Card in Card order, and nothing sorts or
     # filters by it. Empty is No priority, the default.
     priority = models.CharField(max_length=6, choices=Priority, blank=True, default="")
-    # A bare number in the team's own unit, in steps of 0.5. Null is
+    # A bare number in the team's own unit, in steps of 0.1. Null is
     # Unestimated, which is not the same as zero: zero says this is free,
     # Unestimated says nobody has looked yet. No ceiling beyond the column's.
     effort = models.DecimalField(
@@ -488,7 +488,7 @@ class Card(models.Model):
         decimal_places=1,
         null=True,
         blank=True,
-        validators=[MinValueValidator(0), StepValueValidator(Decimal("0.5"))],
+        validators=[MinValueValidator(0), StepValueValidator(Decimal("0.1"))],
     )
     created_at = models.DateTimeField(auto_now_add=True)
     # Recorded for a future display and Card history; nothing shows it yet.
