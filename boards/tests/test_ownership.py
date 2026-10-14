@@ -219,6 +219,94 @@ class DeletingABoardTests(TestCase):
         self.assertFalse(Membership.objects.filter(user=hopper).exists())
 
 
+class RenamingABoardTests(TestCase):
+    def setUp(self):
+        self.ada = a_user()
+        self.grace = verified(a_user("grace@example.com"))
+        self.board = Board.objects.create_with_owner(name="Housework", owner=self.ada)
+        Membership.objects.create(board=self.board, user=self.grace)
+        self.client.force_login(self.ada)
+        self.url = reverse("board_rename", args=[self.board.pk])
+        self.board_url = reverse("board_detail", args=[self.board.pk])
+
+    def rename(self, name):
+        return self.client.post(self.url, {"name": name})
+
+    def test_only_the_owner_is_offered_renaming(self):
+        self.assertIn(f'href="{self.url}"', self.client.get(self.board_url).content.decode())
+
+        self.client.force_login(self.grace)
+        self.assertNotIn(f'href="{self.url}"', self.client.get(self.board_url).content.decode())
+
+    def test_the_page_starts_from_the_current_name(self):
+        self.assertContains(self.client.get(self.url), 'value="Housework"')
+
+    def test_the_owner_renames_it_and_everyone_sees_the_new_name(self):
+        response = self.rename("  Chores  ")
+
+        self.assertRedirects(response, self.board_url, fetch_redirect_response=False)
+        self.board.refresh_from_db()
+        self.assertEqual(self.board.name, "Chores")
+        self.assertContains(self.client.get(self.board_url), "Renamed the board to Chores.")
+        self.client.force_login(self.grace)
+        self.assertContains(self.client.get(reverse("home")), "Chores")
+
+    def test_a_blank_or_too_long_name_is_refused(self):
+        for typed in ["", "   ", "x" * 101]:
+            with self.subTest(typed=typed[:5]):
+                response = self.rename(typed)
+                self.assertEqual(response.status_code, 400)
+                self.board.refresh_from_db()
+                self.assertEqual(self.board.name, "Housework")
+
+    def test_the_pencil_beside_the_name_replaces_the_menu_item(self):
+        content = self.client.get(self.board_url).content.decode()
+
+        self.assertEqual(content.count(f'href="{self.url}"'), 1)
+        self.assertRegex(content, rf'<a href="{self.url}" hx-get="{self.url}"[^>]*aria-label="Rename board"')
+        self.assertNotIn(">Rename board</a>", content)
+
+    def test_the_pencil_opens_the_name_for_editing_in_place(self):
+        response = self.client.get(self.url, headers={"HX-Request": "true"})
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn('<form id="board-heading"', content)
+        self.assertIn('value="Housework"', content)
+        self.assertNotIn("<html", content)
+
+    def test_saving_in_place_returns_the_new_heading_and_title(self):
+        response = self.client.post(self.url, {"name": "Chores"}, headers={"HX-Request": "true"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '<div id="board-heading"')
+        self.assertContains(response, ">Chores</h1>")
+        self.assertContains(response, "<title>Chores · Workboard</title>")
+        self.board.refresh_from_db()
+        self.assertEqual(self.board.name, "Chores")
+        # The new name shows where it was typed, so no message follows later.
+        self.assertNotContains(self.client.get(self.board_url), "Renamed the board")
+
+    def test_a_refused_name_in_place_comes_back_with_its_error(self):
+        response = self.client.post(self.url, {"name": "  "}, headers={"HX-Request": "true"})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, '<form id="board-heading"', status_code=400)
+        self.assertContains(response, "This field is required.", status_code=400)
+        self.board.refresh_from_db()
+        self.assertEqual(self.board.name, "Housework")
+
+    def test_a_member_cannot_rename_by_submitting_directly_and_a_stranger_sees_nothing(self):
+        self.client.force_login(self.grace)
+        self.assertEqual(self.client.get(self.url).status_code, 403)
+        self.assertEqual(self.rename("Mine now").status_code, 403)
+
+        self.client.force_login(a_user("stranger@example.com"))
+        self.assertEqual(self.rename("Mine now").status_code, 404)
+        self.board.refresh_from_db()
+        self.assertEqual(self.board.name, "Housework")
+
+
 class ConcurrentOwnershipTests(TransactionTestCase):
     def setUp(self):
         self.ada = a_user()

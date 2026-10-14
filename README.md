@@ -24,6 +24,10 @@ them. A Member can leave a board the same way, from *Members*.
 Every board has exactly one Owner. To step down, or before leaving, the Owner
 hands ownership to another Member with *Make Owner*.
 
+**Renaming a board.** Only the Owner can, with the pencil beside the board's
+name: edit the name where it is, then press Enter, or Escape to leave it.
+Everyone on the board sees the new name.
+
 **Deleting a board.** Only the Owner can, from *Delete board…* in the board's
 ⋯ menu. It deletes every Card, archived ones included, with no undo, so it
 asks you to type the board's name exactly first.

@@ -149,6 +149,17 @@ that also clips anything overflowing its bottom, so a menu left inside it
 would be cut off on the lowest Card. Scrolling closes an open menu rather than
 leaving it behind, and so does choosing an item that opens a dialog.
 
+**Renaming a board in place** (`components/board_heading.html`). The Owner's
+pencil beside the board's name is a link to the rename page, which is what
+it stays without JavaScript. With htmx it swaps the heading for
+`components/board_rename_form.html`. `board.js` focuses and selects the name,
+and keeps a copy of the heading, so that Escape, Cancel or a click elsewhere
+put it back without a round trip. Saving returns the heading, with a
+`<title>` that htmx applies to the tab, and focus goes back to the pencil. A
+refused name comes back as a 400 carrying its error. `board.js` lets htmx
+swap it in, and clears its error status, which would otherwise make
+`restoreBoard` reload the board.
+
 **Confirmation dialogs** (`components/confirm_dialog.html`) are native
 `<dialog>` elements, opened by a button with `commandfor="<dialog id>"` and
 `command="show-modal"`, so they need no JavaScript: Cancel and Escape close

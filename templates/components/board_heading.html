@@ -1,0 +1,17 @@
+{% comment %}
+  The board's name, and for the Owner a pencil to rename it in place: htmx
+  swaps in board_rename_form.html, and board.js handles focus, Escape and
+  Cancel. Without JavaScript the pencil is a link to the rename page. Needs
+  `board` and `is_owner`. Sent alone after a rename with `retitle`, so htmx
+  renames the tab too.
+{% endcomment %}
+{% if retitle %}<title>{{ board.name }} · Workboard</title>{% endif %}
+<div id="board-heading" class="flex min-w-0 items-center gap-2">
+  {% include "components/page_heading.html" with text=board.name %}
+  {% if is_owner %}
+    {% url 'board_rename' board.pk as rename_url %}
+    <a href="{{ rename_url }}" hx-get="{{ rename_url }}" hx-target="#board-heading" hx-swap="outerHTML" aria-label="Rename board" title="Rename board" class="shrink-0 rounded-md p-1.5 text-text-muted transition-colors hover:bg-sunken hover:text-text">
+      <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
+    </a>
+  {% endif %}
+</div>

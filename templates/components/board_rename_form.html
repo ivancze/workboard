@@ -1,0 +1,19 @@
+{% comment %}
+  The board's name being edited in place, standing in for
+  board_heading.html. Enter saves. Escape, Cancel or a click elsewhere puts
+  the heading back (board.js). A refused name comes back here with its
+  error, as a 400 that board.js lets htmx swap in. Needs `board` and `form`.
+{% endcomment %}
+{% url 'board_rename' board.pk as rename_url %}
+<form id="board-heading" data-rename method="post" action="{{ rename_url }}" hx-post="{{ rename_url }}" hx-target="this" hx-swap="outerHTML" class="flex min-w-0 flex-1 flex-col gap-1.5">
+  {% csrf_token %}
+  <div class="flex items-center gap-2">
+    <input type="text" name="name" value="{{ form.name.value|default:'' }}" maxlength="100" required aria-label="Board name"{% if form.name.errors %} aria-invalid="true" aria-describedby="board-name-error"{% endif %} class="min-w-0 flex-1 rounded-md border border-control bg-surface px-3 py-1 font-display text-3xl font-extrabold tracking-tight text-text">
+    {% include "components/button.html" with label="Save" %}
+    {# board.js finds Cancel as the form's one type="button". #}
+    {% include "components/button.html" with label="Cancel" type="button" variant="ghost" %}
+  </div>
+  {% for error in form.name.errors %}
+    <p id="board-name-error" class="text-sm text-danger">{{ error }}</p>
+  {% endfor %}
+</form>

@@ -211,3 +211,52 @@ htmx.onLoad((root) => {
 });
 document.addEventListener("htmx:responseError", restoreBoard);
 document.addEventListener("htmx:sendError", restoreBoard);
+
+// Renaming the board in place, from the pencil beside its name
+// (board_heading.html). The heading is kept while its form is out, so Escape,
+// Cancel or a click elsewhere put it back without asking the server. htmx
+// strips its listeners from what it swaps out, so this keeps a copy and
+// processes it again on the way back.
+let heading = null;
+
+document.addEventListener("htmx:beforeSwap", (event) => {
+  const target = event.detail.target;
+  if (target.id !== "board-heading") return;
+  if (!target.matches("form")) heading = target.cloneNode(true);
+  // A refused name comes back as a 400 carrying its error. Show it, and keep
+  // it from counting as a failure, which would reload the board.
+  if (event.detail.xhr.status === 400) {
+    event.detail.shouldSwap = true;
+    event.detail.isError = false;
+  }
+});
+
+htmx.onLoad((root) => {
+  // The heading comes back after a save: focus returns to its pencil.
+  if (root.matches("div#board-heading")) root.querySelector("a").focus();
+  if (!root.matches("[data-rename]")) return;
+  const input = root.querySelector("input[name=name]");
+  input.focus();
+  input.select();
+});
+
+function cancelRename() {
+  const form = document.querySelector("[data-rename]");
+  // Not once a save is under way: its answer replaces the form.
+  if (!form || !heading || form.classList.contains("htmx-request")) return;
+  const restored = heading;
+  heading = null;
+  form.replaceWith(restored);
+  htmx.process(restored);
+  restored.querySelector("a").focus();
+}
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && event.target.closest("[data-rename]")) cancelRename();
+});
+document.addEventListener("click", (event) => {
+  if (event.target.closest("[data-rename] button[type=button]")) cancelRename();
+});
+document.addEventListener("pointerdown", (event) => {
+  if (!event.target.closest("[data-rename]")) cancelRename();
+});

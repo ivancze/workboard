@@ -501,6 +501,36 @@ def board_leave(request, board_pk):
 
 
 @login_required
+def board_rename(request, board_pk):
+    """The Owner's alone, like deleting. The form gets its own copy, so a
+    refused name never shows in the page's link back to the board.
+
+    The pencil beside the board's name asks with htmx, and edits the name in
+    place: it gets the bare form, then the heading back. Without JavaScript,
+    the pencil is a link to this page, which redirects to the board."""
+    board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
+    require_owner(board, request.user)
+    form = BoardForm(request.POST or None, instance=copy.copy(board))
+    in_place = request.headers.get("HX-Request")
+    if request.method == "POST" and form.is_valid():
+        form.instance.save(update_fields=["name"])
+        if in_place:
+            return render(
+                request,
+                "components/board_heading.html",
+                {"board": form.instance, "is_owner": True, "retitle": True},
+            )
+        messages.success(request, f"Renamed the board to {form.instance.name}.")
+        return redirect("board_detail", pk=board.pk)
+    return render(
+        request,
+        "components/board_rename_form.html" if in_place else "boards/board_rename.html",
+        {"board": board, "form": form},
+        status=400 if form.is_bound else 200,
+    )
+
+
+@login_required
 def board_delete(request, board_pk):
     """The one place that deliberately slows the Owner down: the whole board
     goes, with no undo, only once its name is typed exactly."""
