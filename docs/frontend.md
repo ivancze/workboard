@@ -42,11 +42,17 @@ colour as invalid. That is acceptable for a small team on current browsers.
 missing from the scale, add it to `@theme` as a token. A test fails on any
 `[` in a template class.
 
-The one copied colour is the tab icon, `static/favicon.svg`, which holds the
+One copied colour is the tab icon, `static/favicon.svg`, which holds the
 light theme's `--color-text` as a hex value because a favicon cannot read the
 stylesheet. It uses the light value in both themes: on a dark tab bar the
 tile's edge fades, but its white bars still read. Change it by hand when that
 token changes.
+
+The other is Google's "G" on the sign-in button
+(`components/google_mark.html`), in Google's own four colours. A brand mark
+isn't recoloured, and Google allows it only on a white or neutral
+background, so that button uses the bordered `secondary` variant rather than
+the accent.
 
 **Contrast is tested.** A test reads each token's light and dark value from
 `assets/app.css` and checks the WCAG AA pairs: 4.5:1 for text, and 3:1 for

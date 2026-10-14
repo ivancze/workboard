@@ -6,7 +6,23 @@
     {% include "components/page_heading.html" with text="Hello, "|add:user.name %}
 
     <section class="mt-8">
-      <h2 class="font-condensed text-3xl tracking-wide text-text-muted">Your boards</h2>
+      <div class="flex items-center justify-between gap-4">
+        <h2 class="font-condensed text-3xl tracking-wide text-text-muted">Your boards</h2>
+        {% comment %}
+          The form waits behind a button, opening as a panel below it, with no
+          JavaScript. It comes back open when a name was refused, to show why.
+        {% endcomment %}
+        <details data-new-board class="relative"{% if form.errors %} open{% endif %}>
+          <summary class="inline-flex cursor-pointer list-none items-center justify-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover">New board</summary>
+          <div class="absolute right-0 z-10 mt-2 w-80 rounded-xl border border-border bg-surface p-4 shadow-lg">
+            <form method="post" action="{% url 'board_create' %}" class="flex flex-col gap-4">
+              {% csrf_token %}
+              {% include "components/fields.html" %}
+              <div>{% include "components/button.html" with label="Create board" %}</div>
+            </form>
+          </div>
+        </details>
+      </div>
       {% if boards %}
         <ul class="mt-4 grid gap-4 sm:grid-cols-2">
           {% for board in boards %}
@@ -21,26 +37,18 @@
         <p class="mt-2 text-sm text-text-muted">You're signed in as <span class="font-semibold text-text">{{ user.email }}</span>. If someone has invited you to a board, check they used this address.</p>
       {% endif %}
     </section>
-
-    <section class="mt-10 rounded-xl border border-border bg-surface p-6">
-      <h2 class="font-condensed text-3xl tracking-wide">New board</h2>
-      <form method="post" action="{% url 'board_create' %}" class="mt-4 flex flex-col gap-4">
-        {% csrf_token %}
-        {% include "components/fields.html" %}
-        <div>{% include "components/button.html" with label="Create board" %}</div>
-      </form>
-    </section>
   {% else %}
     <div class="py-24 text-center">
       <h1 class="font-condensed text-8xl tracking-wide sm:text-9xl">Workboard</h1>
-      <p class="mt-4 text-xl text-text-muted sm:text-2xl">A Kanban board for a small team.</p>
+      <p class="mt-4 text-xl text-text-muted sm:text-2xl">A collaborative Kanban board for small teams.</p>
       {% comment %}
         A POST, not a link: allauth refuses provider login over GET so that a
         third-party page cannot start a sign-in by embedding a URL.
       {% endcomment %}
       <form method="post" action="{% provider_login_url 'google' process='login' %}" class="mt-8">
         {% csrf_token %}
-        {% include "components/button.html" with label="Sign in with Google" %}
+        {# Bordered rather than filled: Google's "G" may only sit on a neutral background. #}
+        {% include "components/button.html" with label="Sign in with Google" icon="components/google_mark.html" variant="secondary" %}
       </form>
     </div>
   {% endif %}

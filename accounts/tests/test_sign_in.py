@@ -1,3 +1,5 @@
+import re
+
 from django.db.utils import IntegrityError
 from django.test import TestCase
 from django.urls import reverse
@@ -11,6 +13,16 @@ class SignedOutHomeTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Sign in with Google")
+
+    def test_says_what_it_is(self):
+        self.assertContains(self.client.get("/"), "A collaborative Kanban board for small teams.")
+
+    def test_the_sign_in_button_carries_googles_mark(self):
+        content = self.client.get("/").content.decode()
+
+        button = re.search(r"<button[^>]*>.*?Sign in with Google</button>", content, re.S).group()
+        self.assertIn('<svg data-google-mark', button)
+        self.assertIn('aria-hidden="true"', button)
 
     def test_leaks_no_template_syntax(self):
         """Django's {# #} comments are single-line only, so a multi-line one

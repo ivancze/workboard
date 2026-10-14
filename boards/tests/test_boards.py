@@ -50,6 +50,19 @@ class CreatingABoardTests(TestCase):
 
         self.assertFalse(Board.objects.exists())
 
+    def test_the_new_board_form_waits_behind_a_button(self):
+        content = self.client.get(reverse("home")).content.decode()
+
+        self.assertRegex(content, r"<details data-new-board[^>]*>\s*<summary[^>]*>New board</summary>")
+        self.assertNotRegex(content, r"<details data-new-board[^>]*\bopen\b")
+        self.assertIn('name="name"', content)  # inside, ready once opened
+
+    def test_a_refused_name_shows_the_form_open_with_its_error(self):
+        response = self.client.post(reverse("board_create"), {"name": "   "})
+
+        self.assertRegex(response.content.decode(), r"<details data-new-board[^>]*\bopen\b")
+        self.assertContains(response, "This field is required.")
+
     def test_creating_requires_signing_in(self):
         self.client.logout()
 
