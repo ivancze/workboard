@@ -5,6 +5,10 @@ name: Test and deploy
 
 on:
   pull_request:
+  # The Run workflow button, for a release with nothing new to push, such as
+  # after a secret changes. Google refuses a token to any branch but those
+  # below, so a run from another branch fails before it builds.
+  workflow_dispatch:
   push:
     # feat/migrate-gcp only while the migration is being built. Google refuses
     # a token to any branch not listed in infra/pipeline.tf as well.
@@ -54,7 +58,7 @@ jobs:
       - run: uv run python manage.py test
 
   deploy:
-    if: github.event_name == 'push'
+    if: github.event_name != 'pull_request'
     needs: test
     runs-on: ubuntu-latest
     permissions:

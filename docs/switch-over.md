@@ -16,7 +16,7 @@ custom domain work. Members keep the address and stay signed in.
    certificate from TXT records while the domain still points at Render. Wait
    until it shows as issued. Whether the certificate really comes before DNS
    moves is still to be confirmed. If not, expect a few minutes of
-   certificate errors at "The window", step 5.
+   certificate errors at "The window", step 6.
 2. **The application accepts the domain.** Add `<domain>` to
    `PUBLIC_HOSTNAMES` in `infra/run.tf`, then `terraform apply`.
 3. **Sign-in accepts it.** `https://<domain>/accounts/google/login/callback/`
@@ -46,22 +46,29 @@ custom domain work. Members keep the address and stay signed in.
    the dump took about 4 s and the import about 10 s, and each count takes
    about a minute. The `diff` must show nothing at all. If it shows anything,
    stop and roll back.
-4. **Deploy:** push the commit from "Days before", step 4. The new revision
-   starts fresh instances, which read the new `SECRET_KEY`. Its smoke check
-   goes through `<domain>`, which still points at Render, so it fails and
-   rolls back. That's expected. Re-run it after step 5 with
-   `gh run rerun <id> --failed`. Then `terraform apply` the `deploy_refs`
-   change.
-5. **Point the domain at Firebase:** replace the DNS record that points at
+4. **Release with Render's key:** `gh workflow run deploy.yml --ref main`,
+   then `gh run watch`. The new revision starts fresh instances, which read
+   the new `SECRET_KEY`. Two things about the timing:
+   - **Before the commit in step 5:** `SITE` is still `web.app`, so the
+     smoke check can pass.
+   - **Before DNS moves:** an instance still holding the trial's key can't
+     read a copied session, so it treats the Member as signed out. The
+     first page it serves then saves over that session.
+5. **Push the commit from "Days before", step 4.** It changes only
+   `.github/` and `infra/`, so it doesn't deploy. Then `terraform apply` the
+   `deploy_refs` change.
+6. **Point the domain at Firebase:** replace the DNS record that points at
    Render with the records the Firebase console lists.
-6. **Check the HSTS header with `curl`, before anyone opens the domain in a
+7. **Check the HSTS header with `curl`, before anyone opens the domain in a
    browser,** following the HSTS test in the custom domain spec.
-7. **Check:**
+8. **Check:**
    - `https://<domain>/health` shows Cloud SQL's fingerprint (see `CLAUDE.md`)
    - a browser that was signed in on Render is still signed in
    - drag a Card, then archive and restore it
    - claim an invitation with a second account
-8. **Tell Members the board is back.**
+   - `gh workflow run deploy.yml --ref main` passes, its smoke check now
+     going through `<domain>`
+9. **Tell Members the board is back.**
 
 ## Rolling back
 
