@@ -148,6 +148,10 @@ TEXT_PAIRS = [
     ("on-accent", "accent-hover"),
     ("on-danger", "danger"),
     ("on-danger", "danger-hover"),
+] + [
+    # A Priority pill's words, on its own colour.
+    (f"on-priority-{level}", f"priority-{level}")
+    for level in ["urgent", "must", "should", "could"]
 ]
 # 3:1 for the parts of a control that identify it, and for the focus ring.
 NON_TEXT_PAIRS = [(fg, bg) for fg in ["control", "focus"] for bg in BACKGROUNDS] + [

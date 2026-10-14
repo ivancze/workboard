@@ -56,14 +56,14 @@ _Avoid_: Column, list, status, state, bucket
 
 **Card**:
 One unit of work. The smallest thing a team member can be accountable for, and
-the only thing that carries effort, a due date, or an assignee.
+the only thing that carries effort, a due date, a priority, or an assignee.
 _Avoid_: Issue, ticket, task, story, item
 
 **Card order**:
 The deliberate top-to-bottom sequence of cards within a stage, arranged by hand
-and read as priority. Never derived from dates, effort, or when a card was
-created.
-_Avoid_: Rank, sort, priority (as a field — there is no priority field)
+and read as the team's working order. Never derived from dates, effort,
+priority, or when a card was created.
+_Avoid_: Rank, sort
 
 ### What a card carries
 
@@ -97,6 +97,14 @@ A card still on the board whose due date has passed. Overdue is read off the
 date alone — the system has no concept of a card being finished — so the way a
 card stops being overdue is by leaving the board through the archive.
 _Avoid_: Late, breached, at risk
+
+**Priority**:
+How much a card matters, declared as one of four levels, from highest: Urgent,
+Must have, Should have, Could have. A card may have none, which is the default
+and shows nothing. Purely a label: it never moves a card in card order, and
+nothing sorts or filters by it. An Urgent card can sit below a Could have one
+if that is where the team put it.
+_Avoid_: Severity, importance, rank, label, tag
 
 **Effort**:
 How much work a card is judged to represent, in whatever unit the team has

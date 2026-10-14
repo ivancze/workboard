@@ -1,0 +1,10 @@
+{% comment %}
+  A Card's Priority as a filled pill, always in words as well as colour.
+  Include it only for a Card that has one.
+
+  The classes are built from the value, so Tailwind, which scans this file,
+  learns them from this list: bg-priority-urgent text-on-priority-urgent
+  bg-priority-must text-on-priority-must bg-priority-should
+  text-on-priority-should bg-priority-could text-on-priority-could
+{% endcomment %}
+<span class="rounded-full bg-priority-{{ card.priority }} px-2 py-0.5 text-xs font-semibold text-on-priority-{{ card.priority }}"><span class="sr-only">Priority:</span> {{ card.get_priority_display }}</span>

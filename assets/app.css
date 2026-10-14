@@ -34,6 +34,15 @@
   --color-on-danger: light-dark(#ffffff, #111114); /* text on danger */
   --color-danger-hover: light-dark(#a51b1b, #fa9a9a);
   --color-warning: light-dark(#d4700f, #f0a05a); /* due today: noticed, not alarming */
+  /* Priority pills, filled so they read apart from the due-date outlines. */
+  --color-priority-urgent: light-dark(#7f1d1d, #991b1b);
+  --color-on-priority-urgent: light-dark(#ffffff, #ffffff);
+  --color-priority-must: light-dark(#dc2626, #dc2626);
+  --color-on-priority-must: light-dark(#ffffff, #ffffff);
+  --color-priority-should: light-dark(#ea580c, #ea580c);
+  --color-on-priority-should: light-dark(#18181b, #18181b);
+  --color-priority-could: light-dark(#facc15, #facc15);
+  --color-on-priority-could: light-dark(#18181b, #18181b);
   --color-scrim: light-dark(rgb(0 0 0 / 0.4), rgb(0 0 0 / 0.6)); /* behind a dialog */
   --color-focus: light-dark(#4f46e5, #8b93f8);
 

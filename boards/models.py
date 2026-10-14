@@ -434,6 +434,12 @@ class Card(models.Model):
     how the archive and every access check still find it.
     """
 
+    class Priority(models.TextChoices):
+        URGENT = "urgent", "Urgent"
+        MUST = "must", "Must have"
+        SHOULD = "should", "Should have"
+        COULD = "could", "Could have"
+
     # PROTECT, like the Stage: deleting a board must not take Cards with it by
     # accident, archived ones included.
     board = models.ForeignKey(Board, on_delete=models.PROTECT, related_name="cards")
@@ -471,6 +477,9 @@ class Card(models.Model):
     # A plain date with no time or timezone, and advisory only: nothing in the
     # system sorts, filters, blocks or notifies on it.
     due_date = models.DateField(null=True, blank=True)
+    # A label only: it never moves a Card in Card order, and nothing sorts or
+    # filters by it. Empty is No priority, the default.
+    priority = models.CharField(max_length=6, choices=Priority, blank=True, default="")
     # A bare number in the team's own unit, in steps of 0.5. Null is
     # Unestimated, which is not the same as zero: zero says this is free,
     # Unestimated says nobody has looked yet. No ceiling beyond the column's.

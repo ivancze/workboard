@@ -37,6 +37,9 @@ title is needed, and the Card goes to the bottom of the leftmost Stage. Click
 a Card to open it, and *Edit* to change it:
 
 - **Description**, written in Markdown
+- **Priority**: Urgent, Must have, Should have or Could have, shown on the
+  board as a coloured label. It's only a label: Cards stay where you put
+  them. Leave it at No priority if it doesn't matter
 - **Assignee**, one Member of the board, or Unassigned
 - **Contact persons**, free text for people outside the board
 - **Due date**, for reference only. A Card due today gets an orange outline,

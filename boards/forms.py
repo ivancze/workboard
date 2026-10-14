@@ -77,6 +77,7 @@ class CardForm(forms.ModelForm):
         fields = [
             "title",
             "description",
+            "priority",
             "assignee",
             "contact_persons",
             "due_date",
@@ -100,3 +101,5 @@ class CardForm(forms.ModelForm):
         self.fields["assignee"].queryset = User.objects.filter(
             memberships__board=board
         ).order_by("display_name", "email")
+        # Named like Unassigned and Unestimated, rather than Django's dashes.
+        self.fields["priority"].choices = [("", "No priority"), *Card.Priority.choices]

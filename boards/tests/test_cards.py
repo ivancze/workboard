@@ -48,7 +48,7 @@ class AddingACardTests(TestCase):
     def test_the_new_card_page_offers_every_field_blank(self):
         content = self.client.get(self.url).content.decode()
 
-        for name in ["title", "description", "assignee", "contact_persons", "due_date", "effort"]:
+        for name in ["title", "description", "priority", "assignee", "contact_persons", "due_date", "effort"]:
             self.assertIn(f'name="{name}"', content)
         self.assertIn("It goes to the bottom of To Do.", content)
 
@@ -584,6 +584,79 @@ class DueDateIsAdvisoryTests(TestCase):
         card.refresh_from_db()
         self.assertEqual(card.due_date, date(2020, 1, 1))
         self.assertEqual(mail.outbox, [])
+
+
+PRIORITIES = [
+    ("urgent", "Urgent"),
+    ("must", "Must have"),
+    ("should", "Should have"),
+    ("could", "Could have"),
+]
+
+
+def a_pill(value, label):
+    return (
+        f'<span class="rounded-full bg-priority-{value} px-2 py-0.5 text-xs font-semibold'
+        f' text-on-priority-{value}"><span class="sr-only">Priority:</span> {label}</span>'
+    )
+
+
+class PriorityTests(TestCase):
+    def setUp(self):
+        self.ada = a_user()
+        self.board = Board.objects.create_with_owner(name="Housework", owner=self.ada)
+        self.card = a_card(self.board.stages.first())
+        self.url = reverse("card_detail", args=[self.board.pk, self.card.pk])
+        self.edit_url = reverse("card_edit", args=[self.board.pk, self.card.pk])
+        self.board_url = reverse("board_detail", args=[self.board.pk])
+        self.client.force_login(self.ada)
+
+    def edit(self, priority):
+        return self.client.post(self.edit_url, {"title": "Buy milk", "priority": priority})
+
+    def test_each_level_is_saved_and_shown_as_its_own_pill(self):
+        for value, label in PRIORITIES:
+            with self.subTest(value=value):
+                self.edit(value)
+                self.card.refresh_from_db()
+                self.assertEqual(self.card.priority, value)
+                self.assertContains(self.client.get(self.board_url), a_pill(value, label), html=True)
+                self.assertContains(self.client.get(self.url), a_pill(value, label), html=True)
+
+    def test_no_priority_is_the_default_and_shows_no_pill(self):
+        self.assertEqual(self.card.priority, "")
+        self.assertContains(
+            self.client.get(self.edit_url),
+            '<option value="" selected>No priority</option>',
+            html=True,
+        )
+        self.assertNotContains(self.client.get(self.board_url), "bg-priority-")
+        self.assertContains(
+            self.client.get(self.url),
+            '<span class="font-normal text-text-muted">No priority</span>',
+            html=True,
+        )
+
+    def test_a_priority_can_be_taken_away(self):
+        self.edit("urgent")
+        self.edit("")
+
+        self.card.refresh_from_db()
+        self.assertEqual(self.card.priority, "")
+
+    def test_a_new_card_can_be_given_one(self):
+        self.client.post(
+            reverse("card_create", args=[self.board.pk]), {"title": "Fix the tap", "priority": "must"}
+        )
+
+        self.assertEqual(Card.objects.get(title="Fix the tap").priority, "must")
+
+    def test_an_unknown_level_is_rejected(self):
+        response = self.edit("critical")
+
+        self.assertContains(response, "Select a valid choice")
+        self.card.refresh_from_db()
+        self.assertEqual(self.card.priority, "")
 
 
 class EffortTests(TestCase):

@@ -39,6 +39,12 @@ Displaying it is a template change.
 **Viewer role.** Owner and Member exist; a read-only third role was cut until
 somebody asks for it. One value in one column plus checks.
 
+**Filtering by Priority.** Priority exists as a label, with four fixed levels.
+A "Show: Urgent" choice beside the Assignee filter would be the natural next
+step. Left out when Priority was added, because nobody had asked for it yet.
+Sorting by Priority is a different matter: Card order is arranged by hand, and
+nothing derives it.
+
 ## Requires something the product does not have
 
 These are not expensive in themselves — they are expensive because of what they

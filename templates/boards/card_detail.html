@@ -38,7 +38,11 @@
     </p>
   {% endif %}
 
-  <dl class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+  <dl class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
+    <div>
+      <dt class="text-sm text-text-muted">Priority</dt>
+      <dd class="mt-1 font-semibold">{% if card.priority %}{% include "components/priority_label.html" %}{% else %}<span class="font-normal text-text-muted">No priority</span>{% endif %}</dd>
+    </div>
     <div>
       <dt class="text-sm text-text-muted">Assignee</dt>
       <dd class="mt-1 font-semibold">{% if card.assignee %}{{ card.assignee.name }}{% else %}<span class="font-normal text-text-muted">Unassigned</span>{% endif %}</dd>
