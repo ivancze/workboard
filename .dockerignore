@@ -10,3 +10,4 @@ staticfiles
 docs
 .bin
 static/css
+infra

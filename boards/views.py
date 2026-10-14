@@ -301,23 +301,18 @@ def card_move(request, board_pk, pk):
     except Card.DoesNotExist:
         raise Http404("That Card has just been archived.")
 
-    # A Card arriving in a different Stage animates on the board, and arriving
-    # in the board's last Stage, its "done", also celebrates.
-    landed = None
+    # A drag sends this with htmx and gets the board back, fresh from the
+    # database, to replace what the page shows. The browser has already
+    # animated the drop (board.js), so this board marks nothing.
+    if request.headers.get("HX-Request"):
+        return render(request, "components/board.html", board_context(board, request))
+
+    # A Move from the menu gets a redirect, and the board it loads animates a
+    # Card arriving in a different Stage; arriving in the board's last Stage,
+    # its "done", also celebrates.
     if target.pk != origin:
         last = board.stages.order_by("position", "id").last()
-        landed = {"card": card.pk, "celebrate": target.pk == last.pk}
-
-    # A drag sends this with htmx and gets the board back, fresh from the
-    # database, to replace what the page shows. A plain form gets a redirect.
-    if request.headers.get("HX-Request"):
-        return render(
-            request,
-            "components/board.html",
-            {**board_context(board, request), "landed": landed},
-        )
-    if landed:
-        request.session["landed"] = landed
+        request.session["landed"] = {"card": card.pk, "celebrate": target.pk == last.pk}
     return redirect(board_url(board, request))
 
 

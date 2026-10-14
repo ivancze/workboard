@@ -284,9 +284,10 @@ class DragAndDropTests(TestCase):
 
 
 class LandingTests(TestCase):
-    """The board marks a Card that just arrived from another Stage, and
-    celebrates one arriving in the last Stage. The animation itself is CSS
-    and JavaScript, checked by eye."""
+    """After a Move from the menu, the board marks a Card that just arrived
+    from another Stage, and celebrates one arriving in the last Stage. After
+    a drag, the browser does both itself. The animation is CSS and
+    JavaScript, checked by eye."""
 
     def setUp(self):
         self.ada = a_user()
@@ -333,11 +334,14 @@ class LandingTests(TestCase):
 
         self.assertIn("data-landed data-celebrate", self.tile(content, self.card))
 
-    def test_a_drag_into_the_last_stage_celebrates_in_the_returned_board(self):
+    def test_a_drag_leaves_landing_to_the_browser(self):
+        # The browser plays both on the drop itself, without waiting for this
+        # board, which arrives a round trip later (board.js).
         content = self.drag(self.done)
 
-        self.assertIn("data-landed data-celebrate", self.tile(content, self.card))
-        # The swap carried it, so nothing waits in the session for a reload.
+        self.assertFalse(self.landed(content))
+        self.assertNotIn("data-celebrate", content)
+        # Nor does anything wait in the session for a reload.
         self.assertFalse(self.landed(self.client.get(self.board_url).content.decode()))
 
     def test_the_last_stage_is_whichever_is_last_now(self):

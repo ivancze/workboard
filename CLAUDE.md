@@ -46,9 +46,15 @@ partials. Read [docs/frontend.md](docs/frontend.md) before writing markup.
 `.env` holds the local URL, pointing at the `db` service. Production credentials
 live in Render and nowhere else.
 
-`/healthz` prints the server version, which tells you where you are.
-`(Debian ...)` is the local container; a bare commit hash like `(7d7ea2a)` is
-Neon.
+`/health` prints the server version, which tells you where you are. Look at
+what follows the version number:
+
+- `PostgreSQL 17.11 (Debian 17.11-1.pgdg13+2) on ...` is the local container.
+- `PostgreSQL 17.11 (7d7ea2a) on ...`, a bare commit hash, is Neon.
+- `PostgreSQL 17.11 on x86_64-pc-linux-gnu, compiled by Debian clang ...`,
+  nothing in brackets, is Cloud SQL. "Debian" appears later in its string
+  too, so don't match on that word alone. The pipeline's smoke check matches
+  `PostgreSQL [0-9.]+ on `.
 
 ## Reading boards
 
@@ -116,6 +122,9 @@ board; reach archived Cards, or a board's Cards in general, through
   the theme toggle, and how the stylesheet is built.
 - [docs/deployment.md](docs/deployment.md) — how a deploy works, and why
   compute and database sit with two providers.
+- [infra/README.md](infra/README.md), [docs/data-copy.md](docs/data-copy.md)
+  and [docs/switch-over.md](docs/switch-over.md) — the Google Cloud setup, and
+  the operator procedures for moving onto it.
 - [docs/v2-features.md](docs/v2-features.md) and
   [docs/v2-infrastructure.md](docs/v2-infrastructure.md) — what was cut from v1
   and why. Check here before building something that feels missing.

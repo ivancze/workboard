@@ -7,7 +7,7 @@ services:
     # Paid instance, so the service is always on. The free tier spins down
     # after 15 minutes idle and costs roughly a minute to wake.
     plan: 0.5c-512mb
-    # Not /healthz, which queries the database: probes every few seconds would
+    # Not /health, which queries the database: probes every few seconds would
     # keep Neon's compute awake around the clock. See docs/deployment.md.
     healthCheckPath: /livez
     # Runs after the image is built and before traffic moves to it, so new code

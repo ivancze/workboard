@@ -164,7 +164,11 @@ through the `data-landed:` variant. In the board's last Stage it also carries
 `data-celebrate`, and `board.js` throws confetti: plain `.confetti` elements
 styled in `assets/app.css`, coloured with the theme tokens, and removed on a
 timer. A timer is used rather than `animationend`, which a hidden tab suspends.
-The views set the mark, in the board fragment after a drag, or in the session
-for the page a Move item redirects to, so it plays once. Reduced motion skips
-the confetti, and the global override stills the landing animation.
+After a drag, `board.js` sets both marks itself, on the drop, rather than a
+round trip later when the server's board arrives. The board fragment carries
+no mark, and the pulse is resumed on the swapped-in tile at the point it had
+reached, through a negative `animation-delay`. After a Move item, the view
+sets the mark in the session for the page it redirects to. Either way it plays
+once. Reduced motion skips the confetti, and the global override stills the
+landing animation.
 

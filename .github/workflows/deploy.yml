@@ -1,0 +1,133 @@
+# Pull requests run the tests. A push to a deploy branch runs the tests, then
+# releases to Cloud Run in the order infra/README.md explains, stopping at the
+# first failure. Render deploys main by itself, unaffected by any of this.
+name: Test and deploy
+
+on:
+  pull_request:
+  # The Run workflow button, for a release with nothing new to push, such as
+  # after a secret changes. Google refuses a token to any branch but those
+  # below, so a run from another branch fails before it builds.
+  workflow_dispatch:
+  push:
+    # feat/migrate-gcp only while the migration is being built. Google refuses
+    # a token to any branch not listed in infra/pipeline.tf as well.
+    branches: [main, feat/migrate-gcp]
+    # Skipped only when every changed file matches, so a release is never
+    # missed. This includes this workflow: a change here deploys on the next
+    # push that touches the application. infra/ isn't in the image, and goes
+    # live through terraform apply.
+    paths-ignore:
+      - ".github/**"
+      - "docs/**"
+      - "infra/**"
+      - "**.md"
+
+permissions:
+  contents: read
+
+env:
+  REGION: asia-southeast1
+  IMAGE: asia-southeast1-docker.pkg.dev/prj-app-workboard/workboard/workboard:${{ github.sha }}
+  # Through Firebase Hosting, the way Members reach it.
+  SITE: https://prj-app-workboard.web.app
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: workboard
+          POSTGRES_USER: workboard
+          POSTGRES_PASSWORD: workboard
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U workboard -d workboard"
+          --health-interval 2s --health-timeout 3s --health-retries 30
+    env:
+      SECRET_KEY: test-only
+      DATABASE_URL: postgres://workboard:workboard@localhost:5432/workboard
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0 # publishes no bare major tag
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run python manage.py test
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # the token Google exchanges for its own
+    # One release at a time, and never cancel one halfway through.
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: projects/678236888289/locations/global/workloadIdentityPools/github/providers/github-actions
+          service_account: workboard-deployer@prj-app-workboard.iam.gserviceaccount.com
+
+      - uses: google-github-actions/setup-gcloud@v3
+
+      - name: Build and push the image
+        run: |
+          gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Note the revision serving now
+        id: previous
+        run: |
+          revision=$(gcloud run services describe workboard --region="$REGION" --format='value(status.traffic[0].revisionName)')
+          echo "revision=$revision" | tee -a "$GITHUB_OUTPUT"
+
+      # A failure here ends the run before the deploy, so the previous revision
+      # keeps serving against a schema it already understands.
+      - name: Migrate
+        run: |
+          gcloud run jobs update workboard-migrate --region="$REGION" --image="$IMAGE"
+          gcloud run jobs execute workboard-migrate --region="$REGION" --wait
+
+      # Traffic goes to the latest revision explicitly: after a rollback it is
+      # pinned to a named one, and a new revision would otherwise get none.
+      - name: Deploy
+        run: |
+          gcloud run services update workboard --region="$REGION" --image="$IMAGE"
+          gcloud run services update-traffic workboard --region="$REGION" --to-latest
+
+      # The page renders only if the database was reached and migrated.
+      # Cloud SQL reports a bare version ("PostgreSQL 17.11 on ..."), where
+      # Neon and the local container put a bracket after it.
+      - name: Smoke check
+        id: smoke
+        run: |
+          page=$(curl --fail-with-body --silent --show-error --retry 3 --max-time 30 \
+            --dump-header headers.txt "$SITE/health")
+          grep -qi '^strict-transport-security:' headers.txt \
+            || { echo "::error::$SITE/health sent no HSTS header"; exit 1; }
+          grep -qE 'PostgreSQL [0-9.]+ on ' <<< "$page" \
+            || { echo "::error::$SITE/health didn't report Cloud SQL"; exit 1; }
+
+      - name: Roll back
+        if: failure() && steps.smoke.outcome == 'failure'
+        run: |
+          gcloud run services update-traffic workboard --region="$REGION" \
+            --to-revisions="${{ steps.previous.outputs.revision }}=100"
+          echo "Rolled back to ${{ steps.previous.outputs.revision }}." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Point the admin job at the release
+        run: gcloud run jobs update workboard-manage --region="$REGION" --image="$IMAGE"
+
+      - name: Summary
+        run: |
+          revision=$(gcloud run services describe workboard --region="$REGION" --format='value(status.traffic[0].revisionName)')
+          echo "Released ${GITHUB_SHA::7} as $revision, serving $SITE." >> "$GITHUB_STEP_SUMMARY"

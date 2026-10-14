@@ -28,4 +28,8 @@ RUN python bin/tailwind build --minify && rm -rf .bin
 RUN SECRET_KEY=build-only DATABASE_URL=postgres://u:p@localhost/db \
     python manage.py collectstatic --noinput
 
-CMD ["sh", "-c", "gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --access-logfile - --error-logfile -"]
+# --preload loads Django once, before the port opens and the workers fork. So
+# Cloud Run's startup check passes only once the app can answer, and two
+# workers don't load it at once on one CPU. No database connection opens before
+# the first request, so none is shared between workers.
+CMD ["sh", "-c", "gunicorn config.wsgi:application --preload --bind 0.0.0.0:${PORT:-8000} --workers 2 --access-logfile - --error-logfile -"]
