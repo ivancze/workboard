@@ -9,8 +9,6 @@ locals {
   # refs/pull/<n>/merge, so pull requests never get a token.
   deploy_refs = [
     "refs/heads/main",
-    # Only while the migration is being built; removed once the site is live.
-    "refs/heads/feat/migrate-gcp",
   ]
 }
 

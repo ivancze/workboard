@@ -1,18 +1,18 @@
-# Pull requests run the tests. A push to a deploy branch runs the tests, then
-# releases to Cloud Run in the order infra/README.md explains, stopping at the
-# first failure. Render deploys main by itself, unaffected by any of this.
+# Pull requests run the tests. A push to main runs the tests, then releases to
+# Cloud Run in the order infra/README.md explains, stopping at the first
+# failure. Render's own auto-deploy is off, so it keeps the code it has.
 name: Test and deploy
 
 on:
   pull_request:
   # The Run workflow button, for a release with nothing new to push, such as
-  # after a secret changes. Google refuses a token to any branch but those
-  # below, so a run from another branch fails before it builds.
+  # after a secret changes. Google refuses a token to any branch but main, so
+  # a run from another branch fails before it builds.
   workflow_dispatch:
   push:
-    # feat/migrate-gcp only while the migration is being built. Google refuses
-    # a token to any branch not listed in infra/pipeline.tf as well.
-    branches: [main, feat/migrate-gcp]
+    # Google refuses a token to any branch not listed in infra/pipeline.tf as
+    # well.
+    branches: [main]
     # Skipped only when every changed file matches, so a release is never
     # missed. This includes this workflow: a change here deploys on the next
     # push that touches the application. infra/ isn't in the image, and goes
