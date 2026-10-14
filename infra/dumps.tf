@@ -1,6 +1,7 @@
-# Where a pg_dump of Neon waits for Cloud SQL to import it. A dump holds
-# Members' email addresses, so it is deleted by hand straight after the import,
-# and anything forgotten is deleted after a day regardless.
+# Where a pg_dump waits for Cloud SQL to import it, as Neon's did for the move
+# (docs/data-copy.md). A dump holds Members' email addresses, so it is deleted
+# by hand straight after the import, and anything forgotten is deleted after a
+# day regardless.
 resource "google_storage_bucket" "dumps" {
   name     = "${local.project}-dumps"
   location = local.region

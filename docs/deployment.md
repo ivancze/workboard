@@ -1,90 +1,105 @@
 # Deployment
 
-Workboard runs as a single Docker container on Render, against a managed
-Postgres at Neon. Both sit in Singapore.
+Workboard runs on Cloud Run with Cloud SQL Postgres, both in Singapore, behind
+Firebase Hosting at `https://workboard.chongky.net`. Everything in Google Cloud
+is declared in Terraform under [infra/](../infra/README.md) and deployed by
+GitHub Actions. [ADR 0004](adr/0004-cloud-run-and-cloud-sql-behind-firebase.md)
+explains why.
 
-## Why two providers
+## What a request passes through
 
-Render hosts the application but its **free** Postgres is deleted 30 days after
-creation, with a 14-day grace period — disqualifying for a database holding a
-team's real work. Neon's free plan has no such expiry. Render's paid Postgres
-would consolidate things at around $19/month; splitting the two costs nothing
-extra and keeps the database on a plan that does not expire.
+1. **Cloudflare DNS:** `workboard.chongky.net` is a CNAME to
+   `prj-app-workboard.web.app`. It's DNS only, with Cloudflare's proxy off,
+   so Firebase holds the certificate.
+2. **Firebase Hosting** terminates HTTPS on Google's edge and rewrites every
+   path to the Cloud Run service. It adds about 150 ms per request, and it
+   forwards only one cookie (see "One cookie only").
+3. **Cloud Run** (`workboard`, `asia-southeast1`) runs the image built from
+   `Dockerfile`: gunicorn with two sync workers and `--preload`, serving
+   Django. It scales from zero to two instances.
+4. **Cloud SQL** (Postgres 17) has a private IP only. Cloud Run reaches it
+   through the VPC by Direct VPC egress, and nothing on the internet can.
 
-The pairing has one hard requirement: **both must be in the same region.** Each
-page load makes several database round trips, so splitting them across
-continents adds hundreds of milliseconds to every request. A Neon project's
-region is fixed at creation and cannot be changed afterwards.
-
-## Why the free web service was rejected
-
-Render's free web service spins down after 15 minutes of inactivity and takes
-roughly a minute to wake. For a board a team checks a few times a day that
-means waiting a minute most visits, which is indistinguishable from the site
-being broken. The always-on paid instance (~$7/month) avoids it.
-
-## Connection string: direct, not pooled
-
-Neon offers a pooled endpoint (hostname containing `-pooler`) and a direct one.
-Use the **direct** endpoint. Pooling runs through PgBouncer in transaction mode,
-which breaks psycopg's prepared statements; it exists for serverless apps that
-open a connection per request, and this is a long-running process holding its
-own connections.
-
-## Why there are no persistent connections
-
-`CONN_MAX_AGE` is 0, so each request opens its own connection. Neon bills
-compute by the hour and suspends an idle compute after five minutes, and its
-documentation does not state whether an open-but-idle connection counts as
-activity. Rather than depend on the answer, the application holds nothing open:
-the free plan's 100 CU-hours cannot be consumed by an idle server. A connection
-handshake per request costs little when the database is in the same region.
-
-Raise `CONN_MAX_AGE` if the database ever stops being billed for uptime.
+The service also answers on its own `run.app` address and on
+`prj-app-workboard.web.app`. Both are in `PUBLIC_HOSTNAMES`.
 
 ## How a deploy works
 
-1. Push to `main`. Render builds the image from `Dockerfile`.
-2. `collectstatic` runs during the **build**, so the running container does no
-   startup work and needs no writable filesystem.
-3. `migrate` runs as the **pre-deploy command**, after the image is built and
-   before traffic moves to it. New code therefore never queries an old schema.
-4. Render switches traffic once `/livez` responds.
+A push to `main` runs `.github/workflows/deploy.yml`:
 
-## Why the health check skips the database
+1. **Tests**, against a Postgres service container. Pull requests stop here.
+2. **Sign-in to Google** with GitHub's short-lived token, through Workload
+   Identity Federation. Google issues one only to this repository's `main`,
+   so no service account key exists anywhere.
+3. **Build and push** the image to Artifact Registry, tagged with the commit.
+4. **Migrate:** the `workboard-migrate` job runs the new image's `migrate` to
+   completion, while the old revision keeps serving. A failed migration stops
+   the deploy there.
+5. **Deploy** a new revision and send it all traffic.
+6. **Smoke check:** `/health` through the domain must answer 200 with HSTS
+   and Cloud SQL's version string. If it doesn't, traffic rolls back to the
+   previous revision and the run fails.
+7. **Point the admin job** (`workboard-manage`) at the new image.
 
-Render probes the health check path every few seconds, for as long as the
-service runs. `/health` queries the database, so pointing Render at it keeps
-Neon's compute from ever reaching its five idle minutes: about 182 CU-hours a
-month at 0.25 CU, against the free plan's 100, and the database is suspended
-mid-month. `/livez` answers without a query or a connection.
+`collectstatic` runs during the build, so a starting container does no work
+and needs no writable filesystem.
 
-The cost is that Render no longer notices the database going away while the
-service runs. Step 3 already proves the database reachable and migrated before
-traffic moves, so a deploy with a broken `DATABASE_URL` still never goes live.
-`/health` remains for checking by hand which database a server reached.
+**Pushes that change nothing in the image don't deploy:** those touching only
+`.github/`, `docs/`, `infra/` or Markdown. The Run workflow button deploys
+`main` on demand, for instance after a secret changes.
+
+**Infrastructure changes** go live through `terraform apply`, run by hand.
+Terraform ignores which image runs, so an apply never undoes a deploy.
 
 Because migrations run while the *old* code is still serving, a migration that
 removes something the old code reads will break during that window. Every
 migration so far is additive. The first rename or column drop needs splitting
 across two deploys.
 
+## Cold starts
+
+With no minimum instance, Cloud Run stops the last instance after about 15
+idle minutes, and the next request waits for a new one: about 5 s, measured
+through the domain. Most of that is Django loading. Two settings keep it from
+being longer:
+- the startup probe checks every second, not every ten
+- `--preload` loads Django once, before the port opens, so the probe passes
+  only when the app can answer
+
+Every other request is warm, about 0.2 s through Firebase.
+
+## Health page
+
+`/health` queries the database and shows its version string, which tells you
+which database a server reached (see `CLAUDE.md`). The smoke check reads it.
+
+The startup probe is TCP, not HTTP. An HTTP probe arrives without a public
+hostname, which `ALLOWED_HOSTS` turns away.
+
 ## Configuration
 
-`render.yaml` defines the service. Environment variables:
+Set in `infra/run.tf`:
 
-| Variable | Source |
+| Variable | Value |
 | --- | --- |
-| `DATABASE_URL` | `sync: false` — prompted at blueprint creation, stored by Render |
-| `SECRET_KEY` | `generateValue: true` — generated by Render, never seen by anyone |
-| `DEBUG` | `False` |
-| `HTTPS_ONLY` | `True` — turns on SSL redirect, secure cookies, and HSTS |
+| `HTTPS_ONLY` | `True`: SSL redirect, secure cookies, and HSTS |
+| `PUBLIC_HOSTNAMES` | the `run.app`, `web.app` and custom domain addresses |
+| `USE_X_FORWARDED_HOST` | `True` (see "One cookie only") |
 
-`ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` are **not** configured. Settings read
-Render's own `RENDER_EXTERNAL_HOSTNAME`, so the deployed hostname is never
-hardcoded — which matters because Render appends a suffix when the requested
-subdomain is already taken. Any other host lists its addresses in
-`PUBLIC_HOSTNAMES`, which feeds both settings the same way.
+From Secret Manager, read when an instance starts:
+
+| Secret | Written by |
+| --- | --- |
+| `DATABASE_URL` | Terraform, with a password that never enters its state |
+| `SECRET_KEY` | the operator |
+| `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` | the operator |
+
+A new secret value reaches only instances started after it. Release with the
+Run workflow button to replace the running ones.
+
+`PUBLIC_HOSTNAMES` feeds both `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS`, so a
+new address is one change in `infra/run.tf`. Google's sign-in client also
+needs the address's `/accounts/google/login/callback/`, added in the console.
 
 `HTTPS_ONLY` is a flag of its own rather than being derived from `DEBUG`,
 because Django forces `DEBUG` off while running tests and an SSL redirect would
@@ -92,29 +107,35 @@ turn every test request into a 301.
 
 HSTS is set to one hour, not a year. A browser that has seen an HSTS header
 will refuse plain HTTP for that hostname until it expires, and that cannot be
-revoked — an hour stays recoverable.
+revoked. An hour stays recoverable. Firebase leaves Django's header alone on
+the custom domain, but replaces it with its own year on `web.app`.
 
 ## One cookie only
 
-On Google Cloud, Firebase Hosting sits in front of Cloud Run, and it forwards
-exactly one cookie: the one named `__session`. Every other cookie still reaches
-the browser, but never comes back to the server, so anything kept in one
-silently vanishes. The application therefore keeps everything in the session:
+Firebase Hosting forwards exactly one cookie to Cloud Run: the one named
+`__session`. Every other cookie still reaches the browser, but never comes
+back to the server, so anything kept in one silently vanishes. The application
+therefore keeps everything in the session:
 
+- **The session cookie** is named `__session`, everywhere, locally too.
 - **CSRF tokens:** `CSRF_USE_SESSIONS`. htmx reads the token from the page,
   never from a cookie.
 - **Messages:** session storage.
-- **The session cookie's name:** `SESSION_COOKIE_NAME`. Cloud Run sets
-  `__session`. Render keeps Django's `sessionid`. Members move to a new
-  address at switch-over and sign in again there anyway.
 
 **Don't add a cookie.** Put the value in the session instead.
 `config/tests/test_cookies.py` sends a form and reads its message with every
-other cookie stripped, as Firebase would.
+cookie but `__session` stripped, as Firebase would.
 
 Firebase also hands Cloud Run requests addressed to Cloud Run's own hostname,
-so `USE_X_FORWARDED_HOST` is on there. Sign-in then builds Google's callback
-address from the host the browser used.
+so `USE_X_FORWARDED_HOST` is on. Sign-in then builds Google's callback address
+from the host the browser used.
+
+## Database connections
+
+Django's default: each request opens its own connection and closes it at the
+end. It was once pinned at 0 because Neon billed by active time. Cloud SQL
+bills the same either way, so `CONN_MAX_AGE` could be set to keep connections
+open between requests, if a handshake per request ever shows up in timings.
 
 ## Static files
 
@@ -128,11 +149,12 @@ browser caching, which is irrelevant at this size.
 
 Unrelated to the above: `docker compose up` runs the application against a
 Postgres container, with source bind-mounted. `.env` holds local values only and
-is never committed. Production values live in Render and nowhere else.
+is never committed. Production values live in Secret Manager and
+`infra/run.tf`, nowhere else.
 
-## Moving off Render
+## Before Google Cloud
 
-Candidate directions for v2 — Google Cloud Run with Terraform and GitHub
-Actions, or a Raspberry Pi behind a Cloudflare Tunnel — are recorded in
-[v2-infrastructure.md](./v2-infrastructure.md), along with what makes this
-application portable and what each move would cost.
+Until 2026-10-14, Workboard ran on Render against Neon's free Postgres. The
+move is recorded in [switch-over.md](switch-over.md) and
+[data-copy.md](data-copy.md). The options weighed for it are in
+[v2-infrastructure.md](v2-infrastructure.md).

@@ -14,12 +14,6 @@ class PublicHostnameTests(SimpleTestCase):
         self.assertEqual(allowed, ["workboard.example.run.app", "example.web.app"])
         self.assertEqual(trusted, ["https://workboard.example.run.app", "https://example.web.app"])
 
-    def test_renders_own_hostname_still_counts(self):
-        allowed, trusted = hosts_with(RENDER_EXTERNAL_HOSTNAME="workboard.onrender.com")
-
-        self.assertEqual(allowed, ["workboard.onrender.com"])
-        self.assertEqual(trusted, ["https://workboard.onrender.com"])
-
     def test_development_hosts_are_allowed_but_never_trusted_as_origins(self):
         allowed, trusted = hosts_with(ALLOWED_HOSTS="localhost,127.0.0.1")
 

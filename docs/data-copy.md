@@ -1,5 +1,9 @@
 # Copying the data from Neon to Cloud SQL
 
+> **A record, not a procedure to follow.** The move was done on 2026-10-14,
+> and Render and Neon have since been deleted. It's kept for how the copy and
+> the cutover went.
+
 Used once for the trial run and once at switch-over. Everything runs from the
 repository root on the operator's Mac, with Compose up. The Mac has no Postgres
 client of its own, so `pg_dump` runs in the `db` container, which is the same

@@ -131,8 +131,9 @@ python3 -c 'import secrets, sys; sys.stdout.write(secrets.token_urlsafe(50))' \
   | gcloud secrets versions add SECRET_KEY --data-file=-
 ```
 
-The sign-in client's ID and secret are the ones Render has, under the
-service's Environment. Run this once for each. It waits for you to paste the
+The sign-in client's ID and secret are on the OAuth client, under APIs &
+Services, then Credentials. If the secret can't be shown there any more, add a
+new one to the client. Run this once for each. It waits for you to paste the
 value and press Enter:
 
 ```

@@ -1,5 +1,9 @@
 # Switching Members from Render to Google Cloud
 
+> **A record, not a procedure to follow.** The move was done on 2026-10-14,
+> and Render and Neon have since been deleted. It's kept for how the copy and
+> the cutover went.
+
 The one-time move from Render and Neon to Cloud Run and Cloud SQL behind
 Firebase Hosting ([ADR 0004](adr/0004-cloud-run-and-cloud-sql-behind-firebase.md)).
 Written from the trial run of 2026-10-13/14, which did every step here except

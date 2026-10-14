@@ -5,7 +5,6 @@ from . import views
 urlpatterns = [
     # Not /healthz: Cloud Run's front end keeps that exact path for itself.
     path("health", views.health, name="health"),
-    path("livez", views.liveness, name="liveness"),
     path("accounts/", include("allauth.urls")),
     path("", include("accounts.urls")),
     path("", include("boards.urls")),

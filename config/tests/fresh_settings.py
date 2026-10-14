@@ -4,7 +4,7 @@ import subprocess
 import sys
 
 # Variables these tests set themselves, so none leak in from the container.
-CONTROLLED = {"ALLOWED_HOSTS", "PUBLIC_HOSTNAMES", "RENDER_EXTERNAL_HOSTNAME", "SESSION_COOKIE_NAME"}
+CONTROLLED = {"ALLOWED_HOSTS", "PUBLIC_HOSTNAMES"}
 
 
 def settings_with(names, **variables):

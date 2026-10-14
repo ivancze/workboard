@@ -18,7 +18,7 @@ COPY . .
 
 # The stylesheet is generated, never committed: build it here so collectstatic
 # picks it up, and fail the image if Tailwind fails. bin/tailwind picks the
-# binary for this machine's architecture (arm64 locally, amd64 on Render) and
+# binary for this machine's architecture (arm64 locally, amd64 on Cloud Run) and
 # checks its checksum; the binary is removed in the same layer so it never ships.
 RUN python bin/tailwind build --minify && rm -rf .bin
 

@@ -89,11 +89,6 @@ resource "google_cloud_run_v2_service" "workboard" {
         name  = "PUBLIC_HOSTNAMES"
         value = "${local.run_hostname},${local.web_hostname},${local.domain_hostname}"
       }
-      # The only cookie Firebase Hosting forwards.
-      env {
-        name  = "SESSION_COOKIE_NAME"
-        value = "__session"
-      }
       env {
         name  = "USE_X_FORWARDED_HOST"
         value = "True"

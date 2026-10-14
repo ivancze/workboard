@@ -1,13 +1,10 @@
 import re
 
-from django.conf import settings
-from django.test import Client, SimpleTestCase, TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 
 from boards.models import Board
 from boards.tests.test_cards import a_user
-
-from .fresh_settings import settings_with
 
 
 class OnlyTheSessionCookieTests(TestCase):
@@ -19,7 +16,7 @@ class OnlyTheSessionCookieTests(TestCase):
 
     def strip_all_but_the_session(self, client):
         for name in list(client.cookies):
-            if name != settings.SESSION_COOKIE_NAME:
+            if name != "__session":
                 del client.cookies[name]
 
     def test_a_form_and_its_message_work_with_the_session_cookie_alone(self):
@@ -37,12 +34,3 @@ class OnlyTheSessionCookieTests(TestCase):
 
         self.assertContains(client.get(response.url), "Added Buy milk to To Do.")
 
-
-class SessionCookieNameTests(SimpleTestCase):
-    def test_is_djangos_own_unless_configured(self):
-        # Render keeps this until the custom domain switch: renaming the
-        # cookie signs everyone out.
-        self.assertEqual(settings_with(["SESSION_COOKIE_NAME"]), ["sessionid"])
-
-    def test_comes_from_configuration(self):
-        self.assertEqual(settings_with(["SESSION_COOKIE_NAME"], SESSION_COOKIE_NAME="__session"), ["__session"])

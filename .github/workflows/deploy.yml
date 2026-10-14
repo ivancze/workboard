@@ -1,6 +1,6 @@
 # Pull requests run the tests. A push to main runs the tests, then releases to
 # Cloud Run in the order infra/README.md explains, stopping at the first
-# failure. Render's own auto-deploy is off, so it keeps the code it has.
+# failure.
 name: Test and deploy
 
 on:
@@ -106,7 +106,7 @@ jobs:
 
       # The page renders only if the database was reached and migrated.
       # Cloud SQL reports a bare version ("PostgreSQL 17.11 on ..."), where
-      # Neon and the local container put a bracket after it.
+      # the local container puts a bracket after it.
       - name: Smoke check
         id: smoke
         run: |

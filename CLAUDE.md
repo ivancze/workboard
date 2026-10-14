@@ -1,7 +1,7 @@
 # Workboard
 
-Django 6.1 + HTMX Kanban tracker for a small team. Deployed to Render against
-Neon Postgres.
+Django 6.1 + HTMX Kanban tracker for a small team. Deployed to Cloud Run with
+Cloud SQL Postgres, behind Firebase Hosting, at `workboard.chongky.net`.
 
 ## Everything runs in Compose
 
@@ -44,17 +44,16 @@ partials. Read [docs/frontend.md](docs/frontend.md) before writing markup.
 ## Which database am I talking to
 
 `.env` holds the local URL, pointing at the `db` service. Production credentials
-live in Render and nowhere else.
+live in Secret Manager and nowhere else.
 
 `/health` prints the server version, which tells you where you are. Look at
 what follows the version number:
 
 - `PostgreSQL 17.11 (Debian 17.11-1.pgdg13+2) on ...` is the local container.
-- `PostgreSQL 17.11 (7d7ea2a) on ...`, a bare commit hash, is Neon.
 - `PostgreSQL 17.11 on x86_64-pc-linux-gnu, compiled by Debian clang ...`,
-  nothing in brackets, is Cloud SQL. "Debian" appears later in its string
-  too, so don't match on that word alone. The pipeline's smoke check matches
-  `PostgreSQL [0-9.]+ on `.
+  nothing in brackets, is Cloud SQL, which is production. "Debian" appears
+  later in its string too, so don't match on that word alone. The pipeline's
+  smoke check matches `PostgreSQL [0-9.]+ on `.
 
 ## Reading boards
 
@@ -120,11 +119,13 @@ board; reach archived Cards, or a board's Cards in general, through
 - [docs/adr/](docs/adr/) — decisions and the trade-offs behind them.
 - [docs/frontend.md](docs/frontend.md) — the design system: tokens, partials,
   the theme toggle, and how the stylesheet is built.
-- [docs/deployment.md](docs/deployment.md) — how a deploy works, and why
-  compute and database sit with two providers.
-- [infra/README.md](infra/README.md), [docs/data-copy.md](docs/data-copy.md)
-  and [docs/switch-over.md](docs/switch-over.md) — the Google Cloud setup, and
-  the operator procedures for moving onto it.
+- [docs/deployment.md](docs/deployment.md) — what runs where, how a deploy
+  works, and the one-cookie rule Firebase imposes.
+- [infra/README.md](infra/README.md) — the Google Cloud setup, releasing an
+  image by hand, and running a management command.
+- [docs/data-copy.md](docs/data-copy.md) and
+  [docs/switch-over.md](docs/switch-over.md) — records of the one-time move
+  from Render and Neon, done on 2026-10-14.
 - [docs/v2-features.md](docs/v2-features.md) and
   [docs/v2-infrastructure.md](docs/v2-infrastructure.md) — what was cut from v1
   and why. Check here before building something that feels missing.

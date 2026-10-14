@@ -9,16 +9,9 @@ env = environ.Env()
 SECRET_KEY = env("SECRET_KEY")
 DEBUG = env.bool("DEBUG", default=False)
 
-# Render publishes the service's own hostname. Reading it means the deployed
-# host is never hardcoded, which matters because Render appends a suffix when
-# the requested subdomain is already taken by someone else.
-RENDER_HOSTNAME = env("RENDER_EXTERNAL_HOSTNAME", default="")
-
-# Every other provider lists the addresses the site is served on here, comma
-# separated: Cloud Run's, Firebase's, and later the custom domain.
+# The addresses the site is served on, comma separated: Cloud Run's,
+# Firebase's and the custom domain. Set in infra/run.tf.
 PUBLIC_HOSTNAMES = env.list("PUBLIC_HOSTNAMES", default=[])
-if RENDER_HOSTNAME:
-    PUBLIC_HOSTNAMES.append(RENDER_HOSTNAME)
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[]) + PUBLIC_HOSTNAMES
 CSRF_TRUSTED_ORIGINS = [f"https://{hostname}" for hostname in PUBLIC_HOSTNAMES]
@@ -30,14 +23,6 @@ CSRF_TRUSTED_ORIGINS = [f"https://{hostname}" for hostname in PUBLIC_HOSTNAMES]
 USE_X_FORWARDED_HOST = env.bool("USE_X_FORWARDED_HOST", default=False)
 
 DATABASES = {"default": env.db("DATABASE_URL")}
-
-# No persistent connections by default. Neon bills compute by the hour and
-# suspends an idle compute after five minutes; its docs do not say whether an
-# open-but-idle connection counts as activity, so this avoids depending on the
-# answer. A connection handshake per request costs little in-region. Raise
-# CONN_MAX_AGE if the database stops being billed for uptime.
-DATABASES["default"]["CONN_MAX_AGE"] = env.int("CONN_MAX_AGE", default=0)
-DATABASES["default"]["CONN_HEALTH_CHECKS"] = DATABASES["default"]["CONN_MAX_AGE"] > 0
 
 INSTALLED_APPS = [
     "django.contrib.auth",
@@ -152,10 +137,9 @@ CSRF_COOKIE_SECURE = HTTPS_ONLY
 
 # Firebase Hosting, in front of Cloud Run, forwards one cookie only, and it must
 # be named __session. So the CSRF token and messages live in the session rather
-# than cookies of their own, and nothing may add another cookie. Render keeps
-# Django's name until the custom domain switch, since renaming the cookie signs
-# everyone out. See docs/deployment.md.
-SESSION_COOKIE_NAME = env("SESSION_COOKIE_NAME", default="sessionid")
+# than cookies of their own, and nothing may add another cookie. See
+# docs/deployment.md.
+SESSION_COOKIE_NAME = "__session"
 CSRF_USE_SESSIONS = True
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
 # Deliberately an hour, not a year: HSTS cannot be revoked for the hostname
@@ -163,10 +147,10 @@ MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
 SECURE_HSTS_SECONDS = 3600 if HTTPS_ONLY else 0
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-# Both concern HSTS on a hostname we do not own. includeSubDomains would cover
-# subdomains of an onrender.com name that will never exist, and preloading
-# requires controlling the registered domain, which Render does. Silenced so a
-# genuinely new warning from `check --deploy` stands out.
+# Both concern HSTS reaching beyond Workboard's own hostname. includeSubDomains
+# would only cover names under workboard.chongky.net, which don't exist, and
+# preloading binds the whole of chongky.net into browsers for good. Silenced so
+# a genuinely new warning from `check --deploy` stands out.
 SILENCED_SYSTEM_CHECKS = ["security.W005", "security.W021"]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
