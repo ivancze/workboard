@@ -36,8 +36,9 @@ backups. The network is sized for more services than this one.
   spell waits a few seconds.
 - **Cookies:** Firebase Hosting forwards only a cookie named `__session`. So
   the session cookie takes that name, and CSRF tokens and messages live in the
-  session instead of their own cookies. Renaming the cookie signs everyone out
-  once, so it's timed to coincide with the custom domain switch.
+  session instead of their own cookies. Renaming the cookie would sign
+  everyone out. That costs nothing here: Members move to a new address at
+  switch-over and sign in again anyway.
 - **One service in a network built for more:** the VPC, private services access
   and Direct VPC egress are more parts than a single service needs. This is
   accepted, because the network is meant to outlive it.

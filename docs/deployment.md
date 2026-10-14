@@ -105,8 +105,8 @@ silently vanishes. The application therefore keeps everything in the session:
   never from a cookie.
 - **Messages:** session storage.
 - **The session cookie's name:** `SESSION_COOKIE_NAME`. Cloud Run sets
-  `__session`. Render keeps Django's `sessionid` until the custom domain
-  switch, because renaming the cookie signs everyone out.
+  `__session`. Render keeps Django's `sessionid`. Members move to a new
+  address at switch-over and sign in again there anyway.
 
 **Don't add a cookie.** Put the value in the session instead.
 `config/tests/test_cookies.py` sends a form and reads its message with every
