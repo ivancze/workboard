@@ -9,6 +9,15 @@ on:
     # feat/migrate-gcp only while the migration is being built. Google refuses
     # a token to any branch not listed in infra/pipeline.tf as well.
     branches: [main, feat/migrate-gcp]
+    # Skipped only when every changed file matches, so a release is never
+    # missed. This includes this workflow: a change here deploys on the next
+    # push that touches the application. infra/ isn't in the image, and goes
+    # live through terraform apply.
+    paths-ignore:
+      - ".github/**"
+      - "docs/**"
+      - "infra/**"
+      - "**.md"
 
 permissions:
   contents: read
