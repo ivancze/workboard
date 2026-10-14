@@ -39,7 +39,11 @@ class CreatingABoardTests(TestCase):
             reverse("board_detail", args=[Board.objects.get().pk])
         )
 
-        self.assertContains(response, "No cards yet.", count=3)
+        # Three empty lists, and no text saying so: a line that vanishes as
+        # the first Card lands made the drop jump.
+        self.assertContains(response, "data-card-list", count=3)
+        self.assertNotContains(response, "data-card-id")
+        self.assertNotContains(response, "No cards yet.")
 
     def test_a_board_needs_a_name(self):
         self.client.post(reverse("board_create"), {"name": ""})

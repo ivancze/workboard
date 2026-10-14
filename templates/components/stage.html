@@ -15,10 +15,12 @@
     </div>
     {% include "components/stage_menu.html" %}
   </div>
-  {% if not stage.card_count %}
-    <p class="px-1 text-sm text-text-muted">No cards yet.</p>
-  {% elif not stage.cards.all %}
-    {# Not "No cards yet.", which would be untrue. It still takes drops. #}
+  {% comment %}
+    An empty Stage says nothing: a line there would vanish as the first Card
+    landed, and make the drop jump. One whose Cards are all hidden by the
+    filter says so, since it only looks empty. It still takes drops.
+  {% endcomment %}
+  {% if stage.card_count and not stage.cards.all %}
     <p class="px-1 text-sm text-text-muted">{{ stage.card_count }} Card{{ stage.card_count|pluralize }}, none matching the filter.</p>
   {% endif %}
   {% comment %}

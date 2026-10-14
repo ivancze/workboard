@@ -101,7 +101,7 @@ class FilteringByAssigneeTests(TestCase):
         content = self.page("?assignee=unassigned")
 
         self.assertIn("1 Card, none matching the filter.", content)  # Done
-        self.assertIn("No cards yet.", content)  # In Progress, truly empty
+        self.assertNotIn("No cards yet.", content)  # In Progress, truly empty
         self.assertIn(f'data-stage="{self.done.pk}"', content)
 
     def test_dragging_keeps_the_filter(self):
