@@ -32,9 +32,10 @@ resource "google_firebase_hosting_site" "default" {
 }
 
 # No files are uploaded, so every path falls through to the rewrite. Firebase's
-# CDN caches only responses marked public, which no page is. Firebase also puts
-# its own year-long HSTS header on every successful response, and a header
-# rule here can't change that (tried 2026-10-13).
+# CDN caches only responses marked public, which no page is. On web.app,
+# Firebase puts its own year-long HSTS header on every successful response, and
+# a header rule here can't change that (tried 2026-10-13). On the custom
+# domain it passes Django's one-hour header through (checked 2026-10-14).
 resource "google_firebase_hosting_version" "default" {
   provider = google-beta
   site_id  = google_firebase_hosting_site.default.site_id

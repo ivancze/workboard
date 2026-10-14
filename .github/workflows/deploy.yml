@@ -29,8 +29,8 @@ permissions:
 env:
   REGION: asia-southeast1
   IMAGE: asia-southeast1-docker.pkg.dev/prj-app-workboard/workboard/workboard:${{ github.sha }}
-  # Through Firebase Hosting, the way Members reach it.
-  SITE: https://prj-app-workboard.web.app
+  # Members' address, through Firebase Hosting.
+  SITE: https://workboard.chongky.net
 
 jobs:
   test:
