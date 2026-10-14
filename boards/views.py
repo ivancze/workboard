@@ -1,4 +1,5 @@
 import copy
+import random
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -14,6 +15,7 @@ from django.views.decorators.http import require_POST, require_safe
 from accounts.models import User
 
 from .forms import (
+    BoardDescriptionForm,
     BoardForm,
     CardForm,
     DeleteBoardForm,
@@ -22,6 +24,21 @@ from .forms import (
     StageForm,
 )
 from .models import Board, Card, Membership, Stage, lock_membership
+
+# Shown under a board's name while it has no Board description, a different
+# one on each visit. Never stored: it belongs to the product, not the board.
+PLAYFUL_DESCRIPTIONS = [
+    "Let them cook",
+    "On top of things",
+    "One card at a time",
+    "Making it happen",
+    "Busy little bees",
+    "Small steps, big wins",
+    "Things are moving",
+    "Progress over perfection",
+    "Getting stuff done",
+    "All hands on deck",
+]
 
 
 def home(request):
@@ -166,6 +183,7 @@ def board_detail(request, pk):
     # plays nothing. A Card is on one board, so another board ignores it.
     context["landed"] = request.session.pop("landed", None)
     context["is_owner"] = board.is_owner(request.user)
+    context["playful"] = random.choice(PLAYFUL_DESCRIPTIONS)
     return render(request, "boards/board_detail.html", context)
 
 
@@ -525,6 +543,37 @@ def board_rename(request, board_pk):
     return render(
         request,
         "components/board_rename_form.html" if in_place else "boards/board_rename.html",
+        {"board": board, "form": form},
+        status=400 if form.is_bound else 200,
+    )
+
+
+@login_required
+def board_describe(request, board_pk):
+    """The Owner's, like renaming, and edited in place the same way: htmx
+    gets the bare form, then the description back. Without JavaScript, the
+    description is a link to this page, which redirects to the board."""
+    board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
+    require_owner(board, request.user)
+    form = BoardDescriptionForm(request.POST or None, instance=copy.copy(board))
+    in_place = request.headers.get("HX-Request")
+    if request.method == "POST" and form.is_valid():
+        form.instance.save(update_fields=["description"])
+        if in_place:
+            return render(
+                request,
+                "components/board_description.html",
+                {
+                    "board": form.instance,
+                    "is_owner": True,
+                    "playful": random.choice(PLAYFUL_DESCRIPTIONS),
+                },
+            )
+        messages.success(request, "Saved the board's description.")
+        return redirect("board_detail", pk=board.pk)
+    return render(
+        request,
+        "components/board_description_form.html" if in_place else "boards/board_describe.html",
         {"board": board, "form": form},
         status=400 if form.is_bound else 200,
     )

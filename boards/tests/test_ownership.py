@@ -1,4 +1,5 @@
 import threading
+from unittest import mock
 
 from django.core.exceptions import ValidationError
 
@@ -7,6 +8,7 @@ from django.test import TestCase, TransactionTestCase
 from django.urls import reverse
 
 from boards.models import Board, Card, Membership, Stage
+from boards.views import PLAYFUL_DESCRIPTIONS
 
 from .test_cards import a_card, a_user
 from .test_members import verified
@@ -305,6 +307,100 @@ class RenamingABoardTests(TestCase):
         self.assertEqual(self.rename("Mine now").status_code, 404)
         self.board.refresh_from_db()
         self.assertEqual(self.board.name, "Housework")
+
+
+class DescribingABoardTests(TestCase):
+    def setUp(self):
+        self.ada = a_user()
+        self.grace = verified(a_user("grace@example.com"))
+        self.board = Board.objects.create_with_owner(name="Housework", owner=self.ada)
+        Membership.objects.create(board=self.board, user=self.grace)
+        self.client.force_login(self.ada)
+        self.url = reverse("board_describe", args=[self.board.pk])
+        self.board_url = reverse("board_detail", args=[self.board.pk])
+
+    def describe(self, description):
+        return self.client.post(
+            self.url, {"description": description}, headers={"HX-Request": "true"}
+        )
+
+    def test_a_board_starts_without_one_and_everyone_sees_a_playful_line(self):
+        self.assertEqual(self.board.description, "")
+        last = PLAYFUL_DESCRIPTIONS[-1]
+        with mock.patch("boards.views.random.choice", side_effect=lambda lines: lines[-1]):
+            owners_view = self.client.get(self.board_url)
+            self.client.force_login(self.grace)
+            members_view = self.client.get(self.board_url)
+
+        self.assertContains(owners_view, last)
+        self.assertContains(members_view, last)
+
+    def test_only_the_owner_can_click_it_to_edit(self):
+        link = f'href="{self.url}" hx-get="{self.url}"'
+        self.assertContains(self.client.get(self.board_url), link)
+
+        self.client.force_login(self.grace)
+        self.assertNotContains(self.client.get(self.board_url), link)
+
+    def test_clicking_opens_it_for_editing_in_place_empty_rather_than_playful(self):
+        response = self.client.get(self.url, headers={"HX-Request": "true"})
+
+        content = response.content.decode()
+        self.assertIn('<form id="board-description"', content)
+        self.assertIn('value=""', content)
+        self.assertFalse(any(line in content for line in PLAYFUL_DESCRIPTIONS))
+        self.assertNotIn("<html", content)
+
+    def test_the_owner_writes_one_and_everyone_sees_it_instead(self):
+        response = self.describe("  Chores for the flat  ")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '<div id="board-description"')
+        self.assertContains(response, "Chores for the flat")
+        self.board.refresh_from_db()
+        self.assertEqual(self.board.description, "Chores for the flat")
+        self.client.force_login(self.grace)
+        content = self.client.get(self.board_url).content.decode()
+        self.assertIn("Chores for the flat", content)
+        self.assertFalse(any(line in content for line in PLAYFUL_DESCRIPTIONS))
+
+    def test_clearing_it_brings_a_playful_line_back(self):
+        self.describe("Chores for the flat")
+
+        response = self.describe("   ")
+
+        self.assertEqual(response.status_code, 200)
+        self.board.refresh_from_db()
+        self.assertEqual(self.board.description, "")
+        self.assertTrue(any(line in response.content.decode() for line in PLAYFUL_DESCRIPTIONS))
+
+    def test_more_than_200_characters_is_refused_in_place(self):
+        response = self.describe("x" * 201)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, '<form id="board-description"', status_code=400)
+        self.assertContains(response, "at most 200 characters", status_code=400)
+        self.board.refresh_from_db()
+        self.assertEqual(self.board.description, "")
+
+    def test_without_javascript_it_is_a_page_that_redirects(self):
+        self.assertContains(self.client.get(self.url), 'name="description"')
+
+        response = self.client.post(self.url, {"description": "Chores"})
+
+        self.assertRedirects(response, self.board_url, fetch_redirect_response=False)
+        self.board.refresh_from_db()
+        self.assertEqual(self.board.description, "Chores")
+
+    def test_a_member_cannot_describe_it_and_a_stranger_sees_nothing(self):
+        self.client.force_login(self.grace)
+        self.assertEqual(self.client.get(self.url).status_code, 403)
+        self.assertEqual(self.describe("Mine now").status_code, 403)
+
+        self.client.force_login(a_user("stranger@example.com"))
+        self.assertEqual(self.describe("Mine now").status_code, 404)
+        self.board.refresh_from_db()
+        self.assertEqual(self.board.description, "")
 
 
 class ConcurrentOwnershipTests(TransactionTestCase):

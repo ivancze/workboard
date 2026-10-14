@@ -6,7 +6,7 @@
   renames the tab too.
 {% endcomment %}
 {% if retitle %}<title>{{ board.name }} · Workboard</title>{% endif %}
-<div id="board-heading" class="flex min-w-0 items-center gap-2">
+<div id="board-heading" data-in-place class="flex min-w-0 items-center gap-2">
   {% include "components/page_heading.html" with text=board.name %}
   {% if is_owner %}
     {% url 'board_rename' board.pk as rename_url %}

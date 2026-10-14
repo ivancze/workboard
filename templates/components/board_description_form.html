@@ -1,0 +1,19 @@
+{% comment %}
+  The Board description being edited in place, standing in for
+  board_description.html, as board_rename_form.html does for the name. It
+  starts empty rather than from the playful line. Saving it empty clears
+  the description. Needs `board` and `form`.
+{% endcomment %}
+{% url 'board_describe' board.pk as describe_url %}
+<form id="board-description" data-in-place method="post" action="{{ describe_url }}" hx-post="{{ describe_url }}" hx-target="this" hx-swap="outerHTML" class="mt-1 flex flex-col gap-1.5">
+  {% csrf_token %}
+  <div class="flex items-center gap-2">
+    <input type="text" name="description" value="{{ form.description.value|default:'' }}" maxlength="200" placeholder="What is this board for?" aria-label="Board description"{% if form.description.errors %} aria-invalid="true" aria-describedby="board-description-error"{% endif %} class="min-w-0 flex-1 rounded-md border border-control bg-surface px-3 py-1.5 text-base text-text placeholder:text-text-muted">
+    {% include "components/button.html" with label="Save" %}
+    {# board.js finds Cancel as the form's one type="button". #}
+    {% include "components/button.html" with label="Cancel" type="button" variant="ghost" %}
+  </div>
+  {% for error in form.description.errors %}
+    <p id="board-description-error" class="text-sm text-danger">{{ error }}</p>
+  {% endfor %}
+</form>

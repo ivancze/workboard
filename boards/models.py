@@ -55,6 +55,9 @@ class Board(models.Model):
     """
 
     name = models.CharField(max_length=100)
+    # Optional, written by the Owner. Without one, the board shows a playful
+    # line instead, which is never stored.
+    description = models.CharField(max_length=200, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects = BoardManager()

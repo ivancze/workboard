@@ -28,6 +28,11 @@ hands ownership to another Member with *Make Owner*.
 name: edit the name where it is, then press Enter, or Escape to leave it.
 Everyone on the board sees the new name.
 
+**Describing a board.** Under the name, the Owner can add a short line about
+what the board is for, up to 200 characters: click it, type, then press
+Enter. Until there is one, the board shows a playful line instead, different
+each visit. Clear the description to bring the playful lines back.
+
 **Deleting a board.** Only the Owner can, from *Delete board…* in the board's
 ⋯ menu. It deletes every Card, archived ones included, with no undo, so it
 asks you to type the board's name exactly first.

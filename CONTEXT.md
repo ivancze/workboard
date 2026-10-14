@@ -18,6 +18,13 @@ The unit of both workflow and access. A board is the only boundary that exists:
 there is no organisation, team, or workspace above it.
 _Avoid_: Project, workspace, team, org
 
+**Board description**:
+An optional short line of plain text under a board's name, written by its
+owner, saying what the board is for. A board without one shows a playful line
+instead, picked at random on each visit. That line belongs to the product,
+not the board, and is never stored.
+_Avoid_: Tagline, subtitle, summary, about
+
 **Member**:
 A user who has access to a board. Members may do anything to its cards and
 stages, and may leave a board of their own accord; the acts that cannot be
@@ -25,8 +32,8 @@ undone are reserved to the owner.
 _Avoid_: Collaborator, participant, user of the board
 
 **Owner**:
-The single member who may invite, remove members, rename or delete a board, and
-hand ownership to another member. Every board has exactly one. Always means this
+The single member who may invite, remove members, rename, describe or delete a
+board, and hand ownership to another member. Every board has exactly one. Always means this
 board-level role, never the person a card is assigned to and never the person
 who created it.
 _Avoid_: Admin, lead, maintainer

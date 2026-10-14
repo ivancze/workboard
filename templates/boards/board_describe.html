@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Describe {{ board.name }} · Workboard{% endblock %}
+
+{% block content %}
+  {% url 'board_detail' board.pk as board_url %}
+  <a href="{{ board_url }}" class="mb-2 inline-block text-sm text-text-muted hover:text-text">← {{ board.name }}</a>
+  {% include "components/page_heading.html" with text="Board description" %}
+
+  <section class="mt-6 rounded-xl border border-border bg-surface p-6">
+    <form method="post" class="flex flex-col gap-4">
+      {% csrf_token %}
+      {% include "components/fields.html" %}
+      <div class="flex gap-2">
+        {% include "components/button.html" with label="Save" %}
+        {% include "components/button.html" with label="Cancel" href=board_url variant="ghost" %}
+      </div>
+    </form>
+  </section>
+{% endblock %}

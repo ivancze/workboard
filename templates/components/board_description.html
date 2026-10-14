@@ -1,0 +1,16 @@
+{% comment %}
+  The Board description, a quiet line under the board's name, or a playful
+  one while it has none (`playful`, picked by the view). For the Owner it is
+  a link that edits it in place, as the pencil does the name: htmx swaps in
+  board_description_form.html, and board.js handles focus, Escape and Cancel.
+  Without JavaScript the link opens the description page. Needs `board`,
+  `is_owner` and `playful`.
+{% endcomment %}
+<div id="board-description" data-in-place class="mt-1 text-base text-text-muted">
+  {% if is_owner %}
+    {% url 'board_describe' board.pk as describe_url %}
+    <a href="{{ describe_url }}" hx-get="{{ describe_url }}" hx-target="#board-description" hx-swap="outerHTML" title="Edit the description" class="rounded-sm transition-colors hover:text-text"><span class="sr-only">Edit the description: </span>{{ board.description|default:playful }}</a>
+  {% else %}
+    <p>{{ board.description|default:playful }}</p>
+  {% endif %}
+</div>

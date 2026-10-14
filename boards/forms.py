@@ -12,6 +12,12 @@ class BoardForm(forms.ModelForm):
         labels = {"name": "Board name"}
 
 
+class BoardDescriptionForm(forms.ModelForm):
+    class Meta:
+        model = Board
+        fields = ["description"]
+
+
 class InviteForm(forms.Form):
     email = forms.EmailField(
         label="Email address",

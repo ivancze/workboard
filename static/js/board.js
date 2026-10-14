@@ -212,19 +212,21 @@ htmx.onLoad((root) => {
 document.addEventListener("htmx:responseError", restoreBoard);
 document.addEventListener("htmx:sendError", restoreBoard);
 
-// Renaming the board in place, from the pencil beside its name
-// (board_heading.html). The heading is kept while its form is out, so Escape,
-// Cancel or a click elsewhere put it back without asking the server. htmx
-// strips its listeners from what it swaps out, so this keeps a copy and
-// processes it again on the way back.
-let heading = null;
+// Editing in place: the board's name, from the pencil beside it
+// (board_heading.html), and its description, by clicking it
+// (board_description.html). Each is a `data-in-place` element that htmx
+// swaps for a form of the same id. What it replaced is kept while the form is
+// out, so Escape, Cancel or a click elsewhere put it back without asking the
+// server. htmx strips its listeners from what it swaps out, so this keeps a
+// copy, and processes it again on the way back.
+const replaced = {};
 
 document.addEventListener("htmx:beforeSwap", (event) => {
   const target = event.detail.target;
-  if (target.id !== "board-heading") return;
-  if (!target.matches("form")) heading = target.cloneNode(true);
-  // A refused name comes back as a 400 carrying its error. Show it, and keep
-  // it from counting as a failure, which would reload the board.
+  if (!target.matches("[data-in-place]")) return;
+  if (!target.matches("form")) replaced[target.id] = target.cloneNode(true);
+  // A refused value comes back as a 400 carrying its error. Show it, and
+  // keep it from counting as a failure, which would reload the board.
   if (event.detail.xhr.status === 400) {
     event.detail.shouldSwap = true;
     event.detail.isError = false;
@@ -232,31 +234,37 @@ document.addEventListener("htmx:beforeSwap", (event) => {
 });
 
 htmx.onLoad((root) => {
-  // The heading comes back after a save: focus returns to its pencil.
-  if (root.matches("div#board-heading")) root.querySelector("a").focus();
-  if (!root.matches("[data-rename]")) return;
-  const input = root.querySelector("input[name=name]");
-  input.focus();
-  input.select();
+  if (!root.matches("[data-in-place]")) return;
+  if (root.matches("form")) {
+    const input = root.querySelector("input:not([type=hidden])");
+    input.focus();
+    input.select();
+  } else {
+    // Back after a save: focus returns to what opened the form.
+    root.querySelector("a").focus();
+  }
 });
 
-function cancelRename() {
-  const form = document.querySelector("[data-rename]");
+function cancelEdit(form) {
   // Not once a save is under way: its answer replaces the form.
-  if (!form || !heading || form.classList.contains("htmx-request")) return;
-  const restored = heading;
-  heading = null;
+  if (form.classList.contains("htmx-request") || !replaced[form.id]) return;
+  const restored = replaced[form.id];
+  delete replaced[form.id];
   form.replaceWith(restored);
   htmx.process(restored);
-  restored.querySelector("a").focus();
+  return restored;
 }
 
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && event.target.closest("[data-rename]")) cancelRename();
+  const form = event.target.closest("form[data-in-place]");
+  if (event.key === "Escape" && form) cancelEdit(form)?.querySelector("a").focus();
 });
 document.addEventListener("click", (event) => {
-  if (event.target.closest("[data-rename] button[type=button]")) cancelRename();
+  const cancel = event.target.closest("form[data-in-place] button[type=button]");
+  if (cancel) cancelEdit(cancel.form)?.querySelector("a").focus();
 });
 document.addEventListener("pointerdown", (event) => {
-  if (!event.target.closest("[data-rename]")) cancelRename();
+  for (const form of document.querySelectorAll("form[data-in-place]")) {
+    if (!form.contains(event.target)) cancelEdit(form);
+  }
 });
