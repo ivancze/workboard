@@ -12,6 +12,14 @@ class BoardForm(forms.ModelForm):
         labels = {"name": "Board name"}
 
 
+class CardPriorityForm(forms.ModelForm):
+    """Priority alone, as set from the dropdown on a Card's tile."""
+
+    class Meta:
+        model = Card
+        fields = ["priority"]
+
+
 class BoardDescriptionForm(forms.ModelForm):
     class Meta:
         model = Board

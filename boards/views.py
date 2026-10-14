@@ -18,6 +18,7 @@ from .forms import (
     BoardDescriptionForm,
     BoardForm,
     CardForm,
+    CardPriorityForm,
     DeleteBoardForm,
     InviteForm,
     MoveCardForm,
@@ -303,6 +304,23 @@ def card_edit(request, board_pk, pk):
     return render(
         request, "boards/card_edit.html", {"board": board, "card": card, "form": form}
     )
+
+
+@require_POST
+@login_required
+def card_priority(request, board_pk, pk):
+    """Priority from the dropdown on a Card's tile, by any Member, as on the
+    edit page. With htmx it answers with the board, swapped in place as after
+    a drag. Without JavaScript, it goes back to the board."""
+    board, card = get_card(request, board_pk, pk)
+    form = CardPriorityForm(request.POST, instance=card)
+    if not form.is_valid():
+        return HttpResponseBadRequest("No such Priority.")
+    # Only this field: a full save would write back whatever else was loaded.
+    form.instance.save(update_fields=["priority", "updated_at"])
+    if request.headers.get("HX-Request"):
+        return render(request, "components/board.html", board_context(board, request))
+    return redirect(board_url(board, request))
 
 
 @require_POST

@@ -34,6 +34,11 @@ urlpatterns = [
         "boards/<int:board_pk>/cards/<int:pk>/move/", views.card_move, name="card_move"
     ),
     path(
+        "boards/<int:board_pk>/cards/<int:pk>/priority/",
+        views.card_priority,
+        name="card_priority",
+    ),
+    path(
         "boards/<int:board_pk>/cards/<int:pk>/archive/",
         views.card_archive,
         name="card_archive",

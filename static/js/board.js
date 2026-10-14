@@ -136,7 +136,10 @@ function placeMenu(event) {
   panel.style.position = "fixed";
   panel.style.margin = "0";
   panel.style.top = `${fits ? below : button.top - 4 - panel.offsetHeight}px`;
-  panel.style.left = `${button.right - panel.offsetWidth}px`;
+  // From the button's right edge, as for a ⋯ menu, or from its left for one
+  // opened at a Card's left, such as its Priority (data-menu-start).
+  const left = menu.hasAttribute("data-menu-start") ? button.left : button.right - panel.offsetWidth;
+  panel.style.left = `${left}px`;
 }
 
 document.addEventListener("toggle", placeMenu, true); // toggle doesn't bubble

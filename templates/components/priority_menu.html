@@ -1,0 +1,26 @@
+{% comment %}
+  A Card's Priority, set from its tile. The pill opens a small menu of the
+  levels, or on a Card with none, a faint "+ Priority" chip that card_tile.html
+  shows on hover. Each level submits the form by itself. With htmx, the board
+  is swapped in place, as after a drag. Without JavaScript, the page reloads.
+  It's a menu like card_menu.html, so board.js closes and pins it, and a drag
+  never starts from it. The pill's menu opens from its left edge
+  (`data-menu-start`), and the chip's from its right. Needs `board`, `card`
+  and `filter_query`.
+{% endcomment %}
+{% url 'card_priority' board.pk card.pk as priority_url %}
+<details data-menu{% if card.priority %} data-menu-start{% endif %} class="relative">
+  <summary aria-label="Priority for {{ card.title }}: {% if card.priority %}{{ card.get_priority_display }}{% else %}none{% endif %}" class="cursor-pointer list-none{% if not card.priority %} rounded-full border border-control bg-surface px-2 py-0.5 text-xs text-text-muted transition-colors hover:text-text{% endif %}">
+    {% if card.priority %}{% include "components/priority_label.html" %}{% else %}+ Priority{% endif %}
+  </summary>
+  <div data-menu-panel class="absolute {% if card.priority %}left-0{% else %}right-0{% endif %} z-10 mt-1 w-44 rounded-lg border border-border bg-surface p-1 shadow-lg">
+    <form method="post" action="{{ priority_url }}{{ filter_query }}" hx-post="{{ priority_url }}{{ filter_query }}" hx-target="#board" hx-swap="outerHTML" aria-label="Priority for {{ card.title }}">
+      {% csrf_token %}
+      <p class="px-2 py-1 text-xs font-semibold text-text-muted">Priority</p>
+      {% for value, label in card.Priority.choices %}
+        <button type="submit" name="priority" value="{{ value }}"{% if card.priority == value %} aria-current="true"{% endif %} class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-sunken{% if card.priority == value %} font-semibold{% endif %}"><span class="size-2.5 shrink-0 rounded-full bg-priority-{{ value }}" aria-hidden="true"></span>{{ label }}</button>
+      {% endfor %}
+      <button type="submit" name="priority" value=""{% if not card.priority %} aria-current="true"{% endif %} class="mt-1 block w-full rounded-md border-t border-border px-2 pt-2 pb-1.5 text-left text-xs text-text-muted transition-colors hover:bg-sunken">No priority</button>
+    </form>
+  </div>
+</details>

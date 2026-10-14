@@ -147,10 +147,13 @@ removes it. Any board swap keeps the Stage row's sideways scroll
 (`data-stage-row`).
 
 **The ⋯ menus** on each Card (`components/card_menu.html`), each Stage
-(`components/stage_menu.html`) and the board (`components/board_menu.html`) are `<details data-menu>` dropdowns, so they
-work without JavaScript. `board.js` closes one on a click elsewhere or Escape,
+(`components/stage_menu.html`) and the board (`components/board_menu.html`),
+and a Card's Priority dropdown (`components/priority_menu.html`), are
+`<details data-menu>` dropdowns, so they work without JavaScript. `board.js` closes one on a click elsewhere or Escape,
 and pins an open menu to the window (`position: fixed`), below its ⋯ button
-or above it when there is no room below. The Stage row scrolls sideways, and
+or above it when there is no room below. A panel lines up with its button's
+right edge, or with its left edge with `data-menu-start`, as for the Priority
+pill at a Card's left. The Stage row scrolls sideways, and
 that also clips anything overflowing its bottom, so a menu left inside it
 would be cut off on the lowest Card. Scrolling closes an open menu rather than
 leaving it behind, and so does choosing an item that opens a dialog.

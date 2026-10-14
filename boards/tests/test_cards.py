@@ -694,7 +694,8 @@ class PriorityTests(TestCase):
             '<option value="" selected>No priority</option>',
             html=True,
         )
-        self.assertNotContains(self.client.get(self.board_url), "bg-priority-")
+        # No pill: the tile's dropdown still lists the levels' colours.
+        self.assertNotContains(self.client.get(self.board_url), '<span class="sr-only">Priority:</span>')
         self.assertContains(
             self.client.get(self.url),
             '<span class="font-normal text-text-muted">No priority</span>',
@@ -721,6 +722,91 @@ class PriorityTests(TestCase):
         self.assertContains(response, "Select a valid choice")
         self.card.refresh_from_db()
         self.assertEqual(self.card.priority, "")
+
+
+class PriorityFromTheTileTests(TestCase):
+    """A Card's Priority is set from a small dropdown on its tile: the pill
+    opens it, and a Card with none offers a faint chip that shows on hover."""
+
+    def setUp(self):
+        self.ada = a_user()
+        self.grace = a_user("grace@example.com")
+        self.board = Board.objects.create_with_owner(name="Housework", owner=self.ada)
+        Membership.objects.create(board=self.board, user=self.grace)
+        self.card = a_card(self.board.stages.first())
+        self.url = reverse("card_priority", args=[self.board.pk, self.card.pk])
+        self.board_url = reverse("board_detail", args=[self.board.pk])
+        self.client.force_login(self.ada)
+
+    def tile(self, content=None):
+        content = content or self.client.get(self.board_url).content.decode()
+        return re.search(rf'<li data-card-id="{self.card.pk}".*?</li>', content, re.S).group()
+
+    def test_every_level_and_none_are_offered_on_the_tile(self):
+        tile = self.tile()
+
+        self.assertIn(f'action="{self.url}"', tile)
+        for value in ["urgent", "must", "should", "could", ""]:
+            self.assertIn(f'name="priority" value="{value}"', tile)
+
+    def test_without_one_the_tile_offers_a_faint_chip(self):
+        tile = self.tile()
+
+        self.assertRegex(tile, r"<summary[^>]*>\s*\+ Priority\s*</summary>")
+        self.assertIn("group-hover:opacity-100", tile)
+
+    def test_with_one_the_pill_opens_the_dropdown_outside_the_cards_link(self):
+        Card.objects.filter(pk=self.card.pk).update(priority="must")
+
+        tile = self.tile()
+
+        summary = re.search(r"<summary[^>]*>.*?</summary>", tile, re.S).group()
+        self.assertIn("bg-priority-must", summary)
+        self.assertNotIn("+ Priority", tile)
+        link = re.search(r"<a href[^>]*>.*?</a>", tile, re.S).group()
+        self.assertNotIn("<details", link)
+
+    def test_choosing_a_level_updates_the_board_in_place(self):
+        response = self.client.post(self.url, {"priority": "urgent"}, headers={"HX-Request": "true"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('id="board"', response.content.decode())
+        self.assertIn("bg-priority-urgent", self.tile(response.content.decode()))
+        self.card.refresh_from_db()
+        self.assertEqual(self.card.priority, "urgent")
+
+    def test_no_priority_clears_it(self):
+        Card.objects.filter(pk=self.card.pk).update(priority="must")
+
+        self.client.post(self.url, {"priority": ""}, headers={"HX-Request": "true"})
+
+        self.card.refresh_from_db()
+        self.assertEqual(self.card.priority, "")
+
+    def test_without_javascript_it_returns_to_the_board_keeping_the_filter(self):
+        response = self.client.post(self.url + "?assignee=me", {"priority": "could"})
+
+        self.assertRedirects(response, self.board_url + "?assignee=me", fetch_redirect_response=False)
+        self.card.refresh_from_db()
+        self.assertEqual(self.card.priority, "could")
+
+    def test_an_unknown_level_is_refused(self):
+        response = self.client.post(self.url, {"priority": "critical"}, headers={"HX-Request": "true"})
+
+        self.assertEqual(response.status_code, 400)
+        self.card.refresh_from_db()
+        self.assertEqual(self.card.priority, "")
+
+    def test_any_member_may_set_it_and_a_stranger_sees_nothing(self):
+        self.client.force_login(self.grace)
+        self.client.post(self.url, {"priority": "should"})
+        self.card.refresh_from_db()
+        self.assertEqual(self.card.priority, "should")
+
+        self.client.force_login(a_user("stranger@example.com"))
+        self.assertEqual(self.client.post(self.url, {"priority": "urgent"}).status_code, 404)
+        self.card.refresh_from_db()
+        self.assertEqual(self.card.priority, "should")
 
 
 class EffortTests(TestCase):

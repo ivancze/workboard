@@ -6,7 +6,10 @@
   finished, every Card is outlined green instead, and an overdue one keeps
   the word without the red. An Unestimated Card shows no Effort, so it stays
   distinct from an Effort of zero. A Card with a Priority shows its pill
-  above the title, and one without shows nothing.
+  above the title, and the pill opens a menu to change it. One without shows
+  a faint "+ Priority" chip in its bottom corner, only on hover or focus, or
+  always on a touch screen (priority_menu.html). Both sit outside the Card's
+  link, since a control can't sit inside one.
 
   A Card that has just arrived from another Stage by its Move menu carries
   `data-landed`, and `data-celebrate` too in the board's last Stage (`landed`,
@@ -14,9 +17,11 @@
 
   The Card's actions, Move among them, are in its ⋯ menu (card_menu.html).
 {% endcomment %}
-<li data-card-id="{{ card.pk }}" data-move-url="{% url 'card_move' board.pk card.pk %}{{ filter_query }}"{% if card.pk == landed.card %} data-landed{% if landed.celebrate %} data-celebrate{% endif %}{% endif %} class="relative cursor-grab rounded-lg border {% if last_stage %}border-success{% elif card.is_overdue %}border-danger{% elif card.is_due_today %}border-warning{% else %}border-border{% endif %} bg-surface shadow-sm transition-colors hover:border-accent data-landed:animate-land">
-  <a href="{% url 'card_detail' board.pk card.pk %}{{ filter_query }}" class="block p-3 pr-12">
-    {% if card.priority %}<span class="mb-1.5 block">{% include "components/priority_label.html" %}</span>{% endif %}
+<li data-card-id="{{ card.pk }}" data-move-url="{% url 'card_move' board.pk card.pk %}{{ filter_query }}"{% if card.pk == landed.card %} data-landed{% if landed.celebrate %} data-celebrate{% endif %}{% endif %} class="group relative cursor-grab rounded-lg border {% if last_stage %}border-success{% elif card.is_overdue %}border-danger{% elif card.is_due_today %}border-warning{% else %}border-border{% endif %} bg-surface shadow-sm transition-colors hover:border-accent data-landed:animate-land">
+  {% if card.priority %}
+    <div class="px-3 pt-3">{% include "components/priority_menu.html" %}</div>
+  {% endif %}
+  <a href="{% url 'card_detail' board.pk card.pk %}{{ filter_query }}" class="block p-3 pr-12{% if card.priority %} pt-1.5{% endif %}">
     <span class="block font-semibold">{{ card.title }}</span>
     <span class="mt-2 flex flex-col gap-1 text-xs text-text-muted">
       {# Each emoji stands in for a label, so screen readers get the word instead. #}
@@ -29,5 +34,8 @@
       {% endif %}
     </span>
   </a>
+  {% if not card.priority %}
+    <div class="absolute right-2 bottom-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 has-open:opacity-100 pointer-coarse:opacity-100">{% include "components/priority_menu.html" %}</div>
+  {% endif %}
   {% include "components/card_menu.html" %}
 </li>

@@ -48,7 +48,9 @@ a Card to open it, and *Edit* to change it:
 - **Description**, written in Markdown
 - **Priority**: Urgent, Must have, Should have or Could have, shown on the
   board as a coloured label. It's only a label: Cards stay where you put
-  them. Leave it at No priority if it doesn't matter
+  them. Leave it at No priority if it doesn't matter. It can also be set
+  straight from the board: click a Card's label, or hover over a Card
+  without one and click *+ Priority*
 - **Assignee**, one Member of the board, or Unassigned
 - **Contact persons**, free text for people outside the board
 - **Due date**, for reference only. A Card due today gets an orange outline,
