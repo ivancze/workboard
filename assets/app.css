@@ -34,6 +34,7 @@
   --color-on-danger: light-dark(#ffffff, #111114); /* text on danger */
   --color-danger-hover: light-dark(#a51b1b, #fa9a9a);
   --color-warning: light-dark(#d4700f, #f0a05a); /* due today: noticed, not alarming */
+  --color-success: light-dark(#3f7a50, #5f9a6e); /* a Card in the board's last Stage */
   /* Priority pills, filled so they read apart from the due-date outlines. */
   --color-priority-urgent: light-dark(#7f1d1d, #991b1b);
   --color-on-priority-urgent: light-dark(#ffffff, #ffffff);

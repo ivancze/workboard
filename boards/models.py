@@ -497,7 +497,7 @@ class Card(models.Model):
     objects = CardManager()
 
     class Meta:
-        # Card order is set by hand and read as priority; `id` only breaks ties.
+        # Card order is set by hand, never by Priority; `id` only breaks ties.
         ordering = ["position", "id"]
         constraints = [
             # The backstop for Card order. Deferred to commit, because closing

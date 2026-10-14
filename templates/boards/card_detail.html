@@ -51,7 +51,7 @@
       <dt class="text-sm text-text-muted">Due date</dt>
       <dd class="mt-1 font-semibold">
         {% if card.due_date %}
-          <span{% if card.is_overdue %} class="text-danger"{% endif %}>{{ card.due_date|date:"j F Y" }}{% if card.is_overdue %} · Overdue{% elif card.is_due_today %} · Today{% endif %}</span>
+          <span{% if card.is_overdue and not in_last_stage %} class="text-danger"{% endif %}>{{ card.due_date|date:"j F Y" }}{% if card.is_overdue %} · Overdue{% elif card.is_due_today %} · Today{% endif %}</span>
         {% else %}
           <span class="font-normal text-text-muted">No due date</span>
         {% endif %}

@@ -43,7 +43,8 @@ a Card to open it, and *Edit* to change it:
 - **Assignee**, one Member of the board, or Unassigned
 - **Contact persons**, free text for people outside the board
 - **Due date**, for reference only. A Card due today gets an orange outline,
-  and one past its date is marked Overdue in red
+  and one past its date is marked Overdue in red. In the board's last Stage,
+  every Card is outlined green and Overdue loses its red
 - **Effort**, a number in steps of 0.1, in whatever unit your team uses:
   hours, days or a score. Leave it empty if it hasn't been estimated
 

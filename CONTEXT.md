@@ -94,9 +94,18 @@ _Avoid_: Deadline, target date, ETA
 
 **Overdue**:
 A card still on the board whose due date has passed. Overdue is read off the
-date alone — the system has no concept of a card being finished — so the way a
-card stops being overdue is by leaving the board through the archive.
+date alone, so the way a card stops being overdue is by leaving the board
+through the archive. In the board's last stage it is still overdue, and still
+says so, but without the alarm colour: see last stage.
 _Avoid_: Late, breached, at risk
+
+**Last stage**:
+The rightmost stage of a board, whatever it is named. The board shows it as
+finished work: a card arriving there gets confetti, every card in it is
+outlined green, and an overdue one there loses its red. That is display only.
+Cards in the last stage still count in every total, stay overdue by their
+date, and leave the board only through the archive.
+_Avoid_: Done, complete, closed
 
 **Priority**:
 How much a card matters, declared as one of four levels, from highest: Urgent,

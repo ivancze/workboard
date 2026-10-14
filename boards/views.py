@@ -239,7 +239,14 @@ def back_to(request, default):
 @login_required
 def card_detail(request, board_pk, pk):
     board, card = get_card(request, board_pk, pk)
-    return render(request, "boards/card_detail.html", {"board": board, "card": card})
+    # The board's last Stage reads as finished, so an overdue Card there loses
+    # its red, as on its tile. An archived Card has no Stage.
+    in_last_stage = card.stage_id is not None and card.stage_id == board.stages.last().pk
+    return render(
+        request,
+        "boards/card_detail.html",
+        {"board": board, "card": card, "in_last_stage": in_last_stage},
+    )
 
 
 @login_required

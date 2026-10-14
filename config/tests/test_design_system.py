@@ -157,6 +157,8 @@ TEXT_PAIRS = [
 NON_TEXT_PAIRS = [(fg, bg) for fg in ["control", "focus"] for bg in BACKGROUNDS] + [
     # The due-today outline is a Card's only marker besides its words.
     ("warning", "surface"),
+    # So is the green outline of a Card in the board's last Stage.
+    ("success", "surface"),
 ]
 
 

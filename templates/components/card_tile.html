@@ -1,8 +1,10 @@
 {% comment %}
   A Card as it sits in its Stage. Needs `board`, `card`, the Card's `stage`,
-  and all the board's `stages` for the Move control. An overdue Card says so
-  in words as well as colour, and so does one due today, outlined in a
-  quieter orange. An Unestimated Card shows no Effort, so it stays
+  all the board's `stages` for the Move control, and `last_stage`. An overdue
+  Card says so in words as well as colour, and so does one due today,
+  outlined in a quieter orange. In the board's last Stage, which reads as
+  finished, every Card is outlined green instead, and an overdue one keeps
+  the word without the red. An Unestimated Card shows no Effort, so it stays
   distinct from an Effort of zero. A Card with a Priority shows its pill
   above the title, and one without shows nothing.
 
@@ -12,7 +14,7 @@
 
   The Card's actions, Move among them, are in its ⋯ menu (card_menu.html).
 {% endcomment %}
-<li data-card-id="{{ card.pk }}" data-move-url="{% url 'card_move' board.pk card.pk %}{{ filter_query }}"{% if card.pk == landed.card %} data-landed{% if landed.celebrate %} data-celebrate{% endif %}{% endif %} class="relative cursor-grab rounded-lg border {% if card.is_overdue %}border-danger{% elif card.is_due_today %}border-warning{% else %}border-border{% endif %} bg-surface shadow-sm transition-colors hover:border-accent data-landed:animate-land">
+<li data-card-id="{{ card.pk }}" data-move-url="{% url 'card_move' board.pk card.pk %}{{ filter_query }}"{% if card.pk == landed.card %} data-landed{% if landed.celebrate %} data-celebrate{% endif %}{% endif %} class="relative cursor-grab rounded-lg border {% if last_stage %}border-success{% elif card.is_overdue %}border-danger{% elif card.is_due_today %}border-warning{% else %}border-border{% endif %} bg-surface shadow-sm transition-colors hover:border-accent data-landed:animate-land">
   <a href="{% url 'card_detail' board.pk card.pk %}{{ filter_query }}" class="block p-3 pr-12">
     {% if card.priority %}<span class="mb-1.5 block">{% include "components/priority_label.html" %}</span>{% endif %}
     <span class="block font-semibold">{{ card.title }}</span>
@@ -23,7 +25,7 @@
         <span><span aria-hidden="true">⚡</span> <span class="sr-only">Effort</span>{{ card.effort|floatformat:"-1" }}</span>
       {% endif %}
       {% if card.due_date %}
-        <span{% if card.is_overdue %} class="font-semibold text-danger"{% endif %}>{% if card.is_overdue %}Overdue · {% endif %}Due {% if card.is_due_today %}today · {% endif %}{{ card.due_date|date:"j M Y" }}</span>
+        <span{% if card.is_overdue and not last_stage %} class="font-semibold text-danger"{% endif %}>{% if card.is_overdue %}Overdue · {% endif %}Due {% if card.is_due_today %}today · {% endif %}{{ card.due_date|date:"j M Y" }}</span>
       {% endif %}
     </span>
   </a>

@@ -550,6 +550,70 @@ class DueDateTests(TestCase):
             self.assertContains(self.client.get(self.board_url), "Overdue")
 
 
+class LastStageTests(TestCase):
+    """The board's last Stage reads as finished work: its Cards are outlined
+    green, and an overdue one there keeps the word but loses the red."""
+
+    def setUp(self):
+        self.ada = a_user()
+        self.board = Board.objects.create_with_owner(name="Housework", owner=self.ada)
+        self.first, _, self.last = self.board.stages.all()
+        self.board_url = reverse("board_detail", args=[self.board.pk])
+        self.yesterday = timezone.localdate() - timedelta(days=1)
+        self.client.force_login(self.ada)
+
+    def tile(self, content, card):
+        return re.search(rf'<li data-card-id="{card.pk}".*?</li>', content, re.S).group()
+
+    def test_every_card_in_the_last_stage_is_outlined_green(self):
+        cards = [
+            a_card(self.last, "No date"),
+            a_card(self.last, "Late one", due_date=self.yesterday),
+            a_card(self.last, "Today", due_date=timezone.localdate()),
+        ]
+        elsewhere = a_card(self.first, "Not finished")
+
+        content = self.client.get(self.board_url).content.decode()
+
+        for card in cards:
+            with self.subTest(card=card.title):
+                tile = self.tile(content, card)
+                self.assertIn("border-success", tile)
+                self.assertNotIn("border-danger", tile)
+                self.assertNotIn("border-warning", tile)
+        self.assertNotIn("border-success", self.tile(content, elsewhere))
+
+    def test_an_overdue_card_there_keeps_the_word_in_grey(self):
+        card = a_card(self.last, "Late one", due_date=self.yesterday)
+
+        tile = self.tile(self.client.get(self.board_url).content.decode(), card)
+
+        self.assertIn(f"<span>Overdue · Due {self.yesterday:%-d %b %Y}</span>", tile)
+
+    def test_moving_it_back_out_brings_the_red_back(self):
+        card = a_card(self.last, "Late one", due_date=self.yesterday)
+        move = reverse("card_move", args=[self.board.pk, card.pk])
+
+        response = self.client.post(move, {"stage": self.first.pk}, headers={"HX-Request": "true"})
+
+        tile = self.tile(response.content.decode(), card)
+        self.assertIn("border-danger", tile)
+        self.assertIn('class="font-semibold text-danger"', tile)
+        self.assertNotIn("border-success", tile)
+
+    def test_the_cards_page_follows_the_same_rule(self):
+        finished = a_card(self.last, "Late one", due_date=self.yesterday)
+        unfinished = a_card(self.first, "Late too", due_date=self.yesterday)
+        overdue = '<span class="text-danger">'
+
+        page = self.client.get(reverse("card_detail", args=[self.board.pk, finished.pk]))
+        self.assertContains(page, " · Overdue")
+        self.assertNotContains(page, overdue)
+
+        page = self.client.get(reverse("card_detail", args=[self.board.pk, unfinished.pk]))
+        self.assertContains(page, overdue)
+
+
 class DueDateIsAdvisoryTests(TestCase):
     """Nothing sorts, filters, blocks or notifies on a Due date."""
 
