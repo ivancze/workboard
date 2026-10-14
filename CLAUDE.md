@@ -122,6 +122,9 @@ board; reach archived Cards, or a board's Cards in general, through
   the theme toggle, and how the stylesheet is built.
 - [docs/deployment.md](docs/deployment.md) — how a deploy works, and why
   compute and database sit with two providers.
+- [infra/README.md](infra/README.md), [docs/data-copy.md](docs/data-copy.md)
+  and [docs/switch-over.md](docs/switch-over.md) — the Google Cloud setup, and
+  the operator procedures for moving onto it.
 - [docs/v2-features.md](docs/v2-features.md) and
   [docs/v2-infrastructure.md](docs/v2-infrastructure.md) — what was cut from v1
   and why. Check here before building something that feels missing.

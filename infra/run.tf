@@ -68,9 +68,14 @@ resource "google_cloud_run_v2_service" "workboard" {
       }
 
       # Not HTTP: a probe arrives without the public hostname, which
-      # ALLOWED_HOSTS turns away.
+      # ALLOWED_HOSTS turns away. Checked every second: at the default 10, a
+      # first check that runs before gunicorn listens (about 1.5 s) leaves a
+      # cold request waiting ~10 s more. 30 attempts still allow 30 s to start.
       startup_probe {
         tcp_socket {}
+        period_seconds    = 1
+        timeout_seconds   = 1
+        failure_threshold = 30
       }
 
       env {
