@@ -188,6 +188,9 @@
   .pet {
     --grid: 16;
     --pixel: 0.1875rem;
+    /* How high it bounces on walk2: one sprite pixel, 2-3 px for most pets.
+       Chico's and Bruno's pixels are 1 px, so they lift two. */
+    --lift: calc(var(--pixel) * -1);
     width: calc(var(--grid) * var(--pixel));
     height: calc(var(--grid) * var(--pixel));
     background-repeat: no-repeat;
@@ -198,6 +201,7 @@
   .pet[data-pet="chico"] {
     --grid: 74;
     --pixel: 0.0625rem;
+    --lift: calc(var(--pixel) * -2);
     background-image: url("../pets/chico.png");
   }
   .pet[data-pet="pug"] {
@@ -208,6 +212,7 @@
   .pet[data-pet="bruno"] {
     --grid: 84;
     --pixel: 0.0625rem;
+    --lift: calc(var(--pixel) * -2);
     background-image: url("../pets/bruno.png");
   }
   .pet[data-pet="chicken"] {

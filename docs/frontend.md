@@ -223,9 +223,10 @@ they stay on that animal's grid.
   the menu out of band (`oob`), closed, with the new choice ticked.
 - `static/js/pet.js` moves it, and the board page loads it even with no pet,
   since one chosen from the menu arrives without a page load. It walks at
-  least 100 px (`STROLL`) to a random spot, sits for 1-3 s, walks again, and
-  after 3 minutes awake (`AWAKE_FOR`) sleeps for a minute or two. A startle
-  sends it dashing 360-540 px (`DASH`), about 3-4.5 s.
+  34 px/s (`SPEED`), at least 100 px (`STROLL`), to a random spot, sits for
+  2.5-5 s (`SIT`), walks again, and after 60-90 s awake (`AWAKE`, picked each
+  time it wakes) sleeps for a minute or two. A startle sends it dashing
+  240-360 px (`DASH`), about 2-3 s.
 - Sitting, the dogs wag their tails: `sit` and `wag` alternate every 200 ms
   (`WAG`). The duck's and pig's `wag` is their `sit` (`== wag = sit` in their
   grids), so they stay still. Reduced motion skips the wag.
@@ -241,9 +242,14 @@ they stay on that animal's grid.
   viewer has their own.
 - The sheets face right. Walking left sets `data-facing="left"`, which
   mirrors it with `scale`, leaving `translate` free for its position.
-- Walking, it bounces in step: its body rises one sprite pixel as its legs
-  pass under it (walk2) and drops as they spread. The bounce is a whole
-  pixel, so it stays on the sprite's grid rather than floating.
+- Walking, it bounces in step: its body rises as its legs pass under it
+  (walk2) and drops as they spread. The rise is `--lift`, a whole number of
+  sprite pixels so it stays on the grid: one for most pets (2-3 px), and two
+  for Chico and Bruno (2 px), whose pixels are small. Chicks hop by one of
+  theirs (2 px) on every other step. A dash runs its legs at 90 ms a frame
+  (`RUN_STRIDE`) and, instead of bouncing every step, hops once per stride in
+  an arc up to twice its bounce (`HOP`), in whole steps of `--lift`. A chick
+  catching up doesn't hop.
 - Asleep, a "z" drifts up from its head: CSS on the sleep frame, in a token
   colour, mirrored back when it faces left so the letter reads.
 - A click, or Enter or Space since it's a button, gets a reaction. Asleep,

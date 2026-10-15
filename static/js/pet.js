@@ -11,23 +11,28 @@
 // Sitting and sleeping are timers, so a pet at rest costs nothing per frame.
 // With reduced motion it never walks: it sleeps where it is.
 
-const SPEED = 40; // px per second
+const SPEED = 34; // px per second
 const RUN = 120; // px per second, running off after a startle
-const DASH = [360, 540]; // px it runs off, between these: 3-4.5 s
-const STROLL = 100; // px a walk goes at least: 2.5 s
-const SIT = [1000, 3000]; // ms it sits between walks
+const DASH = [240, 360]; // px it runs off, between these: 2-3 s
+const STROLL = 100; // px a walk goes at least: about 3 s
+const SIT = [2500, 5000]; // ms it sits between walks
 const WAG = 200; // ms per swish of the tail while it sits (the wag frame)
-const STRIDE = 150; // ms per walking frame
+const STRIDE = 175; // ms per walking frame, in step with SPEED so feet don't slide
+// Running, the legs keep a cadence of their own, quicker but still readable,
+// and it hops once per stride in an arc up to HOP times its bounce (--lift)
+// rather than bouncing on every frame, which read as vibrating.
+const RUN_STRIDE = 90; // ms per running frame
+const HOP = 2;
 const WALK = ["walk1", "walk2", "walk3", "walk2"];
-// Its body rises one sprite pixel (--pixel, assets/app.css) as its legs pass
-// under it, in walk2, and drops as they spread: a bounce in step, kept to the
-// pixel grid.
-const LIFT = { walk2: "calc(var(--pixel) * -1)" };
-const AWAKE_FOR = 180_000; // ms of wandering before it settles to sleep
+// Its body rises as its legs pass under it, in walk2, and drops as they
+// spread: a bounce in step, a whole number of sprite pixels (--lift,
+// assets/app.css), so it keeps to the pixel grid.
+const LIFT = { walk2: "var(--lift)" };
+const AWAKE = [60_000, 90_000]; // ms of wandering before it settles to sleep, picked each time it wakes
 const NAP = [60_000, 120_000]; // ms asleep, between these
 const REACTION = 1000; // ms a heart or "!" shows; its float is a little longer
 
-let pet = null; // { el, x, timer, frame, wag, reaction, awakeSince }
+let pet = null; // { el, x, timer, frame, wag, reaction, awakeSince, awakeFor }
 
 const between = (low, high) => low + Math.random() * (high - low);
 const stillness = matchMedia("(prefers-reduced-motion: reduce)");
@@ -59,7 +64,7 @@ function rest(frame, ms, then) {
 // Sitting, a dog wags its tail: sit and wag alternate. The duck's and pig's
 // wag frame is their sit frame, so they stay still.
 function sit() {
-  rest("sit", between(...SIT), () => (performance.now() - pet.awakeSince > AWAKE_FOR ? sleep() : walk()));
+  rest("sit", between(...SIT), () => (performance.now() - pet.awakeSince > pet.awakeFor ? sleep() : walk()));
   if (!stillness.matches) pet.wag = setInterval(() => show(pet.el.dataset.frame === "sit" ? "wag" : "sit"), WAG);
 }
 
@@ -69,6 +74,7 @@ function sleep() {
 
 function wake() {
   pet.awakeSince = performance.now();
+  pet.awakeFor = between(...AWAKE);
   walk();
 }
 
@@ -84,7 +90,8 @@ function wander() {
 function walk(target = wander(), speed = SPEED) {
   clearInterval(pet.wag);
   if (stillness.matches) return sleep();
-  const stride = (STRIDE * SPEED) / speed; // quicker steps when running
+  const running = speed > SPEED;
+  const stride = running ? RUN_STRIDE : STRIDE;
   pet.el.dataset.facing = target < pet.x ? "left" : "right";
   let last = performance.now();
   const began = last;
@@ -96,7 +103,14 @@ function walk(target = wander(), speed = SPEED) {
     const goal = Math.min(target, room()); // the window may have narrowed
     pet.x += Math.sign(goal - pet.x) * Math.min(distance, Math.abs(goal - pet.x));
     const frame = WALK[Math.floor((now - began) / stride) % WALK.length];
-    place(LIFT[frame]);
+    if (running) {
+      // One arc per stride of four frames, in whole steps of --lift.
+      const phase = ((now - began) % (stride * WALK.length)) / (stride * WALK.length);
+      const height = Math.round(HOP * Math.sin(Math.PI * phase));
+      place(height ? `calc(var(--lift) * ${height})` : undefined);
+    } else {
+      place(LIFT[frame]);
+    }
     show(frame);
     if (Math.abs(goal - pet.x) < 0.5) return sit();
     pet.frame = requestAnimationFrame(step);
@@ -232,6 +246,7 @@ function follow() {
       reach += width + SPACING;
       const goal = Math.min(Math.max(centre - width / 2, 0), edge);
       const gap = goal - chick.x;
+      let lift = "0px";
       if (asleep) {
         chick.el.dataset.frame = "chick-sleep";
       } else if (Math.abs(gap) > 1) {
@@ -239,11 +254,13 @@ function follow() {
         chick.x += Math.sign(gap) * Math.min((speed * elapsed) / 1000, Math.abs(gap));
         chick.el.dataset.facing = gap < 0 ? "left" : "right";
         chick.el.dataset.frame = Math.floor(now / PEEP) % 2 ? "chick-walk1" : "chick-walk2";
+        // A hop in its step, but not running to catch up, when it would vibrate.
+        lift = speed === CHICK_SPEED && chick.el.dataset.frame === "chick-walk2" ? "var(--lift)" : "0px";
       } else {
         chick.el.dataset.facing = pet.el.dataset.facing || "right";
         chick.el.dataset.frame = "chick";
       }
-      chick.el.style.translate = `${chick.x}px 0`;
+      chick.el.style.translate = `${chick.x}px ${lift}`;
     }
     flock = requestAnimationFrame(step);
   };
@@ -271,7 +288,7 @@ function start(root) {
   if (!el && root.id !== "pet") return;
   stop();
   if (!el) return;
-  pet = { el, x: 0, timer: null, frame: null, wag: null, reaction: null, awakeSince: performance.now() };
+  pet = { el, x: 0, timer: null, frame: null, wag: null, reaction: null, awakeSince: performance.now(), awakeFor: between(...AWAKE) };
   stillness.matches ? sleep() : sit();
   if (isHen()) {
     layLater();
