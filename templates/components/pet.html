@@ -1,0 +1,15 @@
+{% comment %}
+  The board's pet, if it has one: a pixel-art animal (bin/pets) on a strip
+  fixed along the bottom of the window. The strip lets clicks through to the
+  page; only the pet takes them. In the page's flow, #pet keeps the strip's
+  height free, so the lowest Card can always scroll clear of it. Outside
+  #board, so a drag or a refresh never resets it. The board_pet view answers
+  with this partial. Needs `board`.
+{% endcomment %}
+<div id="pet"{% if board.pet %} class="h-20"{% endif %}>
+  {% if board.pet %}
+    <div class="pointer-events-none fixed inset-x-0 bottom-0 z-5 h-20">
+      <button type="button" data-pet="{{ board.pet }}" data-frame="sit" aria-label="Pet the {{ board.get_pet_display|lower }}" class="pet pointer-events-auto absolute bottom-2 left-4 cursor-pointer rounded-md"></button>
+    </div>
+  {% endif %}
+</div>

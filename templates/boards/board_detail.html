@@ -6,6 +6,7 @@
 {% block scripts %}
   <script src="{% static 'vendor/Sortable.min.js' %}" defer></script>
   <script src="{% static 'js/board.js' %}" defer></script>
+  <script src="{% static 'js/pet.js' %}" defer></script>
 {% endblock %}
 
 {% block content %}
@@ -24,4 +25,5 @@
   {# Shown by board.js when coming back to the tab fails to refresh the board. #}
   <p id="refresh-failed" role="status" hidden class="mt-4 rounded-lg border border-border bg-surface px-4 py-3 text-sm">This board could not be refreshed, so it may be out of date. Reload the page to see why.</p>
   {% include "components/board.html" %}
+  {% include "components/pet.html" %}
 {% endblock %}

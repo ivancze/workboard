@@ -6,8 +6,9 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import DatabaseError, transaction
 from django.db.models import Count, Prefetch, Q, Sum
-from django.http import Http404, HttpResponseBadRequest
+from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.decorators.http import require_POST, require_safe
@@ -17,6 +18,7 @@ from accounts.models import User
 from .forms import (
     BoardDescriptionForm,
     BoardForm,
+    BoardPetForm,
     CardForm,
     CardPriorityForm,
     DeleteBoardForm,
@@ -595,6 +597,27 @@ def board_describe(request, board_pk):
         {"board": board, "form": form},
         status=400 if form.is_bound else 200,
     )
+
+
+@require_POST
+@login_required
+def board_pet(request, board_pk):
+    """The board's pet, chosen by any Member from its ⋯ menu. With htmx it
+    answers with the pet, and the menu out of band so its tick moves. The pet
+    sits outside #board, so a drag or a refresh never resets it. Without
+    JavaScript, it goes back to the board."""
+    board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
+    form = BoardPetForm(request.POST, instance=board)
+    if not form.is_valid():
+        return HttpResponseBadRequest("No such pet.")
+    form.instance.save(update_fields=["pet"])
+    if request.headers.get("HX-Request"):
+        context = {"board": board, "is_owner": board.is_owner(request.user)}
+        return HttpResponse(
+            render_to_string("components/pet.html", context, request)
+            + render_to_string("components/board_menu.html", {**context, "oob": True}, request)
+        )
+    return redirect(board_url(board, request))
 
 
 @login_required

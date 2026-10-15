@@ -48,11 +48,16 @@ stylesheet. It uses the light value in both themes: on a dark tab bar the
 tile's edge fades, but its white bars still read. Change it by hand when that
 token changes.
 
-The other is Google's "G" on the sign-in button
+Another is Google's "G" on the sign-in button
 (`components/google_mark.html`), in Google's own four colours. A brand mark
 isn't recoloured, and Google allows it only on a white or neutral
 background, so that button uses the bordered `secondary` variant rather than
 the accent.
+
+The third is the board pets' sprites (`assets/pets/`), whose palettes are hex
+inside the pixel grids, because an image can't read the stylesheet. They use
+the same colours in both themes, and each animal is light enough to read on
+the dark canvas, with a dark outline for the light one.
 
 **Contrast is tested.** A test reads each token's light and dark value from
 `assets/app.css` and checks the WCAG AA pairs: 4.5:1 for text, and 3:1 for
@@ -175,6 +180,52 @@ description pages, which is what they stay without JavaScript. Both are
 - A board with no description shows a playful line, picked at random by the
   view on each load (`PLAYFUL_DESCRIPTIONS`). The description's form starts
   empty, not from that line.
+
+**The board pet** (`components/pet.html`) is pixel art. Each animal is a
+text file of square grids, one frame per grid, in `assets/pets/`: 16×16 for
+the duck, 32×32 for the dog, 36×36 for the pig. All three were read from
+reference images by sampling their pixel grids: the dog a Shiba, the duck a
+mallard, and the pig licensed from Dreamstime.
+`bin/pets` builds them into the sprite sheets in `static/pets/`, frames side
+by side in its `FRAMES` order. The sheets are committed, and a test rebuilds them and fails
+if they differ, so after editing a grid, run `bin/pets` and commit both.
+`assets/app.css` draws them with `image-rendering: pixelated`. `--grid` is a
+frame's size in sprite pixels and `--pixel` one sprite pixel on screen: 3 px
+for the duck (48 px), 2 px for the dog (64 px) and the pig (72 px). The pet is sized
+from them, and the bounce and the hop move in `--pixel`, so they stay on
+that animal's grid.
+`data-frame` picks the frame.
+- The pet stands on a strip fixed to the bottom of the window. The strip lets
+  clicks through and only the pet takes them, so it never blocks a Card, a
+  menu or a drag. In the page's flow, `#pet` holds the strip's height free,
+  so the lowest Card can scroll clear of it.
+- `#pet` sits outside `#board`, because a drag or a refresh swaps `#board`
+  and would reset it. So another Member's change shows on the next page load,
+  not on refresh-on-return.
+- It's chosen from the board's ⋯ menu. With htmx, the answer is `#pet`, plus
+  the menu out of band (`oob`), closed, with the new choice ticked.
+- `static/js/pet.js` moves it, and the board page loads it even with no pet,
+  since one chosen from the menu arrives without a page load. It walks to a
+  random spot, sits a while, walks again, and after about 45 s sleeps for a
+  minute or two. Walking runs on `requestAnimationFrame`; sitting and sleeping
+  are timers, so a pet at rest costs nothing per frame. A pet swapped in
+  replaces the old one's loop.
+- The sheets face right. Walking left sets `data-facing="left"`, which
+  mirrors it with `scale`, leaving `translate` free for its position.
+- Walking, it bounces in step: its body rises one sprite pixel as its legs
+  pass under it (walk2) and drops as they spread. The bounce is a whole
+  pixel, so it stays on the sprite's grid rather than floating.
+- Asleep, a "z" drifts up from its head: CSS on the sleep frame, in a token
+  colour, mirrored back when it faces left so the letter reads.
+- A click, or Enter or Space since it's a button, gets a reaction. Asleep,
+  it wakes with a start. Awake, it's either happy, with a heart, or startled,
+  with a hop and a "!", and dashes a short way towards the roomier side.
+  Either way it stays awake for longer. The heart and the "!" are pixel
+  shapes used as CSS masks, filled from tokens (`danger`, `text`), so they
+  keep to the grid and suit both themes.
+- With reduced motion it never walks. It sleeps where it is, and the global
+  override leaves the "z", the heart and the "!" standing still. A click
+  still shows a reaction.
 
 **Confirmation dialogs** (`components/confirm_dialog.html`) are native
 `<dialog>` elements, opened by a button with `commandfor="<dialog id>"` and

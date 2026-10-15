@@ -176,6 +176,149 @@
 }
 
 
+/* A board's pet (components/pet.html), moved by static/js/pet.js. Each
+   sheet is 16 px frames side by side, built by bin/pets in its FRAMES order,
+   drawn with the pixels kept sharp. --grid is a frame's size in sprite
+   pixels and --pixel is one sprite pixel on screen: the duck's 16 px at 3x
+   (3rem), the dog's 32 px and the pig's 36 px at 2x (4rem and 4.5rem). The pet is sized from them, and the bounce
+   and the hop move in --pixel, so everything stays on the sprite's grid.
+   data-frame picks the frame by its index; frames are square. */
+@layer components {
+  .pet {
+    --grid: 16;
+    --pixel: 0.1875rem;
+    width: calc(var(--grid) * var(--pixel));
+    height: calc(var(--grid) * var(--pixel));
+    background-repeat: no-repeat;
+    background-size: auto 100%;
+    background-position: calc(var(--frame, 0) * var(--grid) * var(--pixel) * -1) 0;
+    image-rendering: pixelated;
+  }
+  .pet[data-pet="dog"] {
+    --grid: 32;
+    --pixel: 0.125rem;
+    background-image: url("../pets/dog.png");
+  }
+  .pet[data-pet="duck"] {
+    background-image: url("../pets/duck.png");
+  }
+  .pet[data-pet="pig"] {
+    --grid: 36;
+    --pixel: 0.125rem;
+    background-image: url("../pets/pig.png");
+  }
+  .pet[data-frame="sit"] { --frame: 0; }
+  .pet[data-frame="walk1"] { --frame: 1; }
+  .pet[data-frame="walk2"] { --frame: 2; }
+  .pet[data-frame="walk3"] { --frame: 3; }
+  .pet[data-frame="sleep"] { --frame: 4; }
+  .pet[data-frame="happy"] { --frame: 5; }
+  .pet[data-frame="startled"] { --frame: 6; }
+  /* The sheets face right. Facing left mirrors the pet, and mirrors its "z"
+     back so the letter still reads. */
+  .pet[data-facing="left"],
+  .pet[data-facing="left"]::after {
+    scale: -1 1;
+  }
+  /* A click's reaction (static/js/pet.js): a heart, or a "!" with a hop.
+     Each is a pixel shape used as a mask, so it keeps to the sprite's grid
+     and takes a token colour. It sits above the pet's head, mirrored with
+     it. pet.js clears data-reaction just before the float ends, so with
+     reduced motion it shows, still, for as long. */
+  .pet[data-reaction]::before {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    right: 0.375rem;
+    mask: no-repeat center / contain;
+    animation: pet-float 1100ms ease-out;
+  }
+  .pet[data-reaction="heart"]::before {
+    width: 1.3125rem;
+    height: 1.125rem;
+    background-color: var(--color-danger);
+    mask-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 6'><path d='M1 0h2v1h1V0h2v1h1v2H6v1H5v1H4v1H3V5H2V4H1V3H0V1h1z'/></svg>");
+  }
+  .pet[data-reaction="startled"]::before {
+    width: 0.375rem;
+    height: 0.9375rem;
+    background-color: var(--color-text);
+    mask-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 5'><path d='M0 0h2v3H0zM0 4h2v1H0z'/></svg>");
+  }
+  .pet[data-reaction="startled"] {
+    animation: pet-hop 300ms;
+  }
+  @keyframes pet-float {
+    from {
+      transform: translateY(0.375rem);
+      opacity: 0;
+    }
+    20% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(-0.75rem);
+      opacity: 0;
+    }
+  }
+  /* Up three sprite pixels and down, a pixel at a time. */
+  @keyframes pet-hop {
+    0%,
+    100% {
+      transform: translateY(0);
+      animation-timing-function: steps(1, end);
+    }
+    25%,
+    75% {
+      transform: translateY(calc(var(--pixel) * -2));
+      animation-timing-function: steps(1, end);
+    }
+    50% {
+      transform: translateY(calc(var(--pixel) * -3));
+      animation-timing-function: steps(1, end);
+    }
+  }
+  /* Asleep, a "z" drifts up from its head. With reduced motion, the global
+     override ends the animation at once and it stays put, visible. */
+  .pet[data-frame="sleep"]::after {
+    content: "z";
+    position: absolute;
+    top: -0.25rem;
+    right: -0.25rem;
+    font-family: var(--font-condensed);
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--color-text-muted);
+    animation: pet-snore 2400ms ease-out infinite;
+  }
+  /* The pig is short: its frame has 1.5rem of empty sky above it. */
+  .pet[data-pet="pig"][data-reaction]::before {
+    bottom: calc(100% - 1.5rem);
+  }
+  .pet[data-pet="pig"][data-frame="sleep"]::after {
+    top: 1.5rem;
+  }
+  /* The dog lies down to sleep, so its head is low in the frame. */
+  .pet[data-pet="dog"][data-frame="sleep"]::after {
+    top: 1.5rem;
+    right: 0.5rem;
+  }
+  @keyframes pet-snore {
+    from {
+      transform: translate(0, 0.25rem);
+      opacity: 0;
+    }
+    30% {
+      opacity: 1;
+    }
+    to {
+      transform: translate(0.5rem, -0.75rem);
+      opacity: 0;
+    }
+  }
+}
+
 /* Where a dragged Card will land: Sortable gives the placeholder in the list
    this class (static/js/board.js). Unlayered, so it beats the tile's border,
    background and shadow utilities. The contents are hidden, not removed, so

@@ -1,0 +1,140 @@
+# The duck, a mallard drake, facing right, at 16x16. Read from the user's
+# reference image (2026-10-15): its pixel grid sampled, the colours snapped to
+# this palette, and mirrored to face right. walk2 is the reference's pose; the
+# other frames are derived from it. Built into static/pets/duck.png by bin/pets.
+k #020204 outline, eye
+g #4f7637 head
+l #73b15e head, light
+d #33562c head, dark
+y #feff53 bill, feet
+o #eeb335 bill and feet, shade
+b #81643c breast, wing
+m #bcaa82 belly, wing
+t #d0bd9f belly, light
+w #ffffff eye white, startled
+
+== sit
+................
+................
+........kkkk....
+.......kgllgk...
+......kgllllgk..
+......klkklkkk..
+.....kklkllgdkk.
+...kkbklllkoyyyk
+.kkbbbkglgdkookk
+kkmmbbbkkddddkk.
+kmtttmbbbbbbbbbk
+kkbmttmbbbbmmmbk
+kbkkbbbkbttttmbk
+.kbbkkkbtttttmk.
+..kbbbmtttttmk..
+...kkbmmmmmmk...
+
+== walk1
+................
+........kkkk....
+.......kgllgk...
+......kgllllgk..
+......klkklkkk..
+.....kklkllgdkk.
+...kkbklllkoyyyk
+.kkbbbkglgdkookk
+kkmmbbbkkddddkk.
+kmtttmbbbbbbbbbk
+kkbmttmbbbbmmmbk
+kbkkbbbkbttttmbk
+.kbbkkkbtttttmk.
+..kbbbmtttttmk..
+...kkbmmmmmmk...
+....kyok..koyk..
+
+== walk2
+................
+........kkkk....
+.......kgllgk...
+......kgllllgk..
+......klkklkkk..
+.....kklkllgdkk.
+...kkbklllkoyyyk
+.kkbbbkglgdkookk
+kkmmbbbkkddddkk.
+kmtttmbbbbbbbbbk
+kkbmttmbbbbmmmbk
+kbkkbbbkbttttmbk
+.kbbkkkbtttttmk.
+..kbbbmtttttmk..
+...kkbmmmmmmk...
+.....kyookooyk..
+
+== walk3
+................
+........kkkk....
+.......kgllgk...
+......kgllllgk..
+......klkklkkk..
+.....kklkllgdkk.
+...kkbklllkoyyyk
+.kkbbbkglgdkookk
+kkmmbbbkkddddkk.
+kmtttmbbbbbbbbbk
+kkbmttmbbbbmmmbk
+kbkkbbbkbttttmbk
+.kbbkkkbtttttmk.
+..kbbbmtttttmk..
+...kkbmmmmmmk...
+......kyokoyk...
+
+== sleep
+................
+................
+........kkkk....
+.......kgllgk...
+......kgllllgk..
+......kllllkkk..
+.....kklkklgdkk.
+...kkbklllkoyyyk
+.kkbbbkglgdkookk
+kkmmbbbkkddddkk.
+kmtttmbbbbbbbbbk
+kkbmttmbbbbmmmbk
+kbkkbbbkbttttmbk
+.kbbkkkbtttttmk.
+..kbbbmtttttmk..
+...kkbmmmmmmk...
+
+== happy
+................
+................
+........kkkk....
+.......kgllgk...
+......kgllllgk..
+......kllklkkk..
+.....kklklkgdkk.
+...kkbklllkoyyyk
+.kkbbbkglgdkookk
+kkmmbbbkkddddkk.
+kmtttmbbbbbbbbbk
+kkbmttmbbbbmmmbk
+kbkkbbbkbttttmbk
+.kbbkkkbtttttmk.
+..kbbbmtttttmk..
+...kkbmmmmmmk...
+
+== startled
+................
+........kkkk....
+.......kgllgk...
+......kgllllgk..
+......kwwklkkk..
+.....kklwklgdkk.
+...kkbklllkoyyyk
+.kkbbbkglgdkookk
+kkmmbbbkkddddkk.
+kmtttmbbbbbbbbbk
+kkbmttmbbbbmmmbk
+kbkkbbbkbttttmbk
+.kbbkkkbtttttmk.
+..kbbbmtttttmk..
+...kkbmmmmmmk...
+.....kyookooyk..
