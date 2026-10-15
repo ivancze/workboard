@@ -1,5 +1,6 @@
 import re
 import runpy
+import struct
 from pathlib import Path
 
 from django.conf import settings
@@ -136,6 +137,15 @@ class SpriteSheetTests(TestCase):
             with self.subTest(pet=name):
                 committed = Path(settings.BASE_DIR, "static", "pets", f"{name}.png").read_bytes()
                 self.assertEqual(png, committed, "Run bin/pets and commit the result.")
+
+    def test_every_frame_is_square(self):
+        """assets/app.css steps across a sheet one pet-height at a time, so a
+        frame has to be as wide as it is tall, whatever its pixel size."""
+        frames = runpy.run_path(str(BUILDER))["FRAMES"]
+        for path in Path(settings.BASE_DIR, "static", "pets").glob("*.png"):
+            with self.subTest(pet=path.stem):
+                width, height = struct.unpack(">II", path.read_bytes()[16:24])
+                self.assertEqual(width, height * len(frames))
 
     def test_every_frame_is_shown_from_its_place_in_the_sheet(self):
         """assets/app.css picks a frame by its index in bin/pets' FRAMES, so

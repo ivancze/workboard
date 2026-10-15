@@ -16,9 +16,10 @@ const RUN = 120; // px per second, running off after a startle
 const DASH = [120, 180]; // px it runs off, between these
 const STRIDE = 150; // ms per walking frame
 const WALK = ["walk1", "walk2", "walk3", "walk2"];
-// Its body rises one sprite pixel (3 px at 3x) as its legs pass under it, in
-// walk2, and drops as they spread: a bounce in step, kept to the pixel grid.
-const LIFT = { walk2: "-0.1875rem" };
+// Its body rises one sprite pixel (--pixel, assets/app.css) as its legs pass
+// under it, in walk2, and drops as they spread: a bounce in step, kept to the
+// pixel grid.
+const LIFT = { walk2: "calc(var(--pixel) * -1)" };
 const AWAKE_FOR = 45_000; // ms of wandering before it settles to sleep
 const NAP = [60_000, 120_000]; // ms asleep, between these
 const REACTION = 1000; // ms a heart or "!" shows; its float is a little longer
