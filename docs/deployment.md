@@ -60,11 +60,13 @@ across two deploys.
 
 With no minimum instance, Cloud Run stops the last instance after about 15
 idle minutes, and the next request waits for a new one: about 5 s, measured
-through the domain. Most of that is Django loading. Two settings keep it from
-being longer:
+through the domain, before startup CPU boost was turned on. Most of that is
+Django loading. Three settings keep it from being longer:
 - the startup probe checks every second, not every ten
 - `--preload` loads Django once, before the port opens, so the probe passes
   only when the app can answer
+- startup CPU boost gives an instance extra CPU while it starts and for 10 s
+  after, billed only for that time
 
 Every other request is warm, about 0.2 s through Firebase.
 

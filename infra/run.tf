@@ -68,6 +68,9 @@ resource "google_cloud_run_v2_service" "workboard" {
         # CPU only while handling a request, so an idle instance costs
         # nothing. It's the default only when no limits are set.
         cpu_idle = true
+        # Extra CPU while an instance starts and for 10 s after, billed only
+        # then. Loading Django is most of a cold start.
+        startup_cpu_boost = true
       }
 
       # Not HTTP: a probe arrives without the public hostname, which
