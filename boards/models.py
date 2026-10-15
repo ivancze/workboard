@@ -65,10 +65,11 @@ class Board(models.Model):
         DUCK = "duck", "Duck"
         PIG = "pig", "Pig"
         BRUNO = "bruno", "Bruno"
+        CHICKEN = "chicken", "Chicken"
 
     # The animal wandering along the bottom of the board's page, chosen by any
     # Member. None until someone picks one. Purely for fun: nothing reads it.
-    pet = models.CharField(max_length=5, choices=Pet, blank=True, default="")
+    pet = models.CharField(max_length=7, choices=Pet, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects = BoardManager()

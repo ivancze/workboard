@@ -43,7 +43,7 @@ class ChoosingAPetTests(TestCase):
         menu = self.pet_menu()
 
         self.assertIn(f'action="{self.url}"', menu)
-        for value in ["chico", "pug", "duck", "pig", "bruno", ""]:
+        for value in ["chico", "pug", "duck", "pig", "bruno", "chicken", ""]:
             self.assertIn(f'name="pet" value="{value}"', menu)
         self.assertRegex(menu, r'value=""[^>]*aria-current="true"')
 
@@ -86,6 +86,13 @@ class ChoosingAPetTests(TestCase):
         response = self.client.post(self.url, {"pet": "dog"})
 
         self.assertEqual(response.status_code, 400)
+
+    def test_the_chicken_is_a_kind_of_pet(self):
+        self.client.post(self.url, {"pet": "chicken"})
+
+        page = self.client.get(self.board_url)
+        self.assertContains(page, 'data-pet="chicken"')
+        self.assertContains(page, 'aria-label="Pet the chicken"')
 
     def test_none_takes_it_away(self):
         Board.objects.filter(pk=self.board.pk).update(pet="pig")
@@ -160,7 +167,8 @@ class SpriteSheetTests(TestCase):
     def test_every_pet_has_a_sheet_built_from_its_grid(self):
         built = runpy.run_path(str(BUILDER))["build"]()
 
-        self.assertEqual(set(built), {"chico", "pug", "duck", "pig", "bruno"})
+        # The pets, and the chicken's eggs and chicks.
+        self.assertEqual(set(built), {"chico", "pug", "duck", "pig", "bruno", "chicken", "brood"})
         for name, png in built.items():
             with self.subTest(pet=name):
                 committed = Path(settings.BASE_DIR, "static", "pets", f"{name}.png").read_bytes()
@@ -169,21 +177,24 @@ class SpriteSheetTests(TestCase):
     def test_every_frame_is_square(self):
         """assets/app.css steps across a sheet one pet-height at a time, so a
         frame has to be as wide as it is tall, whatever its pixel size."""
-        frames = runpy.run_path(str(BUILDER))["FRAMES"]
+        frames_of = runpy.run_path(str(BUILDER))["frames_of"]
         for path in Path(settings.BASE_DIR, "static", "pets").glob("*.png"):
             with self.subTest(pet=path.stem):
+                grid = Path(settings.BASE_DIR, "assets", "pets", f"{path.stem}.txt").read_text()
                 width, height = struct.unpack(">II", path.read_bytes()[16:24])
-                self.assertEqual(width, height * len(frames))
+                self.assertEqual(width, height * len(frames_of(grid)))
 
     def test_every_frame_is_shown_from_its_place_in_the_sheet(self):
         """assets/app.css picks a frame by its index in bin/pets' FRAMES, so
         adding or reordering a frame there has to be matched here."""
-        frames = runpy.run_path(str(BUILDER))["FRAMES"]
+        builder = runpy.run_path(str(BUILDER))
+        brood = builder["frames_of"](Path(settings.BASE_DIR, "assets", "pets", "brood.txt").read_text())
         css = Path(settings.BASE_DIR, "assets", "app.css").read_text()
 
-        shown = dict(re.findall(r'\.pet\[data-frame="(\w+)"\]\s*{\s*--frame:\s*(\d+);', css))
+        shown = dict(re.findall(r'\.pet\[data-frame="([\w-]+)"\]\s*{\s*--frame:\s*(\d+);', css))
 
-        self.assertEqual(shown, {name: str(index) for index, name in enumerate(frames)})
+        expected = {name: str(index) for frames in (builder["FRAMES"], brood) for index, name in enumerate(frames)}
+        self.assertEqual(shown, expected)
 
 
 class RoamingTests(TestCase):

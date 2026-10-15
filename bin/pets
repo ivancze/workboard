@@ -7,7 +7,10 @@ A grid file starts with its palette, one colour per line ("k #3b2a20"), then
 holds each frame as "== <name>" and a square of characters, one per pixel:
 16 lines of 16 for the duck and pig, 32 of 32 for the dog. Every frame in a
 file is the same size. "." is transparent. "== wag = sit" reuses a frame
-already drawn, as the duck and pig do: they have no tail to wag. A sheet is the frames side by side, in FRAMES order, which
+already drawn, as the duck and pig do: they have no tail to wag.
+
+A sheet that isn't a pet lists its own frames on a "frames:" line, in sheet
+order, in place of FRAMES: brood.txt, the chicken's eggs and chicks. A sheet is the frames side by side, in FRAMES order, which
 assets/app.css relies on to show one frame at a time.
 
 Commit the PNGs: a test rebuilds them and fails if they differ from the grids.
@@ -25,10 +28,18 @@ SHEETS = ROOT / "static" / "pets"
 FRAMES = ["sit", "walk1", "walk2", "walk3", "sleep", "happy", "startled", "wag"]
 
 
+def frames_of(text):
+    """The frames a sheet holds, in order: its own "frames:" line, else FRAMES."""
+    for line in text.splitlines():
+        if line.startswith("frames: "):
+            return line.split()[1:]
+    return FRAMES
+
+
 def parse(text):
     palette, frames, name = {}, {}, None
     for line in text.splitlines():
-        if not line.strip() or line.startswith("#"):
+        if not line.strip() or line.startswith("#") or line.startswith("frames: "):
             continue
         if match := re.fullmatch(r"(\S) (#[0-9a-f]{6})\b.*", line):
             palette[match[1]] = match[2]
@@ -68,15 +79,17 @@ def png(rows):
 
 
 def sheet(path):
-    palette, frames = parse(path.read_text())
-    if missing := [name for name in FRAMES if name not in frames]:
+    text = path.read_text()
+    palette, frames = parse(text)
+    order = frames_of(text)
+    if missing := [name for name in order if name not in frames]:
         raise ValueError(f"{path.name}: no frame {', '.join(missing)}")
-    size = len(frames[FRAMES[0]])
+    size = len(frames[order[0]])
     rows = [b""] * size
-    for name in FRAMES:
+    for name in order:
         grid = frames[name]
         if len(grid) != size or any(len(line) != size for line in grid):
-            raise ValueError(f"{path.name}: frame {name} is not {size}×{size}, like {FRAMES[0]}")
+            raise ValueError(f"{path.name}: frame {name} is not {size}×{size}, like {order[0]}")
         if unknown := set("".join(grid)) - set(palette) - {"."}:
             raise ValueError(f"{path.name}: frame {name} uses {''.join(sorted(unknown))}, not in the palette")
         for y, line in enumerate(grid):
@@ -85,7 +98,7 @@ def sheet(path):
 
 
 def build():
-    """{pet: PNG bytes} for every grid."""
+    """{sheet: PNG bytes} for every grid: the pets, and the brood."""
     return {path.stem: sheet(path) for path in sorted(GRIDS.glob("*.txt"))}
 
 

@@ -34,9 +34,11 @@ Enter. Until there is one, the board shows a playful line instead, different
 each visit. Clear the description to bring the playful lines back.
 
 **A board pet.** Anyone on the board can give it a pet, Chico, a pug, a duck,
-a pig or Bruno the Labrador, from *Pet* in the board's ⋯ menu. It wanders
-along the bottom of the board's page for everyone on the board, and naps now and then. Click it and
-see what it does. Choose *None* to send it home.
+a pig, Bruno the Labrador or a chicken, from *Pet* in the board's ⋯ menu. It
+wanders along the bottom of the board's page for everyone on the board, and
+naps now and then. Click it and see what it does. The chicken lays eggs: click
+one to hatch a chick, which follows her until you leave the page. Choose
+*None* to send it home.
 
 **Deleting a board.** Only the Owner can, from *Delete board…* in the board's
 ⋯ menu. It deletes every Card, archived ones included, with no undo, so it

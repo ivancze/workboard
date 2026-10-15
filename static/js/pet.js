@@ -136,12 +136,132 @@ function runOff() {
   walk(pet.x > room() / 2 ? Math.max(0, pet.x - dash) : Math.min(room(), pet.x + dash), RUN);
 }
 
+// The chicken lays an egg every 30 s to 2 min, where she stands. A click
+// hatches it: it cracks, and a chick comes out and follows her for the rest
+// of the visit, in a line behind her. The chicks stop when she stops and
+// sleep when she sleeps; a click on one gives a heart. Never more than BROOD
+// eggs and chicks at once: with that many, she stops laying. Nothing is
+// stored, so each visit starts afresh and each viewer has their own. Eggs and
+// chicks share a sheet, data-pet="brood" (assets/pets/brood.txt).
+const LAY = [30_000, 120_000]; // ms between eggs
+const BROOD = 3;
+const SPACING = 6; // px between her and the first chick, and between chicks
+const CHICK_SPEED = 60; // px per second: a little quicker than her, to keep up
+const PEEP = 120; // ms per chick walking frame
+const HATCH = 600; // ms an egg shows its crack before the chick comes out
+
+let brood = []; // { el, x, kind: "egg" | "chick" }, in the order they came
+let laying = null; // the next egg's timer
+let wobbling = null; // the eggs' occasional wobble
+let flock = null; // the chicks' animation frame
+
+const isHen = () => pet && pet.el.dataset.pet === "chicken";
+const chicks = () => brood.filter((one) => one.kind === "chick");
+
+function hatchling(kind, x) {
+  const el = document.createElement("button");
+  el.type = "button";
+  el.className = "pet pointer-events-auto absolute bottom-2 left-4 cursor-pointer rounded-md";
+  el.dataset.pet = "brood";
+  el.dataset.frame = kind;
+  el.setAttribute("aria-label", kind === "egg" ? "Hatch the egg" : "Pet the chick");
+  pet.el.parentElement.append(el);
+  const one = { el, x: Math.max(0, x - el.offsetWidth / 2), kind };
+  el.style.translate = `${one.x}px 0`;
+  brood.push(one);
+  return one;
+}
+
+function layLater() {
+  clearTimeout(laying);
+  if (isHen() && brood.length < BROOD) laying = setTimeout(lay, between(...LAY));
+}
+
+// Under her middle; then she settles a moment. Not while she sleeps.
+function lay() {
+  if (!isHen()) return;
+  if (pet.el.dataset.frame !== "sleep") {
+    hatchling("egg", pet.x + pet.el.offsetWidth / 2);
+    sit();
+  }
+  layLater();
+}
+
+function hatch(egg) {
+  if (egg.el.dataset.frame === "crack") return;
+  egg.el.dataset.frame = "crack";
+  setTimeout(() => {
+    egg.kind = "chick";
+    egg.el.dataset.frame = "chick";
+    egg.el.setAttribute("aria-label", "Pet the chick");
+    follow();
+  }, HATCH);
+}
+
+function cheep(chick) {
+  delete chick.el.dataset.reaction;
+  void chick.el.offsetWidth; // restart the float
+  chick.el.dataset.reaction = "heart";
+  setTimeout(() => delete chick.el.dataset.reaction, REACTION);
+}
+
+// Now and then an egg rocks, a hint that it can be clicked.
+function wobble() {
+  for (const egg of brood) {
+    if (egg.kind === "egg" && egg.el.dataset.frame === "egg" && Math.random() < 0.3) {
+      egg.el.dataset.frame = "wobble";
+      setTimeout(() => egg.el.dataset.frame === "wobble" && (egg.el.dataset.frame = "egg"), 250);
+    }
+  }
+}
+
+// The chicks walk to their places in a line behind her, in hatching order.
+function follow() {
+  if (flock) return;
+  let last = performance.now();
+  const step = (now) => {
+    const elapsed = Math.min(now - last, 100);
+    last = now;
+    const asleep = pet.el.dataset.frame === "sleep" || stillness.matches;
+    const behind = pet.el.dataset.facing === "left" ? 1 : -1;
+    let reach = pet.el.offsetWidth / 2 + SPACING;
+    for (const chick of chicks()) {
+      const width = chick.el.offsetWidth;
+      const edge = chick.el.parentElement.clientWidth - width - 32;
+      const centre = pet.x + pet.el.offsetWidth / 2 + behind * (reach + width / 2);
+      reach += width + SPACING;
+      const goal = Math.min(Math.max(centre - width / 2, 0), edge);
+      const gap = goal - chick.x;
+      if (asleep) {
+        chick.el.dataset.frame = "chick-sleep";
+      } else if (Math.abs(gap) > 1) {
+        const speed = Math.abs(gap) > 100 ? RUN : CHICK_SPEED; // dash to catch up
+        chick.x += Math.sign(gap) * Math.min((speed * elapsed) / 1000, Math.abs(gap));
+        chick.el.dataset.facing = gap < 0 ? "left" : "right";
+        chick.el.dataset.frame = Math.floor(now / PEEP) % 2 ? "chick-walk1" : "chick-walk2";
+      } else {
+        chick.el.dataset.facing = pet.el.dataset.facing || "right";
+        chick.el.dataset.frame = "chick";
+      }
+      chick.el.style.translate = `${chick.x}px 0`;
+    }
+    flock = requestAnimationFrame(step);
+  };
+  flock = requestAnimationFrame(step);
+}
+
 function stop() {
   if (!pet) return;
   clearTimeout(pet.timer);
   clearTimeout(pet.reaction);
   clearInterval(pet.wag);
   cancelAnimationFrame(pet.frame);
+  clearTimeout(laying);
+  clearInterval(wobbling);
+  cancelAnimationFrame(flock);
+  flock = null;
+  for (const one of brood) one.el.remove();
+  brood = [];
   pet = null;
 }
 
@@ -153,11 +273,19 @@ function start(root) {
   if (!el) return;
   pet = { el, x: 0, timer: null, frame: null, wag: null, reaction: null, awakeSince: performance.now() };
   stillness.matches ? sleep() : sit();
+  if (isHen()) {
+    layLater();
+    if (!stillness.matches) wobbling = setInterval(wobble, 1500);
+  }
 }
 
 htmx.onLoad(start);
 document.addEventListener("click", (event) => {
-  if (pet && event.target.closest("[data-pet]") === pet.el) petted();
+  if (!pet) return;
+  const clicked = event.target.closest("[data-pet]");
+  if (clicked === pet.el) return petted();
+  const one = brood.find((b) => b.el === clicked);
+  if (one) one.kind === "egg" ? hatch(one) : cheep(one);
 });
 window.addEventListener("resize", () => pet && place());
 stillness.addEventListener("change", () => pet && (stillness.matches ? sleep() : wake()));

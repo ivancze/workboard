@@ -179,8 +179,8 @@
 /* A board's pet (components/pet.html), moved by static/js/pet.js. Each
    sheet is 16 px frames side by side, built by bin/pets in its FRAMES order,
    drawn with the pixels kept sharp. --grid is a frame's size in sprite
-   pixels and --pixel is one sprite pixel on screen: the duck's 16 px at 3x
-   (3rem); at 2x the pug's 28 px and the pig's 36 (3.5rem and 4.5rem); and at
+   pixels and --pixel is one sprite pixel on screen: the duck's 16 px and the
+   chicken's 18 at 3x (3rem and 3.375rem); at 2x the pug's 28 px and the pig's 36 (3.5rem and 4.5rem); and at
    1x, their full detail, Chico's 74 and Bruno's 84 (4.625rem and 5.25rem). The pet is sized from them, and the bounce
    and the hop move in --pixel, so everything stays on the sprite's grid.
    data-frame picks the frame by its index; frames are square. */
@@ -210,6 +210,16 @@
     --pixel: 0.0625rem;
     background-image: url("../pets/bruno.png");
   }
+  .pet[data-pet="chicken"] {
+    --grid: 18;
+    background-image: url("../pets/chicken.png");
+  }
+  /* The chicken's eggs and chicks (static/js/pet.js): their own sheet, at 2x. */
+  .pet[data-pet="brood"] {
+    --grid: 14;
+    --pixel: 0.125rem;
+    background-image: url("../pets/brood.png");
+  }
   .pet[data-pet="duck"] {
     background-image: url("../pets/duck.png");
   }
@@ -226,6 +236,14 @@
   .pet[data-frame="happy"] { --frame: 5; }
   .pet[data-frame="startled"] { --frame: 6; }
   .pet[data-frame="wag"] { --frame: 7; }
+  /* The brood sheet's frames, in brood.txt's own order. */
+  .pet[data-frame="egg"] { --frame: 0; }
+  .pet[data-frame="wobble"] { --frame: 1; }
+  .pet[data-frame="crack"] { --frame: 2; }
+  .pet[data-frame="chick"] { --frame: 3; }
+  .pet[data-frame="chick-walk1"] { --frame: 4; }
+  .pet[data-frame="chick-walk2"] { --frame: 5; }
+  .pet[data-frame="chick-sleep"] { --frame: 6; }
   /* The sheets face right. Facing left mirrors the pet, and mirrors its "z"
      back so the letter still reads. */
   .pet[data-facing="left"],
