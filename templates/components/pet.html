@@ -6,10 +6,10 @@
   #board, so a drag or a refresh never resets it. The board_pet view answers
   with this partial. Needs `board`.
 {% endcomment %}
-<div id="pet"{% if board.pet %} class="h-20"{% endif %}>
+<div id="pet"{% if board.pet %} class="h-24"{% endif %}>
   {% if board.pet %}
-    <div class="pointer-events-none fixed inset-x-0 bottom-0 z-5 h-20">
-      <button type="button" data-pet="{{ board.pet }}" data-frame="sit" aria-label="Pet the {{ board.get_pet_display|lower }}" class="pet pointer-events-auto absolute bottom-2 left-4 cursor-pointer rounded-md"></button>
+    <div class="pointer-events-none fixed inset-x-0 bottom-0 z-5 h-24">
+      <button type="button" data-pet="{{ board.pet }}" data-frame="sit" aria-label="Pet {{ board.pet_name }}" class="pet pointer-events-auto absolute bottom-2 left-4 cursor-pointer rounded-md"></button>
     </div>
   {% endif %}
 </div>

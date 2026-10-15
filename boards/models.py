@@ -64,16 +64,23 @@ class Board(models.Model):
         PUG = "pug", "Pug"
         DUCK = "duck", "Duck"
         PIG = "pig", "Pig"
+        BRUNO = "bruno", "Bruno"
 
     # The animal wandering along the bottom of the board's page, chosen by any
     # Member. None until someone picks one. Purely for fun: nothing reads it.
-    pet = models.CharField(max_length=4, choices=Pet, blank=True, default="")
+    pet = models.CharField(max_length=5, choices=Pet, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects = BoardManager()
 
     class Meta:
         ordering = ["created_at"]
+
+    def pet_name(self):
+        """The pet in a sentence: "the dog", or Bruno, who has a name."""
+        if self.pet == self.Pet.BRUNO:
+            return self.get_pet_display()
+        return f"the {self.get_pet_display().lower()}"
 
     def __str__(self):
         return self.name

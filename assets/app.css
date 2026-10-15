@@ -180,8 +180,8 @@
    sheet is 16 px frames side by side, built by bin/pets in its FRAMES order,
    drawn with the pixels kept sharp. --grid is a frame's size in sprite
    pixels and --pixel is one sprite pixel on screen: the duck's 16 px at 3x
-   (3rem), and at 2x the pug's 28 px, the dog's 32 and the pig's 36 (3.5rem,
-   4rem and 4.5rem). The pet is sized from them, and the bounce
+   (3rem); at 2x the pug's 28 px, the dog's 32 and the pig's 36 (3.5rem,
+   4rem and 4.5rem); and Bruno's 84 at 1x (5.25rem), his full detail. The pet is sized from them, and the bounce
    and the hop move in --pixel, so everything stays on the sprite's grid.
    data-frame picks the frame by its index; frames are square. */
 @layer components {
@@ -204,6 +204,11 @@
     --grid: 28;
     --pixel: 0.125rem;
     background-image: url("../pets/pug.png");
+  }
+  .pet[data-pet="bruno"] {
+    --grid: 84;
+    --pixel: 0.0625rem;
+    background-image: url("../pets/bruno.png");
   }
   .pet[data-pet="duck"] {
     background-image: url("../pets/duck.png");
@@ -304,6 +309,13 @@
   }
   .pet[data-pet="pig"][data-frame="sleep"]::after {
     top: 1.5rem;
+  }
+  .pet[data-pet="bruno"][data-reaction]::before {
+    bottom: calc(100% - 1rem);
+  }
+  .pet[data-pet="bruno"][data-frame="sleep"]::after {
+    top: 2.5rem;
+    right: 0.5rem;
   }
   .pet[data-pet="pug"][data-frame="sleep"]::after {
     top: 1rem;

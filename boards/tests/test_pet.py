@@ -43,7 +43,7 @@ class ChoosingAPetTests(TestCase):
         menu = self.pet_menu()
 
         self.assertIn(f'action="{self.url}"', menu)
-        for value in ["dog", "pug", "duck", "pig", ""]:
+        for value in ["dog", "pug", "duck", "pig", "bruno", ""]:
             self.assertIn(f'name="pet" value="{value}"', menu)
         self.assertRegex(menu, r'value=""[^>]*aria-current="true"')
 
@@ -65,6 +65,14 @@ class ChoosingAPetTests(TestCase):
         page = self.client.get(self.board_url)
         self.assertContains(page, 'data-pet="pug"')
         self.assertContains(page, 'aria-label="Pet the pug"')
+
+    def test_bruno_is_called_by_his_name(self):
+        """The others are kinds of animal; Bruno is a particular dog."""
+        self.client.post(self.url, {"pet": "bruno"})
+
+        page = self.client.get(self.board_url)
+        self.assertContains(page, 'data-pet="bruno"')
+        self.assertContains(page, 'aria-label="Pet Bruno"')
 
     def test_none_takes_it_away(self):
         Board.objects.filter(pk=self.board.pk).update(pet="pig")
@@ -139,7 +147,7 @@ class SpriteSheetTests(TestCase):
     def test_every_pet_has_a_sheet_built_from_its_grid(self):
         built = runpy.run_path(str(BUILDER))["build"]()
 
-        self.assertEqual(set(built), {"dog", "pug", "duck", "pig"})
+        self.assertEqual(set(built), {"dog", "pug", "duck", "pig", "bruno"})
         for name, png in built.items():
             with self.subTest(pet=name):
                 committed = Path(settings.BASE_DIR, "static", "pets", f"{name}.png").read_bytes()
