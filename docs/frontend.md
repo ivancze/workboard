@@ -183,7 +183,8 @@ description pages, which is what they stay without JavaScript. Both are
 
 **The board pet** (`components/pet.html`) is pixel art. Each animal is a
 text file of square grids, one frame per grid, in `assets/pets/`: 16×16 for
-the duck and pig, 32×32 for the dog, a Shiba read from a reference image.
+the duck and pig, 32×32 for the dog. The dog (a Shiba) and the duck (a
+mallard) were read from reference images by sampling their pixel grids.
 `bin/pets` builds them into the sprite sheets in `static/pets/`, frames side
 by side in its `FRAMES` order. The sheets are committed, and a test rebuilds them and fails
 if they differ, so after editing a grid, run `bin/pets` and commit both.
