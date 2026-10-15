@@ -60,7 +60,7 @@ class Board(models.Model):
     description = models.CharField(max_length=200, blank=True, default="")
 
     class Pet(models.TextChoices):
-        DOG = "dog", "Dog"
+        CHICO = "chico", "Chico"
         PUG = "pug", "Pug"
         DUCK = "duck", "Duck"
         PIG = "pig", "Pig"
@@ -77,8 +77,8 @@ class Board(models.Model):
         ordering = ["created_at"]
 
     def pet_name(self):
-        """The pet in a sentence: "the dog", or Bruno, who has a name."""
-        if self.pet == self.Pet.BRUNO:
+        """The pet in a sentence: "the duck", or Bruno or Chico, who have names."""
+        if self.pet in (self.Pet.CHICO, self.Pet.BRUNO):
             return self.get_pet_display()
         return f"the {self.get_pet_display().lower()}"
 

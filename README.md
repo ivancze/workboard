@@ -33,9 +33,9 @@ what the board is for, up to 200 characters: click it, type, then press
 Enter. Until there is one, the board shows a playful line instead, different
 each visit. Clear the description to bring the playful lines back.
 
-**A board pet.** Anyone on the board can give it a pet, a dog, a pug, a duck,
-a pig or Bruno the Labrador, from *Pet* in the board's ⋯ menu. It wanders along the bottom of the
-board's page for everyone on the board, and naps now and then. Click it and
+**A board pet.** Anyone on the board can give it a pet, Chico, a pug, a duck,
+a pig or Bruno the Labrador, from *Pet* in the board's ⋯ menu. It wanders
+along the bottom of the board's page for everyone on the board, and naps now and then. Click it and
 see what it does. Choose *None* to send it home.
 
 **Deleting a board.** Only the Owner can, from *Delete board…* in the board's

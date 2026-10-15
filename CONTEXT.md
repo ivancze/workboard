@@ -27,11 +27,11 @@ _Avoid_: Tagline, subtitle, summary, about
 
 **Board pet**:
 A small animal that wanders along the bottom of a board's page and reacts
-when clicked: a dog, a pug, a duck, a pig, or Bruno, a black Labrador and
-the one pet with a name. Chosen by any member, one per board, and
-the same kind for everyone on it; a board has none until someone picks one.
-Purely for fun: it carries no information about the board and nothing acts on
-it. "Pet" for short.
+when clicked: a pug, a duck, a pig, or one of two dogs with names, Chico (a
+tan mixed breed) and Bruno (a black Labrador). Chosen by any member, one per
+board, and the same one for everyone on it; a board has none until someone
+picks one. Purely for fun: it carries no information about the board and
+nothing acts on it. "Pet" for short.
 _Avoid_: Mascot, companion, buddy, avatar
 
 **Member**:

@@ -43,7 +43,7 @@ class ChoosingAPetTests(TestCase):
         menu = self.pet_menu()
 
         self.assertIn(f'action="{self.url}"', menu)
-        for value in ["dog", "pug", "duck", "pig", "bruno", ""]:
+        for value in ["chico", "pug", "duck", "pig", "bruno", ""]:
             self.assertIn(f'name="pet" value="{value}"', menu)
         self.assertRegex(menu, r'value=""[^>]*aria-current="true"')
 
@@ -67,12 +67,25 @@ class ChoosingAPetTests(TestCase):
         self.assertContains(page, 'aria-label="Pet the pug"')
 
     def test_bruno_is_called_by_his_name(self):
-        """The others are kinds of animal; Bruno is a particular dog."""
+        """The others are kinds of animal; Bruno and Chico are particular dogs."""
         self.client.post(self.url, {"pet": "bruno"})
 
         page = self.client.get(self.board_url)
         self.assertContains(page, 'data-pet="bruno"')
         self.assertContains(page, 'aria-label="Pet Bruno"')
+
+    def test_chico_is_called_by_his_name(self):
+        self.client.post(self.url, {"pet": "chico"})
+
+        page = self.client.get(self.board_url)
+        self.assertContains(page, 'data-pet="chico"')
+        self.assertContains(page, 'aria-label="Pet Chico"')
+
+    def test_the_dog_is_gone(self):
+        """Chico replaced the dog, so it's no longer a choice."""
+        response = self.client.post(self.url, {"pet": "dog"})
+
+        self.assertEqual(response.status_code, 400)
 
     def test_none_takes_it_away(self):
         Board.objects.filter(pk=self.board.pk).update(pet="pig")
@@ -86,20 +99,20 @@ class ChoosingAPetTests(TestCase):
     def test_with_htmx_it_answers_with_the_pet_and_the_menu(self):
         """The pet sits outside #board, so a board refresh never resets it,
         and the menu comes along out of band so its tick moves."""
-        response = self.client.post(self.url, {"pet": "dog"}, headers={"HX-Request": "true"})
+        response = self.client.post(self.url, {"pet": "chico"}, headers={"HX-Request": "true"})
 
         content = response.content.decode()
         self.assertEqual(response.status_code, 200)
         self.assertNotIn("<html", content)
         self.assertRegex(content, r'^\s*<div id="pet"')
-        self.assertIn('data-pet="dog"', content)
+        self.assertIn('data-pet="chico"', content)
         self.assertRegex(content, r'<details id="board-menu"[^>]*hx-swap-oob="true"')
-        self.assertRegex(self.pet_menu(content), r'value="dog"[^>]*aria-current="true"')
+        self.assertRegex(self.pet_menu(content), r'value="chico"[^>]*aria-current="true"')
 
     def test_the_pet_is_outside_the_board(self):
         """A drag or a refresh swaps #board, which would put it back to the
         start and wake it."""
-        Board.objects.filter(pk=self.board.pk).update(pet="dog")
+        Board.objects.filter(pk=self.board.pk).update(pet="chico")
         card = Card.objects.create_at_end(stage=self.board.stages.first(), title="Buy milk", creator=self.ada)
 
         swapped = self.client.post(
@@ -110,7 +123,7 @@ class ChoosingAPetTests(TestCase):
 
         self.assertContains(swapped, 'id="board"')
         self.assertNotContains(swapped, "data-pet=")
-        self.assertContains(self.client.get(self.board_url), 'data-pet="dog"')
+        self.assertContains(self.client.get(self.board_url), 'data-pet="chico"')
 
     def test_without_javascript_it_returns_to_the_board_keeping_the_filter(self):
         response = self.client.post(self.url + "?assignee=me", {"pet": "pig"})
@@ -127,7 +140,7 @@ class ChoosingAPetTests(TestCase):
     def test_someone_off_the_board_gets_a_404(self):
         self.client.force_login(a_user("mallory@example.com"))
 
-        response = self.client.post(self.url, {"pet": "dog"})
+        response = self.client.post(self.url, {"pet": "chico"})
 
         self.assertEqual(response.status_code, 404)
         self.board.refresh_from_db()
@@ -147,7 +160,7 @@ class SpriteSheetTests(TestCase):
     def test_every_pet_has_a_sheet_built_from_its_grid(self):
         built = runpy.run_path(str(BUILDER))["build"]()
 
-        self.assertEqual(set(built), {"dog", "pug", "duck", "pig", "bruno"})
+        self.assertEqual(set(built), {"chico", "pug", "duck", "pig", "bruno"})
         for name, png in built.items():
             with self.subTest(pet=name):
                 committed = Path(settings.BASE_DIR, "static", "pets", f"{name}.png").read_bytes()
