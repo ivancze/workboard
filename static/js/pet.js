@@ -13,6 +13,7 @@
 
 const SPEED = 40; // px per second
 const RUN = 120; // px per second, running off after a startle
+const DASH = [120, 180]; // px it runs off, between these
 const STRIDE = 150; // ms per walking frame
 const WALK = ["walk1", "walk2", "walk3", "walk2"];
 // Its body rises one sprite pixel (3 px at 3x) as its legs pass under it, in
@@ -111,10 +112,10 @@ function petted() {
   }
 }
 
-// To the far end of whichever side has more room.
+// A short dash, about a second, towards whichever side has more room.
 function runOff() {
-  const width = room();
-  walk(pet.x > width / 2 ? between(0, width * 0.2) : between(width * 0.8, width), RUN);
+  const dash = between(...DASH);
+  walk(pet.x > room() / 2 ? Math.max(0, pet.x - dash) : Math.min(room(), pet.x + dash), RUN);
 }
 
 function stop() {

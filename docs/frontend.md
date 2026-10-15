@@ -212,10 +212,10 @@ fails if they differ, so after editing a grid, run `bin/pets` and commit both.
   colour, mirrored back when it faces left so the letter reads.
 - A click, or Enter or Space since it's a button, gets a reaction. Asleep,
   it wakes with a start. Awake, it's either happy, with a heart, or startled,
-  with a hop and a "!", and runs off to the roomier side. Either way it stays
-  awake for longer. The heart and the "!" are pixel shapes used as CSS masks,
-  filled from tokens (`danger`, `text`), so they keep to the grid and suit
-  both themes.
+  with a hop and a "!", and dashes a short way towards the roomier side.
+  Either way it stays awake for longer. The heart and the "!" are pixel
+  shapes used as CSS masks, filled from tokens (`danger`, `text`), so they
+  keep to the grid and suit both themes.
 - With reduced motion it never walks. It sleeps where it is, and the global
   override leaves the "z", the heart and the "!" standing still. A click
   still shows a reaction.
