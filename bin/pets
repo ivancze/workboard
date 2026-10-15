@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+"""Build the board pets' sprite sheets from their pixel grids.
+
+    bin/pets    writes static/pets/<pet>.png from assets/pets/<pet>.txt
+
+A grid file starts with its palette, one colour per line ("k #3b2a20"), then
+holds each frame as "== <name>" and 16 lines of 16 characters, one per pixel.
+"." is transparent. A sheet is the frames side by side, in FRAMES order, which
+assets/app.css relies on to show one frame at a time.
+
+Commit the PNGs: a test rebuilds them and fails if they differ from the grids.
+Standard library only, so it runs anywhere Python does.
+"""
+
+import re
+import struct
+import zlib
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+GRIDS = ROOT / "assets" / "pets"
+SHEETS = ROOT / "static" / "pets"
+SIZE = 16
+FRAMES = ["sit"]
+
+
+def parse(text):
+    palette, frames, name = {}, {}, None
+    for line in text.splitlines():
+        if not line.strip() or line.startswith("#"):
+            continue
+        if match := re.fullmatch(r"(\S) (#[0-9a-f]{6})\b.*", line):
+            palette[match[1]] = match[2]
+        elif line.startswith("== "):
+            name = line[3:].strip()
+            frames[name] = []
+        else:
+            frames[name].append(line)
+    return palette, frames
+
+
+def rgba(char, palette):
+    if char == ".":
+        return b"\0\0\0\0"
+    return bytes.fromhex(palette[char][1:]) + b"\xff"
+
+
+def png(rows):
+    """An RGBA PNG from rows of 4-byte pixels."""
+
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
+
+    width, height = len(rows[0]) // 4, len(rows)
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    pixels = b"".join(b"\0" + row for row in rows)  # filter type 0 on every row
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", header)
+        + chunk(b"IDAT", zlib.compress(pixels, 9))
+        + chunk(b"IEND", b"")
+    )
+
+
+def sheet(path):
+    palette, frames = parse(path.read_text())
+    if missing := [name for name in FRAMES if name not in frames]:
+        raise ValueError(f"{path.name}: no frame {', '.join(missing)}")
+    rows = [b""] * SIZE
+    for name in FRAMES:
+        grid = frames[name]
+        if len(grid) != SIZE or any(len(line) != SIZE for line in grid):
+            raise ValueError(f"{path.name}: frame {name} is not {SIZE}×{SIZE}")
+        for y, line in enumerate(grid):
+            rows[y] += b"".join(rgba(char, palette) for char in line)
+    return png(rows)
+
+
+def build():
+    """{pet: PNG bytes} for every grid."""
+    return {path.stem: sheet(path) for path in sorted(GRIDS.glob("*.txt"))}
+
+
+if __name__ == "__main__":
+    SHEETS.mkdir(exist_ok=True)
+    for name, data in build().items():
+        (SHEETS / f"{name}.png").write_bytes(data)
+        print(f"static/pets/{name}.png")

@@ -58,6 +58,15 @@ class Board(models.Model):
     # Optional, written by the Owner. Without one, the board shows a playful
     # line instead, which is never stored.
     description = models.CharField(max_length=200, blank=True, default="")
+
+    class Pet(models.TextChoices):
+        DOG = "dog", "Dog"
+        DUCK = "duck", "Duck"
+        PIG = "pig", "Pig"
+
+    # The animal wandering along the bottom of the board's page, chosen by any
+    # Member. None until someone picks one. Purely for fun: nothing reads it.
+    pet = models.CharField(max_length=4, choices=Pet, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     objects = BoardManager()

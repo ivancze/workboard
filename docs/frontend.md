@@ -48,11 +48,16 @@ stylesheet. It uses the light value in both themes: on a dark tab bar the
 tile's edge fades, but its white bars still read. Change it by hand when that
 token changes.
 
-The other is Google's "G" on the sign-in button
+Another is Google's "G" on the sign-in button
 (`components/google_mark.html`), in Google's own four colours. A brand mark
 isn't recoloured, and Google allows it only on a white or neutral
 background, so that button uses the bordered `secondary` variant rather than
 the accent.
+
+The third is the board pets' sprites (`assets/pets/`), whose palettes are hex
+inside the pixel grids, because an image can't read the stylesheet. They use
+the same colours in both themes, and each animal is light enough to read on
+the dark canvas, with a dark outline for the light one.
 
 **Contrast is tested.** A test reads each token's light and dark value from
 `assets/app.css` and checks the WCAG AA pairs: 4.5:1 for text, and 3:1 for
@@ -175,6 +180,23 @@ description pages, which is what they stay without JavaScript. Both are
 - A board with no description shows a playful line, picked at random by the
   view on each load (`PLAYFUL_DESCRIPTIONS`). The description's form starts
   empty, not from that line.
+
+**The board pet** (`components/pet.html`) is pixel art. Each animal is a
+text file of 16×16 grids, one frame per grid, in `assets/pets/`, and `bin/pets`
+builds them into the sprite sheets in `static/pets/`, frames side by side in
+its `FRAMES` order. The sheets are committed, and a test rebuilds them and
+fails if they differ, so after editing a grid, run `bin/pets` and commit both.
+`assets/app.css` shows a sheet at 3× with `image-rendering: pixelated`, and
+`data-frame` picks the frame.
+- The pet stands on a strip fixed to the bottom of the window. The strip lets
+  clicks through and only the pet takes them, so it never blocks a Card, a
+  menu or a drag. In the page's flow, `#pet` holds the strip's height free,
+  so the lowest Card can scroll clear of it.
+- `#pet` sits outside `#board`, because a drag or a refresh swaps `#board`
+  and would reset it. So another Member's change shows on the next page load,
+  not on refresh-on-return.
+- It's chosen from the board's ⋯ menu. With htmx, the answer is `#pet`, plus
+  the menu out of band (`oob`), closed, with the new choice ticked.
 
 **Confirmation dialogs** (`components/confirm_dialog.html`) are native
 `<dialog>` elements, opened by a button with `commandfor="<dialog id>"` and

@@ -1,0 +1,22 @@
+# The pig, facing right. Grids are built into static/pets/pig.png by bin/pets.
+k #4a2a32 outline, eye
+p #f6b3c4 skin
+r #e07a96 ears, snout
+
+== sit
+................
+................
+................
+........kk.kk...
+.......krrkrrk..
+......kppppppk..
+.....kppppkpppkk
+.....kppppppprrk
+....kpppppppprrk
+..kkpppppppppkk.
+.kpppppppppppk..
+.kppppppppppppk.
+kkppppppppppppk.
+.kppppppppppppk.
+..kppkkkkkppk...
+..kkk.....kkk...

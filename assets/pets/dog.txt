@@ -1,0 +1,23 @@
+# The dog, facing right. Grids are built into static/pets/dog.png by bin/pets.
+k #3b2a20 outline, eye, nose
+b #d9a066 coat
+d #8f5a32 ear
+w #f4ead8 muzzle, chest, paws
+
+== sit
+................
+.......kkkkk....
+......kbbbbbk...
+.....kbbbbbbbk..
+....kddbbbkbbbk.
+....kddbbbbbbwkk
+....kddbbbbbwwwk
+.....kdbbbbbwwk.
+......kkbbbbkk..
+...k..kbbwwbbk..
+..kbk.kbbwwbbk..
+..kbbkkbbwwbbk..
+...kbbbbbbbbbk..
+...kbbkbbbkbbk..
+...kbbkwbbkwbk..
+....kkkkkkkkkk..

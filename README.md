@@ -33,6 +33,10 @@ what the board is for, up to 200 characters: click it, type, then press
 Enter. Until there is one, the board shows a playful line instead, different
 each visit. Clear the description to bring the playful lines back.
 
+**A board pet.** Anyone on the board can give it a pet, a dog, a duck or a
+pig, from *Pet* in the board's ⋯ menu. It sits at the bottom of the board's
+page for everyone on the board. Choose *None* to send it home.
+
 **Deleting a board.** Only the Owner can, from *Delete board…* in the board's
 ⋯ menu. It deletes every Card, archived ones included, with no undo, so it
 asks you to type the board's name exactly first.

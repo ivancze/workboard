@@ -1,0 +1,23 @@
+# The duckling, facing right. Grids are built into static/pets/duck.png by bin/pets.
+k #3b3222 outline, eye
+y #ffd84a down
+z #e8b923 wing
+o #f08a24 beak, feet
+
+== sit
+................
+................
+........kkkk....
+.......kyyyyk...
+......kyyyykyk..
+......kyyyyyyook
+.......kyyyyyook
+........kyyykkk.
+...kkkkkyyyyk...
+..kyyyyyyyyyyk..
+.kyyzzzzyyyyyyk.
+.kkyyzzzzyyyyyk.
+..kyyyyyyyyyyyk.
+...kyyyyyyyyyk..
+....kkkkkkkkk...
+.....oo...oo....

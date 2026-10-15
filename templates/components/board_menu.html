@@ -3,8 +3,11 @@
   everyday action stays the prominent one. Needs `board`. Menus behave as in
   card_menu.html. Only the Owner is offered Delete board, set apart below.
   Renaming is the pencil beside the board's name (board_heading.html).
+  Any Member picks the board's pet here (pet.html). With htmx, the answer
+  carries this menu back with `oob`, closed and with the new choice ticked.
 {% endcomment %}
-<details data-menu class="relative">
+{% url 'board_pet' board.pk as pet_url %}
+<details id="board-menu" data-menu class="relative"{% if oob %} hx-swap-oob="true"{% endif %}>
   <summary aria-label="More for {{ board.name }}" class="flex size-9 cursor-pointer list-none items-center justify-center rounded-md border border-control bg-surface text-text transition-colors hover:bg-sunken">
     <svg class="size-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
   </summary>
@@ -12,6 +15,16 @@
     <a href="{% url 'board_members' board.pk %}" class="block rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-sunken">Members</a>
     <a href="{% url 'board_archive' board.pk %}" class="block rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-sunken">Archive</a>
     <a href="{% url 'stage_list' board.pk %}" class="block rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-sunken">Edit stages</a>
+    <form method="post" action="{{ pet_url }}{{ filter_query }}" hx-post="{{ pet_url }}{{ filter_query }}" hx-target="#pet" hx-swap="outerHTML" aria-label="Pet" class="mt-1 border-t border-border px-2 pt-2 pb-1.5">
+      {% csrf_token %}
+      <p class="text-xs font-semibold text-text-muted">Pet</p>
+      <div class="mt-1 flex gap-1">
+        {% for value, label in board.Pet.choices %}
+          <button type="submit" name="pet" value="{{ value }}"{% if board.pet == value %} aria-current="true"{% endif %} class="rounded-md px-2 py-1 text-xs transition-colors hover:bg-sunken{% if board.pet == value %} bg-sunken font-semibold{% endif %}">{{ label }}</button>
+        {% endfor %}
+        <button type="submit" name="pet" value=""{% if not board.pet %} aria-current="true"{% endif %} class="rounded-md px-2 py-1 text-xs text-text-muted transition-colors hover:bg-sunken{% if not board.pet %} bg-sunken font-semibold{% endif %}">None</button>
+      </div>
+    </form>
     {% if is_owner %}
       <a href="{% url 'board_delete' board.pk %}" class="mt-1 block rounded-md border-t border-border px-2 pt-2 pb-1.5 text-xs text-text-muted transition-colors hover:bg-sunken hover:text-danger">Delete board…</a>
     {% endif %}

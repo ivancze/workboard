@@ -176,6 +176,29 @@
 }
 
 
+/* A board's pet (components/pet.html). Each sheet is 16 px frames side by
+   side, built by bin/pets in its FRAMES order, drawn here at 3x with the
+   pixels kept sharp. data-frame picks the frame. */
+@layer components {
+  .pet {
+    background-repeat: no-repeat;
+    background-size: auto 100%;
+    image-rendering: pixelated;
+  }
+  .pet[data-pet="dog"] {
+    background-image: url("../pets/dog.png");
+  }
+  .pet[data-pet="duck"] {
+    background-image: url("../pets/duck.png");
+  }
+  .pet[data-pet="pig"] {
+    background-image: url("../pets/pig.png");
+  }
+  .pet[data-frame="sit"] {
+    background-position: 0 0;
+  }
+}
+
 /* Where a dragged Card will land: Sortable gives the placeholder in the list
    this class (static/js/board.js). Unlayered, so it beats the tile's border,
    background and shadow utilities. The contents are hidden, not removed, so

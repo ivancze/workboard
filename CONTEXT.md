@@ -25,9 +25,17 @@ instead, picked at random on each visit. That line belongs to the product,
 not the board, and is never stored.
 _Avoid_: Tagline, subtitle, summary, about
 
+**Board pet**:
+A small animal, a dog, a duck or a pig, that wanders along the bottom of a
+board's page and reacts when clicked. Chosen by any member, one per board, and
+the same kind for everyone on it; a board has none until someone picks one.
+Purely for fun: it carries no information about the board and nothing acts on
+it. "Pet" for short.
+_Avoid_: Mascot, companion, buddy, avatar
+
 **Member**:
 A user who has access to a board. Members may do anything to its cards and
-stages, and may leave a board of their own accord; the acts that cannot be
+stages, choose its pet, and may leave a board of their own accord; the acts that cannot be
 undone are reserved to the owner.
 _Avoid_: Collaborator, participant, user of the board
 

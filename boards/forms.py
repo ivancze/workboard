@@ -26,6 +26,12 @@ class BoardDescriptionForm(forms.ModelForm):
         fields = ["description"]
 
 
+class BoardPetForm(forms.ModelForm):
+    class Meta:
+        model = Board
+        fields = ["pet"]
+
+
 class InviteForm(forms.Form):
     email = forms.EmailField(
         label="Email address",
