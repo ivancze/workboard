@@ -3,6 +3,7 @@ k #3b2a20 outline, eye, nose
 b #d9a066 coat
 d #8f5a32 ear
 w #f4ead8 muzzle, chest, paws
+t #e86a7a tongue
 
 == sit
 ................
@@ -93,3 +94,39 @@ w #f4ead8 muzzle, chest, paws
 ...kbbkbbbkbbk..
 ...kbbkwbbkwbk..
 ....kkkkkkkkkk..
+
+== happy
+................
+.......kkkkk....
+......kbbbbbk...
+.....kbbbbbbbk..
+....kddbbbkbbbk.
+....kddbbkbkbwkk
+....kddbbbbbwwwk
+.....kdbbbbbwwk.
+......kkbbbbtk..
+...k..kbbwwbbk..
+..kbk.kbbwwbbk..
+..kbbkkbbwwbbk..
+...kbbbbbbbbbk..
+...kbbkbbbkbbk..
+...kbbkwbbkwbk..
+....kkkkkkkkkk..
+
+== startled
+................
+..........kkkk..
+.........kbbbbk.
+........kdbbkkbk
+........kdbbkkwk
+........kdbbbwkk
+.kk......kbbbbk.
+.kbk.kkkkkbbbk..
+..kbkbbbbbbbbk..
+...kbbbbbbbbbk..
+...kbbbbbbbwwk..
+...kbbbbbbbwwk..
+...kbbkkkkkbbk..
+...kbk....kbk...
+...kbk....kbk...
+...kk.....kk....

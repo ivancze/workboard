@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parent.parent
 GRIDS = ROOT / "assets" / "pets"
 SHEETS = ROOT / "static" / "pets"
 SIZE = 16
-FRAMES = ["sit", "walk1", "walk2", "walk3", "sleep"]
+FRAMES = ["sit", "walk1", "walk2", "walk3", "sleep", "happy", "startled"]
 
 
 def parse(text):
@@ -71,6 +71,8 @@ def sheet(path):
         grid = frames[name]
         if len(grid) != SIZE or any(len(line) != SIZE for line in grid):
             raise ValueError(f"{path.name}: frame {name} is not {SIZE}×{SIZE}")
+        if unknown := set("".join(grid)) - set(palette) - {"."}:
+            raise ValueError(f"{path.name}: frame {name} uses {''.join(sorted(unknown))}, not in the palette")
         for y, line in enumerate(grid):
             rows[y] += b"".join(rgba(char, palette) for char in line)
     return png(rows)

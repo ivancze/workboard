@@ -210,8 +210,15 @@ fails if they differ, so after editing a grid, run `bin/pets` and commit both.
   pixel, so it stays on the sprite's grid rather than floating.
 - Asleep, a "z" drifts up from its head: CSS on the sleep frame, in a token
   colour, mirrored back when it faces left so the letter reads.
+- A click, or Enter or Space since it's a button, gets a reaction. Asleep,
+  it wakes with a start. Awake, it's either happy, with a heart, or startled,
+  with a hop and a "!", and runs off to the roomier side. Either way it stays
+  awake for longer. The heart and the "!" are pixel shapes used as CSS masks,
+  filled from tokens (`danger`, `text`), so they keep to the grid and suit
+  both themes.
 - With reduced motion it never walks. It sleeps where it is, and the global
-  override leaves the "z" standing still.
+  override leaves the "z", the heart and the "!" standing still. A click
+  still shows a reaction.
 
 **Confirmation dialogs** (`components/confirm_dialog.html`) are native
 `<dialog>` elements, opened by a button with `commandfor="<dialog id>"` and

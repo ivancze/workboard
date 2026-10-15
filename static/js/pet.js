@@ -3,11 +3,16 @@
 // quiet spell it falls asleep for a while, then gets up by itself. Frames are
 // picked with data-frame (assets/app.css).
 //
+// A click (or Enter or Space, since it's a button) wakes it with a start if
+// it's asleep. Awake, it either loves it (a heart) or is startled (a hop and
+// a "!") and runs off. Either way it's awake for a while longer.
+//
 // Walking runs on requestAnimationFrame, which stops while the tab is hidden.
 // Sitting and sleeping are timers, so a pet at rest costs nothing per frame.
 // With reduced motion it never walks: it sleeps where it is.
 
 const SPEED = 40; // px per second
+const RUN = 120; // px per second, running off after a startle
 const STRIDE = 150; // ms per walking frame
 const WALK = ["walk1", "walk2", "walk3", "walk2"];
 // Its body rises one sprite pixel (3 px at 3x) as its legs pass under it, in
@@ -15,8 +20,9 @@ const WALK = ["walk1", "walk2", "walk3", "walk2"];
 const LIFT = { walk2: "-0.1875rem" };
 const AWAKE_FOR = 45_000; // ms of wandering before it settles to sleep
 const NAP = [60_000, 120_000]; // ms asleep, between these
+const REACTION = 1000; // ms a heart or "!" shows; its float is a little longer
 
-let pet = null; // { el, x, timer, frame, awakeSince }
+let pet = null; // { el, x, timer, frame, reaction, awakeSince }
 
 const between = (low, high) => low + Math.random() * (high - low);
 const stillness = matchMedia("(prefers-reduced-motion: reduce)");
@@ -57,9 +63,9 @@ function wake() {
   walk();
 }
 
-function walk() {
+function walk(target = between(0, room()), speed = SPEED) {
   if (stillness.matches) return sleep();
-  const target = between(0, room());
+  const stride = (STRIDE * SPEED) / speed; // quicker steps when running
   pet.el.dataset.facing = target < pet.x ? "left" : "right";
   let last = performance.now();
   const began = last;
@@ -67,10 +73,10 @@ function walk() {
     // A long gap means the tab was hidden; carry on from where it was.
     const elapsed = Math.min(now - last, 100);
     last = now;
-    const distance = (SPEED * elapsed) / 1000;
+    const distance = (speed * elapsed) / 1000;
     const goal = Math.min(target, room()); // the window may have narrowed
     pet.x += Math.sign(goal - pet.x) * Math.min(distance, Math.abs(goal - pet.x));
-    const frame = WALK[Math.floor((now - began) / STRIDE) % WALK.length];
+    const frame = WALK[Math.floor((now - began) / stride) % WALK.length];
     place(LIFT[frame]);
     show(frame);
     if (Math.abs(goal - pet.x) < 0.5) return sit();
@@ -79,9 +85,42 @@ function walk() {
   pet.frame = requestAnimationFrame(step);
 }
 
+// Shows a heart or a "!" above its head, starting it over if one is already
+// showing, so every click gets its own.
+function react(reaction) {
+  clearTimeout(pet.reaction);
+  delete pet.el.dataset.reaction;
+  void pet.el.offsetWidth; // let the browser see it go, so the animation restarts
+  pet.el.dataset.reaction = reaction;
+  const el = pet.el;
+  pet.reaction = setTimeout(() => delete el.dataset.reaction, REACTION);
+}
+
+function petted() {
+  const asleep = pet.el.dataset.frame === "sleep";
+  pet.awakeSince = performance.now();
+  if (asleep) {
+    react("startled");
+    rest("startled", 600, sit);
+  } else if (Math.random() < 0.5) {
+    react("heart");
+    rest("happy", 1200, sit);
+  } else {
+    react("startled");
+    rest("startled", 400, runOff);
+  }
+}
+
+// To the far end of whichever side has more room.
+function runOff() {
+  const width = room();
+  walk(pet.x > width / 2 ? between(0, width * 0.2) : between(width * 0.8, width), RUN);
+}
+
 function stop() {
   if (!pet) return;
   clearTimeout(pet.timer);
+  clearTimeout(pet.reaction);
   cancelAnimationFrame(pet.frame);
   pet = null;
 }
@@ -92,10 +131,13 @@ function start(root) {
   if (!el && root.id !== "pet") return;
   stop();
   if (!el) return;
-  pet = { el, x: 0, timer: null, frame: null, awakeSince: performance.now() };
+  pet = { el, x: 0, timer: null, frame: null, reaction: null, awakeSince: performance.now() };
   stillness.matches ? sleep() : sit();
 }
 
 htmx.onLoad(start);
+document.addEventListener("click", (event) => {
+  if (pet && event.target.closest("[data-pet]") === pet.el) petted();
+});
 window.addEventListener("resize", () => pet && place());
 stillness.addEventListener("change", () => pet && (stillness.matches ? sleep() : wake()));
