@@ -197,6 +197,21 @@ fails if they differ, so after editing a grid, run `bin/pets` and commit both.
   not on refresh-on-return.
 - It's chosen from the board's ⋯ menu. With htmx, the answer is `#pet`, plus
   the menu out of band (`oob`), closed, with the new choice ticked.
+- `static/js/pet.js` moves it, and the board page loads it even with no pet,
+  since one chosen from the menu arrives without a page load. It walks to a
+  random spot, sits a while, walks again, and after about 45 s sleeps for a
+  minute or two. Walking runs on `requestAnimationFrame`; sitting and sleeping
+  are timers, so a pet at rest costs nothing per frame. A pet swapped in
+  replaces the old one's loop.
+- The sheets face right. Walking left sets `data-facing="left"`, which
+  mirrors it with `scale`, leaving `translate` free for its position.
+- Walking, it bounces in step: its body rises one sprite pixel as its legs
+  pass under it (walk2) and drops as they spread. The bounce is a whole
+  pixel, so it stays on the sprite's grid rather than floating.
+- Asleep, a "z" drifts up from its head: CSS on the sleep frame, in a token
+  colour, mirrored back when it faces left so the letter reads.
+- With reduced motion it never walks. It sleeps where it is, and the global
+  override leaves the "z" standing still.
 
 **Confirmation dialogs** (`components/confirm_dialog.html`) are native
 `<dialog>` elements, opened by a button with `commandfor="<dialog id>"` and

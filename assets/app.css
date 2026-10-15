@@ -176,13 +176,15 @@
 }
 
 
-/* A board's pet (components/pet.html). Each sheet is 16 px frames side by
-   side, built by bin/pets in its FRAMES order, drawn here at 3x with the
-   pixels kept sharp. data-frame picks the frame. */
+/* A board's pet (components/pet.html), moved by static/js/pet.js. Each
+   sheet is 16 px frames side by side, built by bin/pets in its FRAMES order,
+   drawn here at 3x with the pixels kept sharp. data-frame picks the frame by
+   its index; a frame is as wide as the pet is tall. */
 @layer components {
   .pet {
     background-repeat: no-repeat;
     background-size: auto 100%;
+    background-position: calc(var(--frame, 0) * -3rem) 0;
     image-rendering: pixelated;
   }
   .pet[data-pet="dog"] {
@@ -194,8 +196,42 @@
   .pet[data-pet="pig"] {
     background-image: url("../pets/pig.png");
   }
-  .pet[data-frame="sit"] {
-    background-position: 0 0;
+  .pet[data-frame="sit"] { --frame: 0; }
+  .pet[data-frame="walk1"] { --frame: 1; }
+  .pet[data-frame="walk2"] { --frame: 2; }
+  .pet[data-frame="walk3"] { --frame: 3; }
+  .pet[data-frame="sleep"] { --frame: 4; }
+  /* The sheets face right. Facing left mirrors the pet, and mirrors its "z"
+     back so the letter still reads. */
+  .pet[data-facing="left"],
+  .pet[data-facing="left"]::after {
+    scale: -1 1;
+  }
+  /* Asleep, a "z" drifts up from its head. With reduced motion, the global
+     override ends the animation at once and it stays put, visible. */
+  .pet[data-frame="sleep"]::after {
+    content: "z";
+    position: absolute;
+    top: -0.25rem;
+    right: -0.25rem;
+    font-family: var(--font-condensed);
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--color-text-muted);
+    animation: pet-snore 2400ms ease-out infinite;
+  }
+  @keyframes pet-snore {
+    from {
+      transform: translate(0, 0.25rem);
+      opacity: 0;
+    }
+    30% {
+      opacity: 1;
+    }
+    to {
+      transform: translate(0.5rem, -0.75rem);
+      opacity: 0;
+    }
   }
 }
 

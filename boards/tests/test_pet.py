@@ -136,3 +136,27 @@ class SpriteSheetTests(TestCase):
             with self.subTest(pet=name):
                 committed = Path(settings.BASE_DIR, "static", "pets", f"{name}.png").read_bytes()
                 self.assertEqual(png, committed, "Run bin/pets and commit the result.")
+
+    def test_every_frame_is_shown_from_its_place_in_the_sheet(self):
+        """assets/app.css picks a frame by its index in bin/pets' FRAMES, so
+        adding or reordering a frame there has to be matched here."""
+        frames = runpy.run_path(str(BUILDER))["FRAMES"]
+        css = Path(settings.BASE_DIR, "assets", "app.css").read_text()
+
+        shown = dict(re.findall(r'\.pet\[data-frame="(\w+)"\]\s*{\s*--frame:\s*(\d+);', css))
+
+        self.assertEqual(shown, {name: str(index) for index, name in enumerate(frames)})
+
+
+class RoamingTests(TestCase):
+    def setUp(self):
+        self.ada = a_user()
+        self.board = Board.objects.create_with_owner(name="Housework", owner=self.ada)
+        self.client.force_login(self.ada)
+
+    def test_the_board_page_loads_the_pets_script_even_with_no_pet(self):
+        """A pet chosen from the menu arrives without a page load, so the
+        script has to be there already."""
+        response = self.client.get(reverse("board_detail", args=[self.board.pk]))
+
+        self.assertContains(response, '<script src="/static/js/pet.js" defer></script>')

@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parent.parent
 GRIDS = ROOT / "assets" / "pets"
 SHEETS = ROOT / "static" / "pets"
 SIZE = 16
-FRAMES = ["sit"]
+FRAMES = ["sit", "walk1", "walk2", "walk3", "sleep"]
 
 
 def parse(text):
