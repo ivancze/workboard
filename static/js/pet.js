@@ -13,14 +13,16 @@
 
 const SPEED = 40; // px per second
 const RUN = 120; // px per second, running off after a startle
-const DASH = [120, 180]; // px it runs off, between these
+const DASH = [360, 540]; // px it runs off, between these: 3-4.5 s
+const STROLL = 100; // px a walk goes at least: 2.5 s
+const SIT = [1000, 3000]; // ms it sits between walks
 const STRIDE = 150; // ms per walking frame
 const WALK = ["walk1", "walk2", "walk3", "walk2"];
 // Its body rises one sprite pixel (--pixel, assets/app.css) as its legs pass
 // under it, in walk2, and drops as they spread: a bounce in step, kept to the
 // pixel grid.
 const LIFT = { walk2: "calc(var(--pixel) * -1)" };
-const AWAKE_FOR = 45_000; // ms of wandering before it settles to sleep
+const AWAKE_FOR = 180_000; // ms of wandering before it settles to sleep
 const NAP = [60_000, 120_000]; // ms asleep, between these
 const REACTION = 1000; // ms a heart or "!" shows; its float is a little longer
 
@@ -53,7 +55,7 @@ function rest(frame, ms, then) {
 }
 
 function sit() {
-  rest("sit", between(2000, 6000), () => (performance.now() - pet.awakeSince > AWAKE_FOR ? sleep() : walk()));
+  rest("sit", between(...SIT), () => (performance.now() - pet.awakeSince > AWAKE_FOR ? sleep() : walk()));
 }
 
 function sleep() {
@@ -65,7 +67,16 @@ function wake() {
   walk();
 }
 
-function walk(target = between(0, room()), speed = SPEED) {
+// Somewhere at least a stroll away, on whichever side has room for it.
+function wander() {
+  const width = room();
+  const sides = [];
+  if (pet.x - STROLL > 0) sides.push(between(0, pet.x - STROLL));
+  if (pet.x + STROLL < width) sides.push(between(pet.x + STROLL, width));
+  return sides.length ? sides[Math.floor(Math.random() * sides.length)] : between(0, width);
+}
+
+function walk(target = wander(), speed = SPEED) {
   if (stillness.matches) return sleep();
   const stride = (STRIDE * SPEED) / speed; // quicker steps when running
   pet.el.dataset.facing = target < pet.x ? "left" : "right";

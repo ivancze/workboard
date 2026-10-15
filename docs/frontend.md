@@ -215,9 +215,10 @@ they stay on that animal's grid.
 - It's chosen from the board's ⋯ menu. With htmx, the answer is `#pet`, plus
   the menu out of band (`oob`), closed, with the new choice ticked.
 - `static/js/pet.js` moves it, and the board page loads it even with no pet,
-  since one chosen from the menu arrives without a page load. It walks to a
-  random spot, sits a while, walks again, and after about 45 s sleeps for a
-  minute or two. Walking runs on `requestAnimationFrame`; sitting and sleeping
+  since one chosen from the menu arrives without a page load. It walks at
+  least 100 px (`STROLL`) to a random spot, sits for 1-3 s, walks again, and
+  after 3 minutes awake (`AWAKE_FOR`) sleeps for a minute or two. A startle
+  sends it dashing 360-540 px (`DASH`), about 3-4.5 s. Walking runs on `requestAnimationFrame`; sitting and sleeping
   are timers, so a pet at rest costs nothing per frame. A pet swapped in
   replaces the old one's loop.
 - The sheets face right. Walking left sets `data-facing="left"`, which
