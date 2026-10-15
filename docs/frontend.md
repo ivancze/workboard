@@ -183,14 +183,15 @@ description pages, which is what they stay without JavaScript. Both are
 
 **The board pet** (`components/pet.html`) is pixel art. Each animal is a
 text file of square grids, one frame per grid, in `assets/pets/`: 16×16 for
-the duck and pig, 32×32 for the dog. The dog (a Shiba) and the duck (a
-mallard) were read from reference images by sampling their pixel grids.
+the duck, 32×32 for the dog, 36×36 for the pig. All three were read from
+reference images by sampling their pixel grids: the dog a Shiba, the duck a
+mallard, and the pig licensed from Dreamstime.
 `bin/pets` builds them into the sprite sheets in `static/pets/`, frames side
 by side in its `FRAMES` order. The sheets are committed, and a test rebuilds them and fails
 if they differ, so after editing a grid, run `bin/pets` and commit both.
 `assets/app.css` draws them with `image-rendering: pixelated`. `--grid` is a
 frame's size in sprite pixels and `--pixel` one sprite pixel on screen: 3 px
-for the duck and pig (48 px tall), 2 px for the dog (64 px). The pet is sized
+for the duck (48 px), 2 px for the dog (64 px) and the pig (72 px). The pet is sized
 from them, and the bounce and the hop move in `--pixel`, so they stay on
 that animal's grid.
 `data-frame` picks the frame.

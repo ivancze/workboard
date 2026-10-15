@@ -179,8 +179,8 @@
 /* A board's pet (components/pet.html), moved by static/js/pet.js. Each
    sheet is 16 px frames side by side, built by bin/pets in its FRAMES order,
    drawn with the pixels kept sharp. --grid is a frame's size in sprite
-   pixels and --pixel is one sprite pixel on screen: 16 px grids at 3x (3rem),
-   the dog's 32 px at 2x (4rem). The pet is sized from them, and the bounce
+   pixels and --pixel is one sprite pixel on screen: the duck's 16 px at 3x
+   (3rem), the dog's 32 px and the pig's 36 px at 2x (4rem and 4.5rem). The pet is sized from them, and the bounce
    and the hop move in --pixel, so everything stays on the sprite's grid.
    data-frame picks the frame by its index; frames are square. */
 @layer components {
@@ -203,6 +203,8 @@
     background-image: url("../pets/duck.png");
   }
   .pet[data-pet="pig"] {
+    --grid: 36;
+    --pixel: 0.125rem;
     background-image: url("../pets/pig.png");
   }
   .pet[data-frame="sit"] { --frame: 0; }
@@ -289,6 +291,13 @@
     line-height: 1;
     color: var(--color-text-muted);
     animation: pet-snore 2400ms ease-out infinite;
+  }
+  /* The pig is short: its frame has 1.5rem of empty sky above it. */
+  .pet[data-pet="pig"][data-reaction]::before {
+    bottom: calc(100% - 1.5rem);
+  }
+  .pet[data-pet="pig"][data-frame="sleep"]::after {
+    top: 1.5rem;
   }
   /* The dog lies down to sleep, so its head is low in the frame. */
   .pet[data-pet="dog"][data-frame="sleep"]::after {
