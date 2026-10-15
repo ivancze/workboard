@@ -16,6 +16,7 @@ const RUN = 120; // px per second, running off after a startle
 const DASH = [360, 540]; // px it runs off, between these: 3-4.5 s
 const STROLL = 100; // px a walk goes at least: 2.5 s
 const SIT = [1000, 3000]; // ms it sits between walks
+const WAG = 200; // ms per swish of the tail while it sits (the wag frame)
 const STRIDE = 150; // ms per walking frame
 const WALK = ["walk1", "walk2", "walk3", "walk2"];
 // Its body rises one sprite pixel (--pixel, assets/app.css) as its legs pass
@@ -26,7 +27,7 @@ const AWAKE_FOR = 180_000; // ms of wandering before it settles to sleep
 const NAP = [60_000, 120_000]; // ms asleep, between these
 const REACTION = 1000; // ms a heart or "!" shows; its float is a little longer
 
-let pet = null; // { el, x, timer, frame, reaction, awakeSince }
+let pet = null; // { el, x, timer, frame, wag, reaction, awakeSince }
 
 const between = (low, high) => low + Math.random() * (high - low);
 const stillness = matchMedia("(prefers-reduced-motion: reduce)");
@@ -48,14 +49,18 @@ function show(frame) {
 
 function rest(frame, ms, then) {
   clearTimeout(pet.timer);
+  clearInterval(pet.wag);
   cancelAnimationFrame(pet.frame);
   place(); // back on the ground
   show(frame);
   pet.timer = setTimeout(then, ms);
 }
 
+// Sitting, a dog wags its tail: sit and wag alternate. The duck's and pig's
+// wag frame is their sit frame, so they stay still.
 function sit() {
   rest("sit", between(...SIT), () => (performance.now() - pet.awakeSince > AWAKE_FOR ? sleep() : walk()));
+  if (!stillness.matches) pet.wag = setInterval(() => show(pet.el.dataset.frame === "sit" ? "wag" : "sit"), WAG);
 }
 
 function sleep() {
@@ -77,6 +82,7 @@ function wander() {
 }
 
 function walk(target = wander(), speed = SPEED) {
+  clearInterval(pet.wag);
   if (stillness.matches) return sleep();
   const stride = (STRIDE * SPEED) / speed; // quicker steps when running
   pet.el.dataset.facing = target < pet.x ? "left" : "right";
@@ -134,6 +140,7 @@ function stop() {
   if (!pet) return;
   clearTimeout(pet.timer);
   clearTimeout(pet.reaction);
+  clearInterval(pet.wag);
   cancelAnimationFrame(pet.frame);
   pet = null;
 }
@@ -144,7 +151,7 @@ function start(root) {
   if (!el && root.id !== "pet") return;
   stop();
   if (!el) return;
-  pet = { el, x: 0, timer: null, frame: null, reaction: null, awakeSince: performance.now() };
+  pet = { el, x: 0, timer: null, frame: null, wag: null, reaction: null, awakeSince: performance.now() };
   stillness.matches ? sleep() : sit();
 }
 

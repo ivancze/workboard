@@ -6,7 +6,8 @@
 A grid file starts with its palette, one colour per line ("k #3b2a20"), then
 holds each frame as "== <name>" and a square of characters, one per pixel:
 16 lines of 16 for the duck and pig, 32 of 32 for the dog. Every frame in a
-file is the same size. "." is transparent. A sheet is the frames side by side, in FRAMES order, which
+file is the same size. "." is transparent. "== wag = sit" reuses a frame
+already drawn, as the duck and pig do: they have no tail to wag. A sheet is the frames side by side, in FRAMES order, which
 assets/app.css relies on to show one frame at a time.
 
 Commit the PNGs: a test rebuilds them and fails if they differ from the grids.
@@ -21,7 +22,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 GRIDS = ROOT / "assets" / "pets"
 SHEETS = ROOT / "static" / "pets"
-FRAMES = ["sit", "walk1", "walk2", "walk3", "sleep", "happy", "startled"]
+FRAMES = ["sit", "walk1", "walk2", "walk3", "sleep", "happy", "startled", "wag"]
 
 
 def parse(text):
@@ -31,6 +32,10 @@ def parse(text):
             continue
         if match := re.fullmatch(r"(\S) (#[0-9a-f]{6})\b.*", line):
             palette[match[1]] = match[2]
+        elif line.startswith("== ") and " = " in line:
+            alias, drawn = line[3:].split(" = ")
+            frames[alias.strip()] = frames[drawn.strip()]
+            name = None
         elif line.startswith("== "):
             name = line[3:].strip()
             frames[name] = []

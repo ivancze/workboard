@@ -138,3 +138,6 @@ kbkkbbbkbttttmbk
 ..kbbbmtttttmk..
 ...kkbmmmmmmk...
 .....kyookooyk..
+
+# No tail to wag.
+== wag = sit

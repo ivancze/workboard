@@ -225,6 +225,7 @@
   .pet[data-frame="sleep"] { --frame: 4; }
   .pet[data-frame="happy"] { --frame: 5; }
   .pet[data-frame="startled"] { --frame: 6; }
+  .pet[data-frame="wag"] { --frame: 7; }
   /* The sheets face right. Facing left mirrors the pet, and mirrors its "z"
      back so the letter still reads. */
   .pet[data-facing="left"],

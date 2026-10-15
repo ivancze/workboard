@@ -219,7 +219,10 @@ they stay on that animal's grid.
   since one chosen from the menu arrives without a page load. It walks at
   least 100 px (`STROLL`) to a random spot, sits for 1-3 s, walks again, and
   after 3 minutes awake (`AWAKE_FOR`) sleeps for a minute or two. A startle
-  sends it dashing 360-540 px (`DASH`), about 3-4.5 s. Walking runs on `requestAnimationFrame`; sitting and sleeping
+  sends it dashing 360-540 px (`DASH`), about 3-4.5 s.
+- Sitting, the dogs wag their tails: `sit` and `wag` alternate every 200 ms
+  (`WAG`). The duck's and pig's `wag` is their `sit` (`== wag = sit` in their
+  grids), so they stay still. Reduced motion skips the wag. Walking runs on `requestAnimationFrame`; sitting and sleeping
   are timers, so a pet at rest costs nothing per frame. A pet swapped in
   replaces the old one's loop.
 - The sheets face right. Walking left sets `data-facing="left"`, which
