@@ -18,7 +18,7 @@
     <form method="post" action="{{ pet_url }}{{ filter_query }}" hx-post="{{ pet_url }}{{ filter_query }}" hx-target="#pet" hx-swap="outerHTML" aria-label="Pet" class="mt-1 border-t border-border px-2 pt-2 pb-1.5">
       {% csrf_token %}
       <p class="text-xs font-semibold text-text-muted">Pet</p>
-      <div class="mt-1 flex gap-1">
+      <div class="mt-1 flex flex-wrap gap-1">
         {% for value, label in board.Pet.choices %}
           <button type="submit" name="pet" value="{{ value }}"{% if board.pet == value %} aria-current="true"{% endif %} class="rounded-md px-2 py-1 text-xs transition-colors hover:bg-sunken{% if board.pet == value %} bg-sunken font-semibold{% endif %}">{{ label }}</button>
         {% endfor %}

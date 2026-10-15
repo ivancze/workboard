@@ -61,6 +61,7 @@ class Board(models.Model):
 
     class Pet(models.TextChoices):
         DOG = "dog", "Dog"
+        PUG = "pug", "Pug"
         DUCK = "duck", "Duck"
         PIG = "pig", "Pig"
 

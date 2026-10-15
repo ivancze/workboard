@@ -26,8 +26,8 @@ not the board, and is never stored.
 _Avoid_: Tagline, subtitle, summary, about
 
 **Board pet**:
-A small animal, a dog, a duck or a pig, that wanders along the bottom of a
-board's page and reacts when clicked. Chosen by any member, one per board, and
+A small animal, a dog, a pug, a duck or a pig, that wanders along the
+bottom of a board's page and reacts when clicked. Chosen by any member, one per board, and
 the same kind for everyone on it; a board has none until someone picks one.
 Purely for fun: it carries no information about the board and nothing acts on
 it. "Pet" for short.
