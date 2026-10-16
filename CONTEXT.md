@@ -149,6 +149,12 @@ The summed effort of the cards still on a board or in one stage, always paired
 with a count of the unestimated cards it could not include. Archived cards count
 towards nothing.
 
+**Subtask**:
+A line of plain text on a card that is either done or not, kept in an order
+arranged by hand. A card may have none. A subtask is never a card itself: it
+has no assignee, due date or effort, and ticking the last one moves nothing.
+_Avoid_: Checklist item, to-do, child card, subcard
+
 ### Leaving the board
 
 **Archive**:

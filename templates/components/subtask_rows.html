@@ -1,0 +1,22 @@
+{% comment %}
+  A Card's Subtasks as rows on New card and Edit (SubtaskFormSet): rename one,
+  remove it with ×, or fill the blank row at the end to add one. Ticks and
+  order are kept, and set on the Card's page. + Add, shown by subtasks.js,
+  adds a row from the formset's empty form; without JavaScript there is
+  always one blank row, so more can be added a save at a time. Needs
+  `subtasks`.
+{% endcomment %}
+<fieldset data-subtask-rows class="flex flex-col gap-1.5">
+  <legend class="mb-1.5 text-sm font-semibold">Subtasks</legend>
+  {{ subtasks.management_form }}
+  {% for error in subtasks.non_form_errors %}
+    <p class="text-sm text-danger">{{ error }}</p>
+  {% endfor %}
+  <ul data-subtask-list class="flex flex-col gap-2">
+    {% for row in subtasks %}{% include "components/subtask_row.html" %}{% endfor %}
+  </ul>
+  <template data-subtask-template>{% include "components/subtask_row.html" with row=subtasks.empty_form %}</template>
+  <div>
+    <button type="button" data-subtask-more hidden class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-text-muted transition-colors hover:bg-sunken hover:text-text">+ Add a Subtask</button>
+  </div>
+</fieldset>

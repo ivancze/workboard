@@ -1,0 +1,77 @@
+{% comment %}
+  The Subtasks section on a Card's page, and the fragment every Subtask
+  action answers with under htmx, swapped in place. Without JavaScript each
+  form posts and comes back to the page.
+
+  A box is a button rather than a checkbox input, so it submits without
+  JavaScript. It sends the state wanted, the opposite of what it shows, never
+  "toggle". Its id lets htmx put focus back on it after the swap, so ticking
+  down a list by keyboard keeps its place. Needs `board`, `card`, `subtasks`,
+  `subtasks_done` and `subtask_form`.
+{% endcomment %}
+<section id="subtasks" aria-labelledby="subtasks-heading" class="mt-6 rounded-xl border border-border bg-surface p-6">
+  <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+    <h2 id="subtasks-heading" class="font-condensed text-3xl tracking-wide">Subtasks</h2>
+    {% if subtasks %}
+      <div class="flex min-w-40 flex-1 items-center gap-3">
+        <progress value="{{ subtasks_done }}" max="{{ subtasks|length }}" aria-label="Subtasks done" class="subtask-progress flex-1">{{ subtasks_done }} of {{ subtasks|length }}</progress>
+        <span class="shrink-0 text-sm text-text-muted">{{ subtasks_done }} of {{ subtasks|length }}</span>
+      </div>
+    {% endif %}
+  </div>
+
+  {% if subtasks %}
+    <ul class="mt-4 flex flex-col gap-1">
+      {% for subtask in subtasks %}
+        <li id="subtask-{{ subtask.pk }}" class="flex items-start gap-2 rounded-md px-1 py-1 hover:bg-sunken">
+          {% url 'subtask_tick' board.pk card.pk subtask.pk as tick_url %}
+          <form method="post" action="{{ tick_url }}{{ filter_query }}" hx-post="{{ tick_url }}{{ filter_query }}" hx-target="#subtasks" hx-swap="outerHTML" class="flex py-2">
+            {% csrf_token %}
+            <button type="submit" id="subtask-{{ subtask.pk }}-box" name="done" value="{% if not subtask.done %}on{% endif %}" role="checkbox" aria-checked="{% if subtask.done %}true{% else %}false{% endif %}" aria-label="{{ subtask.text }}" class="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded border transition-colors {% if subtask.done %}border-accent bg-accent text-on-accent hover:bg-accent-hover{% else %}border-control bg-surface hover:border-accent{% endif %}">
+              {% if subtask.done %}<svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>{% endif %}
+            </button>
+          </form>
+          {% url 'subtask_rename' board.pk card.pk subtask.pk as rename_url %}
+          {# One field and no button: Enter submits it. subtasks.js puts it back on Escape. #}
+          <form method="post" action="{{ rename_url }}{{ filter_query }}" hx-post="{{ rename_url }}{{ filter_query }}" hx-target="#subtasks" hx-swap="outerHTML" class="flex min-w-0 flex-1 flex-col">
+            {% csrf_token %}
+            <input type="text" id="subtask-{{ subtask.pk }}-text" name="text" value="{% if subtask.rename_form %}{{ subtask.rename_form.text.value|default:'' }}{% else %}{{ subtask.text }}{% endif %}" maxlength="200" required data-subtask-text aria-label="Rename {{ subtask.text }}"{% if subtask.rename_form.errors %} aria-invalid="true" aria-describedby="subtask-{{ subtask.pk }}-error"{% endif %} class="w-full min-w-0 rounded-md border border-transparent bg-transparent px-2 py-1 text-base text-text transition-colors hover:border-border focus:border-control focus:bg-surface{% if subtask.done %} text-text-muted line-through{% endif %}">
+            {% for error in subtask.rename_form.text.errors %}
+              <p id="subtask-{{ subtask.pk }}-error" class="px-2 text-sm text-danger">{{ error }}</p>
+            {% endfor %}
+          </form>
+          {% url 'subtask_shift' board.pk card.pk subtask.pk as shift_url %}
+          {# Two fixed slots, so the arrows line up whichever a row has. #}
+          <form method="post" action="{{ shift_url }}{{ filter_query }}" hx-post="{{ shift_url }}{{ filter_query }}" hx-target="#subtasks" hx-swap="outerHTML" class="grid w-14 shrink-0 grid-cols-2 gap-0.5 py-1">
+            {% csrf_token %}
+            {% if forloop.first %}<span></span>{% else %}
+              <button type="submit" id="subtask-{{ subtask.pk }}-up" name="direction" value="up" aria-label="Move {{ subtask.text }} up" class="rounded-md py-0.5 text-text-muted transition-colors hover:bg-surface hover:text-text">↑</button>
+            {% endif %}
+            {% if forloop.last %}<span></span>{% else %}
+              <button type="submit" id="subtask-{{ subtask.pk }}-down" name="direction" value="down" aria-label="Move {{ subtask.text }} down" class="rounded-md py-0.5 text-text-muted transition-colors hover:bg-surface hover:text-text">↓</button>
+            {% endif %}
+          </form>
+          {% url 'subtask_delete' board.pk card.pk subtask.pk as delete_url %}
+          <form method="post" action="{{ delete_url }}{{ filter_query }}" hx-post="{{ delete_url }}{{ filter_query }}" hx-target="#subtasks" hx-swap="outerHTML" class="py-1">
+            {% csrf_token %}
+            <button type="submit" aria-label="Delete {{ subtask.text }}" class="rounded-md px-2 py-0.5 text-text-muted transition-colors hover:bg-surface hover:text-danger">×</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="mt-2 text-sm text-text-muted">No Subtasks yet.</p>
+  {% endif %}
+
+  {% url 'subtask_add' board.pk card.pk as add_url %}
+  <form method="post" action="{{ add_url }}{{ filter_query }}" hx-post="{{ add_url }}{{ filter_query }}" hx-target="#subtasks" hx-swap="outerHTML" class="mt-4 flex flex-col gap-1.5">
+    {% csrf_token %}
+    <div class="flex gap-2">
+      <input type="text" id="subtask-new" name="text" value="{% if subtask_form.errors %}{{ subtask_form.text.value|default:'' }}{% endif %}" maxlength="200" required placeholder="Add a Subtask" aria-label="New Subtask"{% if subtask_form.text.errors %} aria-invalid="true" aria-describedby="subtask-new-error"{% endif %} class="min-w-0 flex-1 rounded-md border border-control bg-surface px-3 py-2 text-sm text-text placeholder:text-text-muted">
+      {% include "components/button.html" with label="Add" variant="secondary" %}
+    </div>
+    {% for error in subtask_form.text.errors %}
+      <p id="subtask-new-error" class="text-sm text-danger">{{ error }}</p>
+    {% endfor %}
+  </form>
+</section>

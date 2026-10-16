@@ -84,6 +84,11 @@ Saving a Card that names an Assignee first locks that person's membership
 Cards, so a Card can never end up assigned to someone with no access. This
 lock comes before any Stage lock.
 
+Every write to a Card's Subtasks that counts or renumbers them (adding one,
+↑↓, and the rows of New card and Edit) first locks the Card itself with
+`lock_card`, `FOR NO KEY UPDATE`. Nothing holding it then waits on a Stage, so
+it can't deadlock against a move; on Edit it comes after the membership lock.
+
 An archived Card has no Stage and no position, and a database check keeps it
 from being half of each. `stage.cards` therefore holds only the Cards on the
 board; reach archived Cards, or a board's Cards in general, through

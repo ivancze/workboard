@@ -732,3 +732,71 @@ class Card(models.Model):
             and self.due_date is not None
             and self.due_date < timezone.localdate()
         )
+
+
+# The most Subtasks a Card holds, so its page can't grow without bound.
+MAX_SUBTASKS = 50
+
+
+def lock_card(card_id):
+    """Lock a Card for the rest of the transaction, so its Subtasks can be
+    counted and renumbered without another request interleaving. Raises
+    Card.DoesNotExist if it was deleted first.
+
+    NO KEY UPDATE, as for Board.lock: a plain FOR UPDATE would block the
+    key-share lock a Subtask insert takes on its Card. Nothing holding this
+    lock then waits on a Stage, so it can't deadlock against a move."""
+    Card.objects.select_for_update(no_key=True).get(pk=card_id)
+
+
+class SubtaskManager(models.Manager):
+    def add(self, *, card, text):
+        """Add a Subtask at the bottom of its Card's list, or refuse the
+        51st with a ValidationError."""
+        with transaction.atomic():
+            lock_card(card.pk)
+            subtasks = self.filter(card=card)
+            if subtasks.count() >= MAX_SUBTASKS:
+                raise ValidationError(f"A Card holds at most {MAX_SUBTASKS} Subtasks.")
+            last = subtasks.aggregate(last=models.Max("position"))["last"]
+            return self.create(card=card, text=text, position=0 if last is None else last + 1)
+
+
+class Subtask(models.Model):
+    """A line of plain text on a Card, done or not. Never a Card itself: it
+    has no Assignee, Due date or Effort, and ticking the last one moves
+    nothing."""
+
+    # CASCADE: a Subtask is part of its Card, and goes when the Card does.
+    card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name="subtasks")
+    text = models.CharField(max_length=200)
+    done = models.BooleanField(default=False)
+    # Arranged by hand. Renumbered 0..n-1 on a shift, as Stages are, so a
+    # delete's gap needs no closing and no unique constraint is needed.
+    position = models.PositiveIntegerField()
+
+    objects = SubtaskManager()
+
+    class Meta:
+        ordering = ["position", "id"]
+
+    def __str__(self):
+        return self.text
+
+    def shift(self, step):
+        """Move this Subtask one place up (-1) or down (+1) its Card's list.
+        Does nothing at either end. Renumbered 0..n-1 under the Card lock,
+        as Stages are under the board's, so presses take turns and gaps
+        left by deletes close up."""
+        with transaction.atomic():
+            lock_card(self.card_id)
+            order = list(Subtask.objects.filter(card_id=self.card_id))
+            here = next((i for i, subtask in enumerate(order) if subtask.pk == self.pk), None)
+            if here is None:
+                raise Subtask.DoesNotExist("This Subtask was deleted first.")
+            there = here + step
+            if 0 <= there < len(order):
+                order[here], order[there] = order[there], order[here]
+            for position, subtask in enumerate(order):
+                if subtask.position != position:
+                    Subtask.objects.filter(pk=subtask.pk).update(position=position)

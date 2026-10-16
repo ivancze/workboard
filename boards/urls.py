@@ -39,6 +39,31 @@ urlpatterns = [
         name="card_priority",
     ),
     path(
+        "boards/<int:board_pk>/cards/<int:pk>/subtasks/",
+        views.subtask_add,
+        name="subtask_add",
+    ),
+    path(
+        "boards/<int:board_pk>/cards/<int:pk>/subtasks/<int:subtask_pk>/tick/",
+        views.subtask_tick,
+        name="subtask_tick",
+    ),
+    path(
+        "boards/<int:board_pk>/cards/<int:pk>/subtasks/<int:subtask_pk>/rename/",
+        views.subtask_rename,
+        name="subtask_rename",
+    ),
+    path(
+        "boards/<int:board_pk>/cards/<int:pk>/subtasks/<int:subtask_pk>/move/",
+        views.subtask_shift,
+        name="subtask_shift",
+    ),
+    path(
+        "boards/<int:board_pk>/cards/<int:pk>/subtasks/<int:subtask_pk>/delete/",
+        views.subtask_delete,
+        name="subtask_delete",
+    ),
+    path(
         "boards/<int:board_pk>/cards/<int:pk>/archive/",
         views.card_archive,
         name="card_archive",

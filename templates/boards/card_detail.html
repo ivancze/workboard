@@ -1,7 +1,10 @@
 {% extends "base.html" %}
-{% load markdown %}
+{% load markdown static %}
 
 {% block title %}{{ card.title }} · {{ board.name }} · Workboard{% endblock %}
+{% block scripts %}
+  <script src="{% static 'js/subtasks.js' %}" defer></script>
+{% endblock %}
 
 {% block content %}
   {% if card.archived_at %}
@@ -74,6 +77,8 @@
       <p class="text-sm text-text-muted">No description.</p>
     {% endif %}
   </section>
+
+  {% include "components/subtasks.html" %}
 
   {# Deliberately quiet, below everything: Archive is how work ends. #}
   <div class="mt-8 flex justify-end">

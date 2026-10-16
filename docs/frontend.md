@@ -181,6 +181,30 @@ description pages, which is what they stay without JavaScript. Both are
   view on each load (`PLAYFUL_DESCRIPTIONS`). The description's form starts
   empty, not from that line.
 
+**Subtasks** (`components/subtasks.html`, `static/js/subtasks.js`). On a
+Card's page every Subtask action is a small form: tick, rename, ↑↓, delete and
+add. Without JavaScript each posts and comes back to the page. With htmx each
+answers with the whole `#subtasks` section, swapped in place, and a refused
+value comes back as a 400 that `subtasks.js` lets htmx swap in, error and all.
+- A tick box is a `<button role="checkbox">`, so it submits without
+  JavaScript. It sends the state wanted, never "toggle", so two people ticking
+  from the same stale page both mean done.
+- A Subtask's text is a borderless field in a form of its own: Enter saves it,
+  and `subtasks.js` puts it back on Escape or when it loses focus unsaved.
+- Each box, arrow and field carries an id, so htmx returns focus to it after
+  the swap. Ticking down a list by keyboard keeps its place, and the add field
+  stays focused for the next one.
+- Progress is a native `<progress>`, on the page and on the Card's tile,
+  styled as `.subtask-progress` in `assets/app.css`. Its width needs no
+  arbitrary value, and it carries its own semantics.
+
+New card and Edit show the Subtasks as rows (`components/subtask_rows.html`),
+an inline formset. × is the formset's delete checkbox, hidden behind the
+symbol, so removing works without JavaScript; the row dims until saved.
+`subtasks.js` shows + Add, which focuses the blank last row or copies the
+formset's empty form from a `<template>`. Without JavaScript the one blank row
+stands in for it, a Subtask per save.
+
 **The board pet** (`components/pet.html`) is pixel art. Each animal is a
 text file of square grids, one frame per grid, in `assets/pets/`: 16×16 for
 the duck, 18×18 for the chicken, 28×28 for the pug, 36×36 for the pig, 74×74

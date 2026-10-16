@@ -67,6 +67,15 @@ a Card to open it, and *Edit* to change it:
 - **Effort**, a number in steps of 0.1, in whatever unit your team uses:
   hours, days or a score. Leave it empty if it hasn't been estimated
 
+**Subtasks.** A Card can carry a list of Subtasks: short lines of text to
+tick off as you go. On the Card's page, type one into *Add a Subtask* and press
+Enter, click a box to tick it, click a Subtask's text to change it (Enter
+saves, Escape leaves it), and use ↑ ↓ to reorder and × to remove. New card and
+Edit list them as rows too, with *+ Add a Subtask*. A bar shows how many are
+done, on the Card's page and on its tile on the board. Subtasks are only text:
+they have no Assignee or Due date, and ticking the last one moves nothing. A
+Card holds up to 50.
+
 **Effort totals.** The board and each Stage show their total Effort, with a
 count of the Unestimated Cards it leaves out.
 

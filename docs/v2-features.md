@@ -23,9 +23,6 @@ unlabelled boards stay readable at this size.
 first feature where people will *expect* a notification to follow, which drags
 in email — see below.
 
-**Checklists or subtasks.** Cut as a second ordered collection inside a Card,
-duplicating work already done for Card order.
-
 **Attachments.** Cut because it is the only deferred feature that needs object
 storage, a storage account, upload limits, and a decision about what happens to
 files when a Card is deleted. Genuinely more work than it looks.

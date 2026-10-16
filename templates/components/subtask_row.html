@@ -1,0 +1,22 @@
+{% comment %}
+  One row of subtask_rows.html. × is the formset's delete checkbox, so
+  removing works without JavaScript; the row dims while it's ticked, and
+  saving takes it away. Needs `row`, one form of the formset.
+{% endcomment %}
+<li class="flex flex-col gap-1 has-checked:opacity-50">
+  <div class="flex items-center gap-2">
+    {% for field in row.hidden_fields %}{{ field }}{% endfor %}
+    <label for="{{ row.text.id_for_label }}" class="sr-only">Subtask</label>
+    <div class="min-w-0 flex-1">{{ row.text }}</div>
+    {% if row.instance.done %}<span class="shrink-0 text-xs text-text-muted">Done</span>{% endif %}
+    <label class="shrink-0 cursor-pointer rounded-md px-2 py-1 text-text-muted transition-colors hover:bg-sunken hover:text-danger has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-focus">
+      <input type="checkbox" name="{{ row.DELETE.html_name }}" id="{{ row.DELETE.id_for_label }}"{% if row.DELETE.value %} checked{% endif %} class="peer sr-only">
+      <span aria-hidden="true" class="peer-checked:hidden">×</span>
+      <span aria-hidden="true" class="hidden text-sm peer-checked:inline">Undo</span>
+      <span class="sr-only">Remove this Subtask</span>
+    </label>
+  </div>
+  {% for error in row.non_field_errors %}<p class="text-sm text-danger">{{ error }}</p>{% endfor %}
+  {% for field in row.hidden_fields %}{% for error in field.errors %}<p class="text-sm text-danger">{{ error }}</p>{% endfor %}{% endfor %}
+  {% for error in row.text.errors %}<p class="text-sm text-danger">{{ error }}</p>{% endfor %}
+</li>

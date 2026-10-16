@@ -25,8 +25,11 @@ from .forms import (
     InviteForm,
     MoveCardForm,
     StageForm,
+    SubtaskForm,
+    SubtaskFormSet,
+    SubtaskTickForm,
 )
-from .models import Board, Card, Membership, Stage, lock_membership
+from .models import Board, Card, Membership, Stage, Subtask, lock_card, lock_membership
 
 # Shown under a board's name while it has no Board description, a different
 # one on each visit. Never stored: it belongs to the product, not the board.
@@ -128,7 +131,17 @@ def board_context(board, request):
     """Everything the board's Stages and totals need, for the page and for
     the fragment that replaces them after a drag, narrowed by its filter."""
     shown = AssigneeFilter(request, board)
-    cards = Card.objects.select_related("assignee")
+    # Each tile's Subtask progress is counted in the same query as its Card.
+    # Ordered explicitly, as the Stages are below: counting drops
+    # Meta.ordering, and Card order would be lost.
+    cards = (
+        Card.objects.select_related("assignee")
+        .annotate(
+            subtask_count=Count("subtasks"),
+            subtasks_done=Count("subtasks", filter=Q(subtasks__done=True)),
+        )
+        .order_by("position", "id")
+    )
     # Effort totals are summed by the database, so a large board costs the
     # same two queries as a small one. Each total travels with the count of
     # Unestimated Cards it could not include.
@@ -196,13 +209,16 @@ def card_create(request, board_pk):
     the bottom of the board's first Stage, the start of the workflow."""
     board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
     form = CardForm(request.POST or None, board=board)
-    if request.method == "POST" and form.is_valid():
+    subtasks = SubtaskFormSet(request.POST or None, instance=Card(board=board))
+    if request.method == "POST" and form.is_valid() and subtasks.is_valid():
         try:
             with transaction.atomic():
                 lock_assignee(board, form)
                 card = Card.objects.create_in_first_stage(
                     board=board, creator=request.user, **form.cleaned_data
                 )
+                subtasks.instance = card
+                subtasks.save_rows()
         except Membership.DoesNotExist:
             pass  # the form now says why
         except Board.DoesNotExist:
@@ -214,7 +230,12 @@ def card_create(request, board_pk):
     return render(
         request,
         "boards/card_create.html",
-        {"board": board, "form": form, "first_stage": board.stages.first()},
+        {
+            "board": board,
+            "form": form,
+            "subtasks": subtasks,
+            "first_stage": board.stages.first(),
+        },
     )
 
 
@@ -260,14 +281,128 @@ def back_to(request, default):
 @login_required
 def card_detail(request, board_pk, pk):
     board, card = get_card(request, board_pk, pk)
+    return card_page(request, board, card)
+
+
+def card_page(request, board, card, *, subtask_form=None, renamed=None, status=200):
     # The board's last Stage reads as finished, so an overdue Card there loses
     # its red, as on its tile. An archived Card has no Stage.
     in_last_stage = card.stage_id is not None and card.stage_id == board.stages.last().pk
     return render(
         request,
         "boards/card_detail.html",
-        {"board": board, "card": card, "in_last_stage": in_last_stage},
+        {
+            "board": board,
+            "card": card,
+            "in_last_stage": in_last_stage,
+            **subtasks_context(card, subtask_form, renamed),
+        },
+        status=status,
     )
+
+
+def subtasks_context(card, form=None, renamed=None):
+    """What the Subtasks section on a Card's page needs (subtasks.html). A
+    refused rename comes back on its own row: `renamed` is that Subtask,
+    carrying the form."""
+    subtasks = list(card.subtasks.all())
+    for subtask in subtasks:
+        if renamed is not None and subtask.pk == renamed.pk:
+            subtask.rename_form = renamed.rename_form
+    return {
+        "subtasks": subtasks,
+        "subtasks_done": sum(subtask.done for subtask in subtasks),
+        "subtask_form": form or SubtaskForm(),
+    }
+
+
+def subtasks_answer(request, board, card, *, form=None, renamed=None, status=200):
+    """With htmx, the Subtasks section, swapped in place. Without, back to the
+    Card's page, or that page again carrying a refusal."""
+    if request.headers.get("HX-Request"):
+        return render(
+            request,
+            "components/subtasks.html",
+            {"board": board, "card": card, **subtasks_context(card, form, renamed)},
+            status=status,
+        )
+    if status != 200:
+        return card_page(
+            request, board, card, subtask_form=form, renamed=renamed, status=status
+        )
+    return redirect(reverse("card_detail", args=[board.pk, card.pk]) + filter_query(request))
+
+
+def get_subtask(request, board_pk, pk, subtask_pk):
+    """Through its own Card, itself reached through a board scoped to the
+    user, so a Subtask of another Card is a 404."""
+    board, card = get_card(request, board_pk, pk)
+    return board, card, get_object_or_404(card.subtasks, pk=subtask_pk)
+
+
+@require_POST
+@login_required
+def subtask_add(request, board_pk, pk):
+    """By any Member, as editing is, archived Cards included. It goes to the
+    bottom of the list."""
+    board, card = get_card(request, board_pk, pk)
+    form = SubtaskForm(request.POST)
+    if form.is_valid():
+        try:
+            Subtask.objects.add(card=card, text=form.cleaned_data["text"])
+        except ValidationError as refusal:
+            form.add_error("text", refusal)
+        except Card.DoesNotExist:
+            raise Http404("That Card has just been deleted.")
+    if form.errors:
+        return subtasks_answer(request, board, card, form=form, status=400)
+    return subtasks_answer(request, board, card)
+
+
+@require_POST
+@login_required
+def subtask_tick(request, board_pk, pk, subtask_pk):
+    board, card, subtask = get_subtask(request, board_pk, pk, subtask_pk)
+    form = SubtaskTickForm(request.POST)
+    form.is_valid()  # a BooleanField that isn't required takes anything
+    # An update rather than a save: a Subtask deleted meanwhile stays deleted.
+    Subtask.objects.filter(pk=subtask.pk).update(done=form.cleaned_data["done"])
+    return subtasks_answer(request, board, card)
+
+
+@require_POST
+@login_required
+def subtask_rename(request, board_pk, pk, subtask_pk):
+    """Edited where it is on the Card's page. Its tick and place stay."""
+    board, card, subtask = get_subtask(request, board_pk, pk, subtask_pk)
+    form = SubtaskForm(request.POST)
+    if not form.is_valid():
+        subtask.rename_form = form
+        return subtasks_answer(request, board, card, renamed=subtask, status=400)
+    Subtask.objects.filter(pk=subtask.pk).update(text=form.cleaned_data["text"])
+    return subtasks_answer(request, board, card)
+
+
+@require_POST
+@login_required
+def subtask_shift(request, board_pk, pk, subtask_pk):
+    board, card, subtask = get_subtask(request, board_pk, pk, subtask_pk)
+    step = {"up": -1, "down": 1}.get(request.POST.get("direction"))
+    if step is None:
+        return HttpResponseBadRequest("Direction must be up or down.")
+    try:
+        subtask.shift(step)
+    except (Card.DoesNotExist, Subtask.DoesNotExist):
+        raise Http404("That Subtask has just been deleted.")
+    return subtasks_answer(request, board, card)
+
+
+@require_POST
+@login_required
+def subtask_delete(request, board_pk, pk, subtask_pk):
+    board, card, subtask = get_subtask(request, board_pk, pk, subtask_pk)
+    subtask.delete()
+    return subtasks_answer(request, board, card)
 
 
 @login_required
@@ -277,6 +412,8 @@ def card_edit(request, board_pk, pk):
     # The form gets its own copy so a rejected edit cannot leak into the saved
     # Card the page names in its heading.
     form = CardForm(request.POST or None, instance=copy.copy(card), board=board)
+    subtasks = SubtaskFormSet(request.POST or None, instance=card)
+    context = {"board": board, "card": card, "form": form, "subtasks": subtasks}
     if request.method == "POST" and form.is_valid():
         # Only the form's own fields. A full save would write back the Stage
         # and position as loaded, undoing a move made while this was open.
@@ -285,27 +422,28 @@ def card_edit(request, board_pk, pk):
             # transaction usable for the check below.
             with transaction.atomic():
                 lock_assignee(board, form)
-                form.instance.save(update_fields=[*form.Meta.fields, "updated_at"])
+                # The Subtasks are checked under the Card's lock, so the cap
+                # counts any added meanwhile, and two edits can't pass it.
+                lock_card(card.pk)
+                if subtasks.is_valid():
+                    form.instance.save(update_fields=[*form.Meta.fields, "updated_at"])
+                    subtasks.save_rows()
         except Membership.DoesNotExist:
-            return render(
-                request,
-                "boards/card_edit.html",
-                {"board": board, "card": card, "form": form},
-                status=400,
-            )
+            return render(request, "boards/card_edit.html", context, status=400)
+        except Card.DoesNotExist:
+            raise Http404("That Card has just been deleted.")
         except DatabaseError:
             # Django's answer when the row to update is gone: deleted while
             # this edit was open.
             if Card.objects.filter(pk=card.pk).exists():
                 raise
             raise Http404("That Card has just been deleted.")
-        return redirect(
-            reverse("card_detail", args=[board.pk, card.pk]) + filter_query(request)
-        )
+        if subtasks.is_valid():
+            return redirect(
+                reverse("card_detail", args=[board.pk, card.pk]) + filter_query(request)
+            )
 
-    return render(
-        request, "boards/card_edit.html", {"board": board, "card": card, "form": form}
-    )
+    return render(request, "boards/card_edit.html", context)
 
 
 @require_POST

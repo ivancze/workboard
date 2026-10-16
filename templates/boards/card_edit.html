@@ -1,6 +1,11 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Edit {{ card.title }} · {{ board.name }} · Workboard{% endblock %}
+
+{% block scripts %}
+  <script src="{% static 'js/subtasks.js' %}" defer></script>
+{% endblock %}
 
 {% block content %}
   {% url 'card_detail' board.pk card.pk as card_path %}
@@ -12,6 +17,7 @@
     <form method="post" class="flex flex-col gap-4">
       {% csrf_token %}
       {% include "components/fields.html" %}
+      {% include "components/subtask_rows.html" %}
       <div class="flex gap-2">
         {% include "components/button.html" with label="Save" %}
         {% include "components/button.html" with label="Cancel" href=card_url variant="ghost" %}

@@ -1,6 +1,11 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}New card · {{ board.name }} · Workboard{% endblock %}
+
+{% block scripts %}
+  <script src="{% static 'js/subtasks.js' %}" defer></script>
+{% endblock %}
 
 {% block content %}
   {% url 'board_detail' board.pk as board_path %}
@@ -13,6 +18,7 @@
     <form method="post" class="flex flex-col gap-4">
       {% csrf_token %}
       {% include "components/fields.html" %}
+      {% include "components/subtask_rows.html" %}
       <div class="flex gap-2">
         {% include "components/button.html" with label="Add card" %}
         {% include "components/button.html" with label="Cancel" href=board_url variant="ghost" %}

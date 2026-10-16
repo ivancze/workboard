@@ -5,7 +5,9 @@
   outlined in a quieter orange. In the board's last Stage, which reads as
   finished, every Card is outlined green instead, and an overdue one keeps
   the word without the red. An Unestimated Card shows no Effort, so it stays
-  distinct from an Effort of zero. A Card with a Priority shows its pill
+  distinct from an Effort of zero. A Card with Subtasks shows a bar of how
+  many are done, counted by the board's one Card query (`subtask_count`,
+  `subtasks_done`). A Card with a Priority shows its pill
   above the title, and the pill opens a menu to change it. One without shows
   a faint "+ Priority" chip in its bottom corner, only on hover or focus, or
   always on a touch screen (priority_menu.html). Both sit outside the Card's
@@ -33,6 +35,9 @@
         <span{% if card.is_overdue and not last_stage %} class="font-semibold text-danger"{% endif %}>{% if card.is_overdue %}Overdue · {% endif %}Due {% if card.is_due_today %}today · {% endif %}{{ card.due_date|date:"j M Y" }}</span>
       {% endif %}
     </span>
+    {% if card.subtask_count %}
+      <progress value="{{ card.subtasks_done }}" max="{{ card.subtask_count }}" aria-label="Subtasks: {{ card.subtasks_done }} of {{ card.subtask_count }} done" class="subtask-progress mt-3 w-full">{{ card.subtasks_done }} of {{ card.subtask_count }}</progress>
+    {% endif %}
   </a>
   {% if not card.priority %}
     <div class="absolute right-2 bottom-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 has-open:opacity-100 pointer-coarse:opacity-100">{% include "components/priority_menu.html" %}</div>
