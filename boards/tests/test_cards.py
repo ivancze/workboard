@@ -499,11 +499,13 @@ class DueDateTests(TestCase):
                 self.assertContains(self.client.get(self.board_url), "Due 14 Oct 2099")
 
     def test_a_card_past_its_due_date_is_emphasised(self):
-        a_card(self.stage, "Late one", due_date=timezone.localdate() - timedelta(days=1))
+        yesterday = timezone.localdate() - timedelta(days=1)
+        a_card(self.stage, "Late one", due_date=yesterday)
 
         response = self.client.get(self.board_url)
 
         self.assertContains(response, "Overdue", count=1)
+        self.assertContains(response, f'<span class="font-semibold text-danger">Overdue {yesterday:%-d %b %Y}</span>')
         self.assertContains(response, "border-danger", count=1)
 
     def test_a_card_due_today_is_not_yet_overdue(self):
@@ -596,7 +598,7 @@ class LastStageTests(TestCase):
 
         tile = self.tile(self.client.get(self.board_url).content.decode(), card)
 
-        self.assertIn(f"<span>Overdue · Due {self.yesterday:%-d %b %Y}</span>", tile)
+        self.assertIn(f"<span>Overdue {self.yesterday:%-d %b %Y}</span>", tile)
 
     def test_moving_it_back_out_brings_the_red_back(self):
         card = a_card(self.last, "Late one", due_date=self.yesterday)

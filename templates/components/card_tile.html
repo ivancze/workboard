@@ -32,7 +32,7 @@
         <span><span aria-hidden="true">⚡</span> <span class="sr-only">Effort</span>{{ card.effort|floatformat:"-1" }}</span>
       {% endif %}
       {% if card.due_date %}
-        <span{% if card.is_overdue and not last_stage %} class="font-semibold text-danger"{% endif %}>{% if card.is_overdue %}Overdue · {% endif %}Due {% if card.is_due_today %}today · {% endif %}{{ card.due_date|date:"j M Y" }}</span>
+        <span{% if card.is_overdue and not last_stage %} class="font-semibold text-danger"{% endif %}>{% if card.is_overdue %}Overdue{% else %}Due{% endif %} {% if card.is_due_today %}today · {% endif %}{{ card.due_date|date:"j M Y" }}</span>
       {% endif %}
     </span>
     {% if card.subtask_count %}
