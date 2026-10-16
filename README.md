@@ -37,7 +37,11 @@ each visit. Clear the description to bring the playful lines back.
 a pig, Bruno the Labrador or a chicken, from *Pet* in the board's ⋯ menu. It
 wanders along the bottom of the board's page for everyone on the board, and
 naps now and then. Click it and see what it does. The chicken lays eggs: click
-one to hatch a chick, which follows her until you leave the page. Choose
+one to hatch a chick, which follows her. Everyone sees the same pet, but what
+it's up to is yours alone: where it is, whether it's napping, and the
+chicken's eggs and chicks. They're still there when you reload or go to
+another page and come back, and time keeps passing while you're away, so it
+may have woken up or laid an egg. Closing the tab starts it afresh. Choose
 *None* to send it home.
 
 **Deleting a board.** Only the Owner can, from *Delete board…* in the board's

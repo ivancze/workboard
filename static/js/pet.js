@@ -10,6 +10,11 @@
 // Walking runs on requestAnimationFrame, which stops while the tab is hidden.
 // Sitting and sleeping are timers, so a pet at rest costs nothing per frame.
 // With reduced motion it never walks: it sleeps where it is.
+//
+// Leaving the page saves where it is and what it's doing, the chicken's brood
+// with it, to this tab's sessionStorage, so a reload or a trip to another page
+// and back carries on; closing the tab forgets it. Time away counts: its
+// timers are kept as wall-clock times, so a nap that ran out meanwhile is over.
 
 const SPEED = 34; // px per second
 const RUN = 120; // px per second, running off after a startle
@@ -32,7 +37,7 @@ const AWAKE = [60_000, 90_000]; // ms of wandering before it settles to sleep, p
 const NAP = [60_000, 120_000]; // ms asleep, between these
 const REACTION = 1000; // ms a heart or "!" shows; its float is a little longer
 
-let pet = null; // { el, x, timer, frame, wag, reaction, awakeSince, awakeFor }
+let pet = null; // { el, x, timer, frame, wag, reaction, awakeSince, awakeFor, napUntil }
 
 const between = (low, high) => low + Math.random() * (high - low);
 const stillness = matchMedia("(prefers-reduced-motion: reduce)");
@@ -64,16 +69,17 @@ function rest(frame, ms, then) {
 // Sitting, a dog wags its tail: sit and wag alternate. The duck's and pig's
 // wag frame is their sit frame, so they stay still.
 function sit() {
-  rest("sit", between(...SIT), () => (performance.now() - pet.awakeSince > pet.awakeFor ? sleep() : walk()));
+  rest("sit", between(...SIT), () => (Date.now() - pet.awakeSince > pet.awakeFor ? sleep() : walk()));
   if (!stillness.matches) pet.wag = setInterval(() => show(pet.el.dataset.frame === "sit" ? "wag" : "sit"), WAG);
 }
 
-function sleep() {
-  rest("sleep", between(...NAP), wake);
+function sleep(ms = between(...NAP)) {
+  pet.napUntil = Date.now() + ms;
+  rest("sleep", ms, wake);
 }
 
 function wake() {
-  pet.awakeSince = performance.now();
+  pet.awakeSince = Date.now();
   pet.awakeFor = between(...AWAKE);
   walk();
 }
@@ -131,7 +137,7 @@ function react(reaction) {
 
 function petted() {
   const asleep = pet.el.dataset.frame === "sleep";
-  pet.awakeSince = performance.now();
+  pet.awakeSince = Date.now();
   if (asleep) {
     react("startled");
     rest("startled", 600, sit);
@@ -155,9 +161,9 @@ function runOff() {
 // hatches it: it cracks, and a chick comes out and follows her for the rest
 // of the visit, in a line behind her. The chicks stop when she stops and
 // sleep when she sleeps; a click on one gives a heart. Never more than BROOD
-// eggs and chicks at once: with that many, she stops laying. Nothing is
-// stored, so each visit starts afresh and each viewer has their own. Eggs and
-// chicks share a sheet, data-pet="brood" (assets/pets/brood.txt).
+// eggs and chicks at once: with that many, she stops laying. They're saved
+// with her, so they last as long as the tab does, and each viewer has their
+// own. Eggs and chicks share a sheet, data-pet="brood" (assets/pets/brood.txt).
 const FIRST_LAY = [30_000, 60_000]; // ms before her first egg
 const LAY = [120_000, 600_000]; // ms between eggs after that
 const BROOD = 3;
@@ -168,6 +174,7 @@ const HATCH = 600; // ms an egg shows its crack before the chick comes out
 
 let brood = []; // { el, x, kind: "egg" | "chick" }, in the order they came
 let laying = null; // the next egg's timer
+let layAt = null; // when it fires, in wall-clock ms
 let wobbling = null; // the eggs' occasional wobble
 let flock = null; // the chicks' animation frame
 
@@ -188,9 +195,12 @@ function hatchling(kind, x) {
   return one;
 }
 
-function layLater() {
+function layLater(ms = between(...(brood.length ? LAY : FIRST_LAY))) {
   clearTimeout(laying);
-  if (isHen() && brood.length < BROOD) laying = setTimeout(lay, between(...(brood.length ? LAY : FIRST_LAY)));
+  if (isHen() && brood.length < BROOD) {
+    layAt = Date.now() + ms;
+    laying = setTimeout(lay, ms);
+  }
 }
 
 // Under her middle; then she settles a moment. Not while she sleeps.
@@ -276,6 +286,7 @@ function stop() {
   clearInterval(pet.wag);
   cancelAnimationFrame(pet.frame);
   clearTimeout(laying);
+  layAt = null;
   clearInterval(wobbling);
   cancelAnimationFrame(flock);
   flock = null;
@@ -284,21 +295,51 @@ function stop() {
   pet = null;
 }
 
+// What this tab saved on this board when it last left, taken once: a pet
+// chosen from the menu later starts afresh.
+const KEY = `pet:${location.pathname}`;
+let saved = JSON.parse(sessionStorage.getItem(KEY));
+sessionStorage.removeItem(KEY);
+
+function save() {
+  if (!pet) return;
+  sessionStorage.setItem(KEY, JSON.stringify({
+    kind: pet.el.dataset.pet,
+    x: pet.x,
+    facing: pet.el.dataset.facing,
+    asleep: pet.el.dataset.frame === "sleep",
+    napUntil: pet.napUntil,
+    awakeSince: pet.awakeSince,
+    awakeFor: pet.awakeFor,
+    layAt,
+    // Centres, as hatchling() takes them.
+    brood: brood.map((one) => ({ kind: one.kind, x: one.x + one.el.offsetWidth / 2 })),
+  }));
+}
+
 // For the page, and again whenever choosing a pet swaps #pet in.
 function start(root) {
   const el = root.querySelector("[data-pet]");
   if (!el && root.id !== "pet") return;
   stop();
   if (!el) return;
-  pet = { el, x: 0, timer: null, frame: null, wag: null, reaction: null, awakeSince: performance.now(), awakeFor: between(...AWAKE) };
-  stillness.matches ? sleep() : sit();
+  const was = saved?.kind === el.dataset.pet ? saved : null;
+  saved = null;
+  pet = { el, x: was?.x ?? 0, timer: null, frame: null, wag: null, reaction: null, awakeSince: was?.awakeSince ?? Date.now(), awakeFor: was?.awakeFor ?? between(...AWAKE), napUntil: null };
+  if (was?.facing) el.dataset.facing = was.facing;
+  if (stillness.matches) sleep();
+  else if (was?.asleep) was.napUntil > Date.now() ? sleep(was.napUntil - Date.now()) : wake();
+  else sit();
   if (isHen()) {
-    layLater();
+    for (const one of was?.brood ?? []) hatchling(one.kind, one.x);
+    if (chicks().length) follow();
+    layLater(was?.layAt == null ? undefined : Math.max(0, was.layAt - Date.now()));
     if (!stillness.matches) wobbling = setInterval(wobble, 1500);
   }
 }
 
 htmx.onLoad(start);
+window.addEventListener("pagehide", save);
 document.addEventListener("click", (event) => {
   if (!pet) return;
   const clicked = event.target.closest("[data-pet]");

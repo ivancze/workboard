@@ -276,8 +276,20 @@ they stay on that animal's grid.
   it cracks, and a chick hatches and follows her in a line, stopping when she
   stops and sleeping when she sleeps. A click on a chick gives a heart. There
   are never more than three eggs and chicks (`BROOD`); with three, she stops
-  laying. They live only in the page, so each visit starts afresh and each
-  viewer has their own.
+  laying. Each viewer has their own.
+- Leaving the page (`pagehide`) saves the pet's place, facing, whether it's
+  asleep, its timers, and the chicken's eggs and chicks, to `sessionStorage`
+  under `pet:` plus the board's path. The next load of that board in the same
+  tab takes it once and carries on, so a reload or a trip to another page and
+  back keeps them, and closing the tab forgets them. Time away counts: the
+  timers are saved as wall-clock times (`Date.now()`), so a nap or an egg that
+  fell due meanwhile is over or laid soon after. Saved state for a different
+  animal is ignored, and a pet chosen from the menu starts afresh. Since
+  `pet.js` is deferred, a small inline script after the pet's button in
+  `components/pet.html` applies its saved place, facing and sleep before the
+  first paint, as `base.html` does for the theme, so it doesn't flash at the
+  start first. Eggs and chicks are drawn by `pet.js`, so they appear a moment
+  later.
 - The sheets face right. Walking left sets `data-facing="left"`, which
   mirrors it with `scale`, leaving `translate` free for its position.
 - Walking, it bounces in step: its body rises as its legs pass under it

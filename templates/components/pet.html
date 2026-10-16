@@ -10,6 +10,22 @@
   {% if board.pet %}
     <div class="pointer-events-none fixed inset-x-0 bottom-0 z-5 h-24">
       <button type="button" data-pet="{{ board.pet }}" data-frame="sit" aria-label="Pet {{ board.pet_name }}" class="pet pointer-events-auto absolute bottom-2 left-4 cursor-pointer rounded-md"></button>
+      {% comment %}
+        Runs before the first paint, so a pet this tab saved (pet.js, same
+        key) shows where it was instead of flashing at the start first.
+        pet.js takes over from here.
+      {% endcomment %}
+      <script>
+        try {
+          const saved = JSON.parse(sessionStorage.getItem(`pet:${location.pathname}`));
+          const el = document.currentScript.previousElementSibling;
+          if (saved?.kind === el.dataset.pet) {
+            el.style.translate = `${saved.x}px 0`;
+            if (saved.facing) el.dataset.facing = saved.facing;
+            if (saved.asleep) el.dataset.frame = "sleep";
+          }
+        } catch (e) {}
+      </script>
     </div>
   {% endif %}
 </div>
