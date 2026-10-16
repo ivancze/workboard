@@ -52,8 +52,7 @@ Stage can be deleted, and a board always keeps at least one.
 title is needed, and the Card goes to the bottom of the leftmost Stage. Click
 a Card to open it, and *Edit* to change it:
 
-- **Description**, written in Markdown. A single new line is kept as a line
-  break, as in GitHub comments
+- **Description**, written in Markdown: see *Writing a description* below
 - **Priority**: Urgent, Must have, Should have or Could have, shown on the
   board as a coloured label. It's only a label: Cards stay where you put
   them. Leave it at No priority if it doesn't matter. It can also be set
@@ -66,6 +65,26 @@ a Card to open it, and *Edit* to change it:
   every Card is outlined green and Overdue loses its red
 - **Effort**, a number in steps of 0.1, in whatever unit your team uses:
   hours, days or a score. Leave it empty if it hasn't been estimated
+
+**Writing a description.** Descriptions use standard Markdown (CommonMark). A
+single new line is kept as a line break, as in GitHub comments, and a blank
+line starts a new paragraph.
+
+| To get | Write |
+|---|---|
+| Headings | `# Heading`, `## Smaller`, down to `######` |
+| Bold and italic | `**bold**`, `*italic*` |
+| Code | `` `inline` ``, or a block between lines of ```` ``` ```` |
+| Lists | `- item` or `1. item`; indent to nest |
+| Quotes | `> quoted text` |
+| A dividing line | `---` on its own line, after a blank line |
+| Links | `[text](https://example.com)`, or `<https://example.com>` |
+| Images | `![what it shows](https://example.com/picture.png)` |
+| A literal `*` or `#` | put a backslash before it: `\*` |
+
+Some things GitHub supports don't work here: tables, `~~strikethrough~~`,
+checkboxes (`- [ ]`; use Subtasks instead), and bare web addresses, which stay
+as plain text unless wrapped in `<` `>`. HTML is shown as typed, not applied.
 
 **Subtasks.** A Card can carry a list of Subtasks: short lines of text to
 tick off as you go. On the Card's page, type one into *Add a Subtask* and press

@@ -27,8 +27,8 @@
   --color-control: light-dark(#85858f, #74747e); /* edges that identify a control */
   --color-text: light-dark(#18181b, #f4f4f5);
   --color-text-muted: light-dark(#55555e, #a3a3ad);
-  --color-accent: light-dark(#4f46e5, #8b93f8);
-  --color-accent-hover: light-dark(#4338ca, #a5abfa);
+  --color-accent: light-dark(#0055ff, #3b9eff);
+  --color-accent-hover: light-dark(#0047d4, #7ab8ff);
   --color-on-accent: light-dark(#ffffff, #111114); /* text on accent */
   --color-danger: light-dark(#c42121, #f87878);
   --color-on-danger: light-dark(#ffffff, #111114); /* text on danger */
@@ -45,7 +45,7 @@
   --color-priority-could: light-dark(#facc15, #facc15);
   --color-on-priority-could: light-dark(#18181b, #18181b);
   --color-scrim: light-dark(rgb(0 0 0 / 0.4), rgb(0 0 0 / 0.6)); /* behind a dialog */
-  --color-focus: light-dark(#4f46e5, #8b93f8);
+  --color-focus: light-dark(#0055ff, #3b9eff);
 
   /* A Card arriving in a new Stage: a small pop and a fading accent ring. */
   --animate-land: land 700ms ease-out;
