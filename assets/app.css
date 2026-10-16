@@ -46,6 +46,10 @@
   --color-on-priority-could: light-dark(#18181b, #18181b);
   --color-scrim: light-dark(rgb(0 0 0 / 0.4), rgb(0 0 0 / 0.6)); /* behind a dialog */
   --color-focus: light-dark(#0055ff, #3b9eff);
+  /* The Subtask bar's gradient, red at none done to green at all done. */
+  --color-progress-start: light-dark(#dc2626, #f05252);
+  --color-progress-mid: light-dark(#facc15, #facc15);
+  --color-progress-end: light-dark(#1f9d4c, #22c55e);
 
   /* A Card arriving in a new Stage: a small pop and a fading accent ring. */
   --animate-land: land 700ms ease-out;
@@ -190,15 +194,33 @@
     background-color: var(--color-sunken);
     color: var(--color-accent);
   }
+  /* The fill's gradient is sized to the whole track (100cqw, the bar being
+     its own container), so the colour the fill reaches shows how far along
+     it is. */
+  .subtask-progress {
+    container-type: inline-size;
+  }
   .subtask-progress::-webkit-progress-bar {
     background-color: var(--color-sunken);
   }
   .subtask-progress::-webkit-progress-value {
-    background-color: var(--color-accent);
+    background-image: linear-gradient(
+      to right,
+      var(--color-progress-start),
+      var(--color-progress-mid),
+      var(--color-progress-end)
+    );
+    background-size: 100cqw 100%;
     border-radius: 9999px;
   }
   .subtask-progress::-moz-progress-bar {
-    background-color: var(--color-accent);
+    background-image: linear-gradient(
+      to right,
+      var(--color-progress-start),
+      var(--color-progress-mid),
+      var(--color-progress-end)
+    );
+    background-size: 100cqw 100%;
     border-radius: 9999px;
   }
 }

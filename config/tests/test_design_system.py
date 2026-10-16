@@ -159,6 +159,10 @@ NON_TEXT_PAIRS = [(fg, bg) for fg in ["control", "focus"] for bg in BACKGROUNDS]
     ("warning", "surface"),
     # So is the green outline of a Card in the board's last Stage.
     ("success", "surface"),
+    # The Subtask bar's fill, on its track. Its yellow middle is left out on
+    # purpose: a true yellow can't reach 3:1 on the light track.
+    ("progress-start", "sunken"),
+    ("progress-end", "sunken"),
 ]
 
 
