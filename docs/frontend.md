@@ -257,7 +257,8 @@ they stay on that animal's grid.
 - Walking runs on `requestAnimationFrame`; sitting and sleeping are timers,
   so a pet at rest costs nothing per frame. A pet swapped in replaces the old
   one's loop, and takes any eggs and chicks with it.
-- The chicken lays an egg every 30 s to 2 min (`LAY`) where she stands, but
+- The chicken lays her first egg after 30 s to 1 min (`FIRST_LAY`), and each
+  one after that 2 to 10 min after the last (`LAY`), where she stands, but
   not while she sleeps. An egg wobbles now and then until it's clicked. Then
   it cracks, and a chick hatches and follows her in a line, stopping when she
   stops and sleeping when she sleeps. A click on a chick gives a heart. There

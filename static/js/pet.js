@@ -150,14 +150,16 @@ function runOff() {
   walk(pet.x > room() / 2 ? Math.max(0, pet.x - dash) : Math.min(room(), pet.x + dash), RUN);
 }
 
-// The chicken lays an egg every 30 s to 5 min, where she stands. A click
+// The chicken lays her first egg after 30 s to 1 min, and each one after that
+// 2 to 10 min after the last, where she stands. A click
 // hatches it: it cracks, and a chick comes out and follows her for the rest
 // of the visit, in a line behind her. The chicks stop when she stops and
 // sleep when she sleeps; a click on one gives a heart. Never more than BROOD
 // eggs and chicks at once: with that many, she stops laying. Nothing is
 // stored, so each visit starts afresh and each viewer has their own. Eggs and
 // chicks share a sheet, data-pet="brood" (assets/pets/brood.txt).
-const LAY = [30_000, 300_000]; // ms between eggs
+const FIRST_LAY = [30_000, 60_000]; // ms before her first egg
+const LAY = [120_000, 600_000]; // ms between eggs after that
 const BROOD = 3;
 const SPACING = 6; // px between her and the first chick, and between chicks
 const CHICK_SPEED = 60; // px per second: a little quicker than her, to keep up
@@ -188,7 +190,7 @@ function hatchling(kind, x) {
 
 function layLater() {
   clearTimeout(laying);
-  if (isHen() && brood.length < BROOD) laying = setTimeout(lay, between(...LAY));
+  if (isHen() && brood.length < BROOD) laying = setTimeout(lay, between(...(brood.length ? LAY : FIRST_LAY)));
 }
 
 // Under her middle; then she settles a moment. Not while she sleeps.
