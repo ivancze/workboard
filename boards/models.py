@@ -399,6 +399,21 @@ class Stage(models.Model):
             )
             return held
 
+    def sort_by_priority(self):
+        """Rewrite this Stage's Card order once, by Priority: Urgent first and
+        No priority last. Cards of the same Priority keep their order. Nothing
+        keeps it sorted: the next move is by hand again.
+        """
+        # Card.Priority is declared from highest to lowest.
+        rank = {value: i for i, value in enumerate(Card.Priority.values)}
+        with transaction.atomic():
+            lock_stages(self.pk)
+            cards = sorted(self.cards.all(), key=lambda card: rank.get(card.priority, len(rank)))
+            now = timezone.now()
+            for position, card in enumerate(cards):
+                if card.position != position:
+                    Card.objects.filter(pk=card.pk).update(position=position, updated_at=now)
+
 
 def lock_stages(*stage_ids):
     """Lock Stages for the rest of the transaction, so their Card order can be
@@ -498,8 +513,9 @@ class Card(models.Model):
     # A plain date with no time or timezone, and advisory only: nothing in the
     # system sorts, filters, blocks or notifies on it.
     due_date = models.DateField(null=True, blank=True)
-    # A label only: it never moves a Card in Card order, and nothing sorts or
-    # filters by it. Empty is No priority, the default.
+    # A label: it never moves a Card by itself, and nothing filters by it.
+    # Stage.sort_by_priority reorders by it once, on request. Empty is No
+    # priority, the default.
     priority = models.CharField(max_length=6, choices=Priority, blank=True, default="")
     # A bare number in the team's own unit, in steps of 0.1. Null is
     # Unestimated, which is not the same as zero: zero says this is free,
@@ -518,7 +534,8 @@ class Card(models.Model):
     objects = CardManager()
 
     class Meta:
-        # Card order is set by hand, never by Priority; `id` only breaks ties.
+        # Card order is set by hand, never kept sorted by Priority; `id` only
+        # breaks ties.
         ordering = ["position", "id"]
         constraints = [
             # The backstop for Card order. Deferred to commit, because closing

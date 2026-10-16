@@ -39,8 +39,8 @@ somebody asks for it. One value in one column plus checks.
 **Filtering by Priority.** Priority exists as a label, with four fixed levels.
 A "Show: Urgent" choice beside the Assignee filter would be the natural next
 step. Left out when Priority was added, because nobody had asked for it yet.
-Sorting by Priority is a different matter: Card order is arranged by hand, and
-nothing derives it.
+Keeping a Stage sorted by Priority is a different matter: Card order is
+arranged by hand, so Sort by Priority rewrites it once and nothing maintains it.
 
 ## Requires something the product does not have
 

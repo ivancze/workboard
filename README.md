@@ -3,86 +3,80 @@ A Kanban board for a small team to track their work.
 
 ## How it works
 
-**Signing in.** Sign in with Google. Your display name, shown on Cards, can be
-changed from your profile.
+**Signing in.** Sign in with Google. You can change your display name from
+your profile.
 
 **Boards.** Create a board from the home page. It starts with three Stages:
-To Do, In Progress and Done. *Members*, *Archive* and *Edit stages* are in the
-⋯ menu beside *Add card*.
+To Do, In Progress and Done. The ⋯ menu beside *Add card* holds the board's
+settings: *Members*, *Archive*, *Edit stages*, *Pet* and *Delete board…*.
 
 **Members.** The board's Owner invites people from *Members* by typing the
-email address they sign in to Google with. Nothing is sent, so tell them
-yourself: the board appears for them once they sign in with that address.
-Until then the invitation is listed as waiting, and the Owner can withdraw it.
-If someone signs in and sees no boards, the home page shows the address they
-signed in with, so a mistyped invitation is easy to spot.
+email address they use for Google. No email is sent, so let them know: the
+board appears once they sign in with that address. The Owner can also remove
+Members, or hand ownership to someone else with *Make Owner*. Anyone can leave
+a board from *Members*.
 
-The Owner can also remove a Member. They lose access at once, and Cards
-assigned to them become unassigned, though Cards they created still credit
-them. A Member can leave a board the same way, from *Members*.
+**Naming and describing a board.** The Owner can rename the board with the
+pencil beside its name, and add a short description underneath: click, type,
+then press Enter.
 
-Every board has exactly one Owner. To step down, or before leaving, the Owner
-hands ownership to another Member with *Make Owner*.
+**Stages.** *Edit stages* lets you add, rename, reorder and delete Stages. A
+Stage must be empty before it can be deleted.
 
-**Renaming a board.** Only the Owner can, with the pencil beside the board's
-name: edit the name where it is, then press Enter, or Escape to leave it.
-Everyone on the board sees the new name.
+**Cards.** Click *Add card* and give it a title; it lands at the bottom of the
+first Stage. Click a Card to open it, then click any part of it to edit it in
+place: Enter saves, Escape cancels. A Card can have:
 
-**Describing a board.** Under the name, the Owner can add a short line about
-what the board is for, up to 200 characters: click it, type, then press
-Enter. Until there is one, the board shows a playful line instead, different
-each visit. Clear the description to bring the playful lines back.
+- a **Description**, written in Markdown (see below)
+- a **Priority**: Urgent, Must have, Should have or Could have, shown as a
+  coloured label. You can also set it from the board by clicking the label
+- an **Assignee** from the board's Members
+- **Contact persons** outside the board
+- a **Due date**. Cards due today are outlined orange, and overdue ones are
+  marked red
+- an **Effort** estimate, in whatever unit your team uses. The board and each
+  Stage show their total
 
-**A board pet.** Anyone on the board can give it a pet, Chico, a pug, a duck,
-a pig, Bruno the Labrador or a chicken, from *Pet* in the board's ⋯ menu. It
-wanders along the bottom of the board's page for everyone on the board, and
-naps now and then. Click it and see what it does. The chicken lays eggs: click
-one to hatch a chick, which follows her. The other pets poop now and then:
-click it to clean it up. There are never more than five at a time, eggs,
-chicks or poop. Everyone sees the same pet, but what it's up
-to is yours alone: where it is, whether it's napping, and what it has left
-behind. They're still there when you reload or go to another page and come
-back, and time keeps passing while you're away, so it may have woken up or
-left something new. Closing the tab starts it afresh. Choose
-*None* to send it home.
+**Subtasks.** On a Card's page, type into *Add a Subtask* and press Enter.
+Tick them off as you go; a progress bar shows on the Card and its tile.
 
-**Deleting a board.** Only the Owner can, from *Delete board…* in the board's
-⋯ menu. It deletes every Card, archived ones included, with no undo, so it
-asks you to type the board's name exactly first.
+**Moving Cards.** Drag a Card to reorder it or move it to another Stage, or use
+its ⋯ menu. A Card reaching the last Stage gets confetti. To put a Stage in
+order of Priority, Urgent first and Cards with none last, choose *Sort by
+Priority* from the Stage's ⋯ menu; you can rearrange it by hand afterwards.
 
-**Stages.** *Edit stages* lets you add, rename,
-reorder (↑ ↓) and delete Stages. Names are unique on a board. Only an empty
-Stage can be deleted, and a board always keeps at least one.
+**Filtering.** Use *Show* to see only one Member's Cards, Unassigned ones, or
+your own.
 
-**Cards.** *Add card*, beside the board's name, opens a blank Card. Only the
-title is needed, and the Card goes to the bottom of the leftmost Stage. Click
-a Card to open it. Any Member can change a Card: on its page, click its title,
-the description or any field to edit it where it is. Enter or *Save* saves it,
-and Escape, *Cancel* or a click elsewhere leaves it as it was. The description
-is the exception: a click elsewhere keeps it open, so a stray click doesn't
-lose what you've written. A Card has:
+**Seeing others' changes.** Changes made by others show up when you come back
+to the board's tab.
 
-- **Description**, written in Markdown: see *Writing a description* below
-- **Priority**: Urgent, Must have, Should have or Could have, shown on the
-  board as a coloured label. It's only a label: Cards stay where you put
-  them. Leave it at No priority if it doesn't matter. It can also be set
-  straight from the board: click a Card's label, or hover over a Card
-  without one and click *+ Priority*
-- **Assignee**, one Member of the board, or Unassigned
-- **Contact persons**, free text for people outside the board
-- **Due date**, for reference only. A Card due today gets an orange outline,
-  and one past its date is marked Overdue in red. In the board's last Stage,
-  every Card is outlined green and Overdue loses its red
-- **Effort**, a number in steps of 0.1, in whatever unit your team uses:
-  hours, days or a score. Leave it empty if it hasn't been estimated
+**Archive.** When work is finished, choose *Archive* from a Card's ⋯ menu. It
+leaves the board but isn't lost: find it under *Archive* in the board's ⋯ menu,
+where you can open it or *Restore* it. To clear a whole Stage, choose *Archive
+all Cards* from the Stage's ⋯ menu.
 
-**Writing a description.** Descriptions use standard Markdown (CommonMark). A
-single new line is kept as a line break, as in GitHub comments, and a blank
-line starts a new paragraph.
+**Deleting.** *Delete…* in a Card's ⋯ menu removes it for good, so use it for
+mistakes and archive finished work instead. The Owner can delete a whole board
+from *Delete board…*.
+
+**A board pet.** Choose a pet from *Pet* in the board's ⋯ menu: Chico, a pug,
+a duck, a pig, Bruno the Labrador or a chicken. It wanders along the bottom of
+the page and naps now and then. Click it to see how it reacts, or to wake it
+up. The chicken lays eggs: click one to hatch a chick, which follows her
+around. The other pets leave poop behind: click it to clean it up. Choose
+*None* to send the pet home.
+
+**Theme.** The button in the header switches between System, Light and Dark.
+
+## Writing a description
+
+Descriptions use Markdown. A new line starts a new line, and a blank line
+starts a new paragraph.
 
 | To get | Write |
 |---|---|
-| Headings | `# Heading`, `## Smaller`, down to `######` |
+| Headings | `# Heading`, `## Smaller` |
 | Bold and italic | `**bold**`, `*italic*` |
 | Code | `` `inline` ``, or a block between lines of ```` ``` ```` |
 | Lists | `- item` or `1. item`; indent to nest |
@@ -90,53 +84,6 @@ line starts a new paragraph.
 | A dividing line | `---` on its own line, after a blank line |
 | Links | `[text](https://example.com)`, or `<https://example.com>` |
 | Images | `![what it shows](https://example.com/picture.png)` |
-| A literal `*` or `#` | put a backslash before it: `\*` |
 
-Some things GitHub supports don't work here: tables, `~~strikethrough~~`,
-checkboxes (`- [ ]`; use Subtasks instead), and bare web addresses, which stay
-as plain text unless wrapped in `<` `>`. HTML is shown as typed, not applied.
-
-**Subtasks.** A Card can carry a list of Subtasks: short lines of text to
-tick off as you go. On the Card's page, type one into *Add a Subtask* and press
-Enter, click a box to tick it, click a Subtask's text to change it (Enter
-saves, Escape leaves it), and use ↑ ↓ to reorder and × to remove. New card
-lists them as rows too, with *+ Add a Subtask*. A bar shows how many are
-done, on the Card's page and on its tile on the board. Subtasks are only text:
-they have no Assignee or Due date, and ticking the last one moves nothing. A
-Card holds up to 50.
-
-**Effort totals.** The board and each Stage show their total Effort, with a
-count of the Unestimated Cards it leaves out.
-
-**Moving Cards.** Drag a Card to reorder it, or drop it into another Stage. Or
-use its ⋯ menu, which moves it to the bottom of the Stage you pick. A Card
-arriving in the board's last Stage gets confetti.
-
-**Filtering.** *Show*, beside the board's totals, narrows the board to one
-Member's Cards, to Unassigned ones, or to *Mine*. The choice is in the page's
-address, so it survives a reload and can be shared. Hidden Cards are only out
-of view: the totals still count the whole board, with the shown figures
-labelled *Shown* beside them, and dragging still works.
-
-**Staying current.** Changes others make don't appear live. A board catches up
-when you come back to its tab or window, keeping your filter. It waits while
-you're dragging or have a menu open, and says so if it can't refresh.
-
-**Archive.** Archiving is how finished work leaves the board. Choose *Archive*
-from a Card's ⋯ menu, or on the Card's page. The Card disappears from the
-board and its totals, but nothing is lost:
-
-- *Archive*, in the board's ⋯ menu, lists the board's archived Cards, most
-  recently archived first.
-- An archived Card can still be opened and edited, and is never Overdue.
-- *Restore* puts it back at the bottom of the Stage it left. If that Stage has
-  since been deleted, it goes to the board's first Stage.
-- A Stage holding only archived Cards can be deleted.
-- To clear a whole Stage at once, choose *Archive all Cards* from the ⋯ menu
-  in its header. It asks first, saying how many Cards it will archive.
-
-**Deleting a Card.** *Delete…* is at the bottom of a Card's ⋯ menu, on the
-Card's page and in the archive. It asks first and can't be undone, so it's
-for mistakes. Archive finished work instead.
-
-**Theme.** The button in the header switches between System, Light and Dark.
+Tables, strikethrough and checkboxes aren't supported; use Subtasks for
+checklists.

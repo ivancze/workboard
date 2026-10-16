@@ -81,8 +81,9 @@ _Avoid_: Issue, ticket, task, story, item
 
 **Card order**:
 The deliberate top-to-bottom sequence of cards within a stage, arranged by hand
-and read as the team's working order. Never derived from dates, effort,
-priority, or when a card was created.
+and read as the team's working order. Never kept in step with dates, effort,
+priority, or when a card was created: sorting a stage by priority rewrites it
+once, on request, and from then on it is arranged by hand again.
 _Avoid_: Rank, sort
 
 ### What a card carries
@@ -130,9 +131,11 @@ _Avoid_: Done, complete, closed
 **Priority**:
 How much a card matters, declared as one of four levels, from highest: Urgent,
 Must have, Should have, Could have. A card may have none, which is the default
-and shows nothing. Purely a label: it never moves a card in card order, and
-nothing sorts or filters by it. An Urgent card can sit below a Could have one
-if that is where the team put it.
+and shows nothing. A label: it never moves a card by itself, and nothing
+filters by it. Sorting a stage by priority, from the stage's menu, rewrites its
+card order once, highest first and cards with none last, keeping the existing
+order among equals. After that an Urgent card can again sit below a Could have
+one if that is where the team puts it.
 _Avoid_: Severity, importance, rank, label, tag
 
 **Effort**:

@@ -6,6 +6,11 @@
   the Stage holds a different number by then, nothing is archived. A Stage
   with no Cards shows the item disabled. The count is of every Card in the
   Stage, including any a filter hides, and the dialog says so.
+
+  "Sort by Priority" asks first too, since it replaces the order set by hand,
+  and sorts every Card in the Stage, hidden ones included. It is disabled
+  alongside "Archive all Cards".
+
   Menus behave as in card_menu.html.
 {% endcomment %}
 {% with held=stage.card_count %}
@@ -15,15 +20,23 @@
   </summary>
   <div data-menu-panel class="absolute right-0 z-10 mt-1 w-52 rounded-lg border border-border bg-surface p-1 shadow-lg">
     {% if held %}
+      <button type="button" commandfor="sort-stage-{{ stage.pk }}" command="show-modal" class="block w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-sunken">Sort by Priority</button>
       <button type="button" commandfor="archive-stage-{{ stage.pk }}" command="show-modal" class="block w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-sunken">Archive all Cards</button>
     {% else %}
-      <button type="button" disabled class="flex w-full cursor-not-allowed items-baseline justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm text-text-muted opacity-60">
-        Archive all Cards <span class="text-xs">No Cards</span>
-      </button>
+      <button type="button" disabled class="block w-full cursor-not-allowed rounded-md px-2 py-1.5 text-left text-sm text-text-muted opacity-60">Sort by Priority</button>
+      <button type="button" disabled class="block w-full cursor-not-allowed rounded-md px-2 py-1.5 text-left text-sm text-text-muted opacity-60">Archive all Cards</button>
     {% endif %}
   </div>
 </details>
 {% if held %}
+  {% url 'stage_sort_cards' board.pk stage.pk as stage_sort_url %}
+  {% with sort_url=stage_sort_url|add:filter_query pk=stage.pk|stringformat:"d" %}{% with dialog_id="sort-stage-"|add:pk question="Sort "|add:stage.name|add:" by Priority?" %}
+    {% if assignee_filter.lookup and stage.shown_count != held %}
+      {% include "components/confirm_dialog.html" with id=dialog_id action=sort_url confirm_label="Sort" note="Urgent first, then Must have, Should have, Could have, and no Priority last. This replaces the current order, including Cards hidden by the filter." variant="" %}
+    {% else %}
+      {% include "components/confirm_dialog.html" with id=dialog_id action=sort_url confirm_label="Sort" note="Urgent first, then Must have, Should have, Could have, and no Priority last. This replaces the current order." variant="" %}
+    {% endif %}
+  {% endwith %}{% endwith %}
   {% url 'stage_archive_cards' board.pk stage.pk as stage_archive_url %}
   {% with archive_url=stage_archive_url|add:filter_query %}
   {% with pk=stage.pk|stringformat:"d" count=held|stringformat:"d" plural=held|pluralize %}{% with dialog_id="archive-stage-"|add:pk question="Archive "|add:count|add:" Card"|add:plural|add:" from "|add:stage.name|add:"?" %}

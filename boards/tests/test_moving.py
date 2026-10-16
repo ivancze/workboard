@@ -428,6 +428,113 @@ class MoveAccessTests(TestCase):
         self.assertEqual(self.adas_card.stage, self.adas_board.stages.first())
 
 
+class SortingAStageByPriorityTests(TestCase):
+    """A one-off rewrite of a Stage's Card order from its ⋯ menu. Nothing keeps
+    it sorted afterwards."""
+
+    def setUp(self):
+        self.ada = a_user()
+        self.board = Board.objects.create_with_owner(name="Housework", owner=self.ada)
+        self.to_do, self.in_progress, self.done = self.board.stages.all()
+        self.client.force_login(self.ada)
+        self.board_url = reverse("board_detail", args=[self.board.pk])
+
+    def sort(self, stage, query=""):
+        return self.client.post(reverse("stage_sort_cards", args=[self.board.pk, stage.pk]) + query)
+
+    def page(self, query=""):
+        return " ".join(self.client.get(self.board_url + query).content.decode().split())
+
+    def test_a_stage_with_cards_offers_it_behind_a_confirmation(self):
+        a_card(self.done, "One")
+
+        content = self.page()
+
+        self.assertRegex(
+            content, rf'commandfor="sort-stage-{self.done.pk}" command="show-modal"[^>]*>Sort by Priority</button>'
+        )
+        self.assertIn("Sort Done by Priority?</h2>", content)
+        action = reverse("stage_sort_cards", args=[self.board.pk, self.done.pk])
+        self.assertIn(f'<form method="post" action="{action}"', content)
+
+    def test_a_stage_with_no_cards_does_not_offer_it(self):
+        content = self.page()
+
+        self.assertNotIn(f'sort-stage-{self.done.pk}', content)
+        self.assertIn('disabled class="block w-full cursor-not-allowed rounded-md px-2 py-1.5 text-left text-sm text-text-muted opacity-60">Sort by Priority</button>', content)
+
+    def test_it_orders_by_priority_and_keeps_ties_in_their_order(self):
+        for title, priority in [
+            ("Could", "could"),
+            ("None first", ""),
+            ("Must first", "must"),
+            ("Urgent", "urgent"),
+            ("None second", ""),
+            ("Should", "should"),
+            ("Must second", "must"),
+        ]:
+            a_card(self.done, title, priority=priority)
+        a_card(self.to_do, "Elsewhere", priority="could")
+        a_card(self.to_do, "Elsewhere urgent", priority="urgent")
+
+        response = self.sort(self.done)
+
+        self.assertRedirects(response, self.board_url, fetch_redirect_response=False)
+        self.assertEqual(
+            card_order(self.done),
+            [
+                ("Urgent", 0),
+                ("Must first", 1),
+                ("Must second", 2),
+                ("Should", 3),
+                ("Could", 4),
+                ("None first", 5),
+                ("None second", 6),
+            ],
+        )
+        self.assertEqual(card_order(self.to_do), [("Elsewhere", 0), ("Elsewhere urgent", 1)])
+        self.assertIn("Sorted Done by Priority.", self.page())
+
+    def test_it_keeps_the_filter(self):
+        a_card(self.done, "One")
+
+        response = self.sort(self.done, "?assignee=me")
+
+        self.assertRedirects(response, self.board_url + "?assignee=me", fetch_redirect_response=False)
+
+    def test_the_order_is_by_hand_again_afterwards(self):
+        low = a_card(self.done, "Low", priority="could")
+        a_card(self.done, "High", priority="urgent")
+        self.sort(self.done)
+
+        low.move_to(self.done, 0)
+
+        self.assertEqual(card_order(self.done), [("Low", 0), ("High", 1)])
+
+    def test_it_needs_a_post_and_a_stage_on_this_board(self):
+        other = Board.objects.create_with_owner(name="Elsewhere", owner=self.ada)
+        their_stage = other.stages.first()
+        a_card(their_stage, "Low", priority="could")
+        a_card(their_stage, "High", priority="urgent")
+
+        get = self.client.get(reverse("stage_sort_cards", args=[self.board.pk, self.done.pk]))
+        wrong_board = self.client.post(
+            reverse("stage_sort_cards", args=[self.board.pk, their_stage.pk])
+        )
+
+        self.assertEqual((get.status_code, wrong_board.status_code), (405, 404))
+        self.assertEqual(card_order(their_stage), [("Low", 0), ("High", 1)])
+
+    def test_a_non_member_cannot_sort_a_stage(self):
+        grace = a_user("grace@example.com")
+        a_card(self.done, "Low", priority="could")
+        a_card(self.done, "High", priority="urgent")
+        self.client.force_login(grace)
+
+        self.assertEqual(self.sort(self.done).status_code, 404)
+        self.assertEqual(card_order(self.done), [("Low", 0), ("High", 1)])
+
+
 class ConcurrentCardOrderTests(TransactionTestCase):
     """Requests that rewrite Card order at the same moment, each on its own
     database connection, as they would arrive from different people."""

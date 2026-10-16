@@ -88,6 +88,11 @@ urlpatterns = [
         views.stage_archive_cards,
         name="stage_archive_cards",
     ),
+    path(
+        "boards/<int:board_pk>/stages/<int:pk>/sort/",
+        views.stage_sort_cards,
+        name="stage_sort_cards",
+    ),
     path("boards/<int:board_pk>/archive/", views.board_archive, name="board_archive"),
     path("boards/<int:board_pk>/members/", views.board_members, name="board_members"),
     path(

@@ -263,7 +263,7 @@ class ArchivingAStageTests(TestCase):
 
         self.assertNotIn(f'commandfor="archive-stage-{self.done.pk}"', content)
         self.assertNotIn("stages/{self.done.pk}/archive/", content)
-        self.assertIn("Archive all Cards <span class=\"text-xs\">No Cards</span>", content)
+        self.assertIn('disabled class="block w-full cursor-not-allowed rounded-md px-2 py-1.5 text-left text-sm text-text-muted opacity-60">Archive all Cards</button>', content)
 
     def test_archiving_a_stage_archives_every_card_it_holds_and_nothing_else(self):
         cards = [a_card(self.done, title) for title in ["One", "Two", "Three"]]

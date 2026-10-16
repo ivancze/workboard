@@ -929,6 +929,19 @@ def stage_archive_cards(request, board_pk, pk):
 
 @require_POST
 @login_required
+def stage_sort_cards(request, board_pk, pk):
+    board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
+    stage = get_object_or_404(board.stages, pk=pk)
+    try:
+        stage.sort_by_priority()
+    except Stage.DoesNotExist:
+        raise Http404("That Stage has just been deleted.")
+    messages.success(request, f"Sorted {stage.name} by Priority.")
+    return redirect(board_url(board, request))
+
+
+@require_POST
+@login_required
 def stage_shift(request, board_pk, pk):
     board = get_object_or_404(Board.objects.for_user(request.user), pk=board_pk)
     stage = get_object_or_404(board.stages, pk=pk)
