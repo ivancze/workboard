@@ -12,6 +12,7 @@ from django.utils import timezone
 
 from accounts.models import User
 from boards import models
+from boards.forms import CardForm
 from boards.models import Board, Card, Membership, Stage
 
 
@@ -211,7 +212,7 @@ class EditingACardTests(TestCase):
         self.assertContains(response, "<p>Semi-skimmed</p>", html=True)
         self.assertNotContains(response, "Unsaved")
 
-    def test_the_card_page_is_read_only_with_an_edit_button(self):
+    def test_the_card_page_holds_no_form_until_a_field_is_clicked(self):
         response = self.client.get(self.url)
 
         self.assertNotContains(response, 'name="title"')
@@ -246,6 +247,193 @@ class EditingACardTests(TestCase):
 
         self.card.refresh_from_db()
         self.assertGreater(self.card.updated_at, before)
+
+
+CARD_FIELDS = ["title", "description", "priority", "assignee", "contact_persons", "due_date", "effort"]
+
+
+class EditingInPlaceTests(TestCase):
+    """Each field on a Card's page is edited where it is: htmx gets the
+    field's form, then the field back. Only that field is written."""
+
+    def setUp(self):
+        self.ada = a_user()
+        self.grace = a_user("grace@example.com")
+        self.board = Board.objects.create_with_owner(name="Housework", owner=self.ada)
+        Membership.objects.create(board=self.board, user=self.grace)
+        self.card = a_card(self.board.stages.first(), "Buy milk", description="Semi-skimmed")
+        self.url = reverse("card_detail", args=[self.board.pk, self.card.pk])
+        self.edit_url = reverse("card_edit", args=[self.board.pk, self.card.pk])
+        # Any Member edits a Card, not only the Owner.
+        self.client.force_login(self.grace)
+
+    def field_url(self, field):
+        return reverse("card_field", args=[self.board.pk, self.card.pk, field])
+
+    def open(self, field):
+        return self.client.get(self.field_url(field), headers={"HX-Request": "true"})
+
+    def save(self, field, data):
+        return self.client.post(self.field_url(field), data, headers={"HX-Request": "true"})
+
+    def test_every_field_on_the_card_page_opens_in_place(self):
+        content = self.client.get(self.url).content.decode()
+
+        for field in CARD_FIELDS:
+            with self.subTest(field=field):
+                self.assertIn(f'hx-get="{self.field_url(field)}"', content)
+                # Without JavaScript, the same click opens Edit at that field.
+                self.assertIn(f'href="{self.edit_url}#id_{field}"', content)
+
+    def test_the_edit_button_is_only_for_pages_without_javascript(self):
+        content = self.client.get(self.url).content.decode()
+
+        self.assertRegex(content, rf'<noscript>\s*<a href="{self.edit_url}"[^>]*>Edit</a>\s*</noscript>')
+
+    def test_opening_a_field_gives_its_form_alone_with_the_saved_value(self):
+        response = self.open("title")
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn('<form id="card-title"', content)
+        self.assertIn('value="Buy milk"', content)
+        self.assertNotIn('name="description"', content)
+        self.assertNotIn("<html", content)
+
+    def test_saving_a_field_returns_it_and_writes_nothing_else(self):
+        response = self.save("priority", {"priority": "urgent", "title": "Ignored"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '<div id="card-priority"')
+        self.assertContains(response, "Urgent")
+        self.card.refresh_from_db()
+        self.assertEqual(self.card.priority, "urgent")
+        self.assertEqual(self.card.title, "Buy milk")
+
+    def test_saving_the_title_renames_the_heading_and_the_tab(self):
+        response = self.save("title", {"title": "Buy oat milk"})
+
+        self.assertContains(response, ">Buy oat milk</h1>")
+        self.assertContains(response, "<title>Buy oat milk · Housework · Workboard</title>")
+        self.card.refresh_from_db()
+        self.assertEqual(self.card.title, "Buy oat milk")
+
+    def test_saving_the_title_renames_the_card_in_its_delete_dialog(self):
+        question = f"delete-card-{self.card.pk}-question"
+        self.assertContains(self.client.get(self.url), f'<h2 id="{question}"')
+
+        response = self.save("title", {"title": "Buy oat milk"})
+
+        self.assertRegex(
+            response.content.decode(),
+            rf'<div hx-swap-oob="innerHTML:#{question}">Delete Buy oat milk\?</div>',
+        )
+
+    def test_only_the_title_renames_the_delete_dialog(self):
+        response = self.save("effort", {"effort": "3"})
+
+        self.assertNotContains(response, "hx-swap-oob")
+
+    def test_saving_the_description_shows_it_rendered(self):
+        response = self.save("description", {"description": "**Barista**"})
+
+        self.assertContains(response, '<section id="card-description"')
+        self.assertContains(response, "<strong>Barista</strong>")
+
+    def test_a_refused_value_comes_back_with_its_error(self):
+        for field, value in [("title", "  "), ("effort", "-1"), ("due_date", "someday")]:
+            with self.subTest(field=field):
+                response = self.save(field, {field: value})
+
+                self.assertEqual(response.status_code, 400)
+                self.assertContains(response, f'<form id="card-{field}"', status_code=400)
+                self.assertContains(response, 'class="text-sm text-danger"', status_code=400)
+        self.card.refresh_from_db()
+        self.assertEqual(self.card.title, "Buy milk")
+        self.assertIsNone(self.card.effort)
+        self.assertIsNone(self.card.due_date)
+
+    def test_optional_fields_can_be_cleared(self):
+        Card.objects.filter(pk=self.card.pk).update(
+            priority="must",
+            assignee=self.ada,
+            contact_persons="Lando",
+            due_date=date(2099, 1, 1),
+            effort=Decimal("2"),
+        )
+
+        for field in CARD_FIELDS[1:]:
+            with self.subTest(field=field):
+                self.assertEqual(self.save(field, {field: ""}).status_code, 200)
+
+        self.card.refresh_from_db()
+        self.assertEqual(
+            [self.card.description, self.card.priority, self.card.assignee, self.card.contact_persons, self.card.due_date, self.card.effort],
+            ["", "", None, "", None, None],
+        )
+
+    def test_only_a_member_can_be_assigned(self):
+        mallory = a_user("mallory@example.com")
+
+        refused = self.save("assignee", {"assignee": mallory.pk})
+
+        self.assertContains(refused, "Select a valid choice", status_code=400)
+        self.assertNotContains(self.open("assignee"), "mallory")
+        self.assertRegex(self.save("assignee", {"assignee": self.ada.pk}).content.decode(), r">\s*ada\s*<")
+        self.card.refresh_from_db()
+        self.assertEqual(self.card.assignee, self.ada)
+
+    def test_a_date_already_past_shows_as_overdue_once_saved(self):
+        yesterday = timezone.localdate() - timedelta(days=1)
+
+        response = self.save("due_date", {"due_date": yesterday.isoformat()})
+
+        self.assertContains(response, f'<span class="text-danger">{yesterday:%-d %B %Y} · Overdue</span>')
+
+    def test_an_archived_card_is_edited_in_place_too(self):
+        self.card.archive()
+
+        self.assertContains(self.client.get(self.url), f'hx-get="{self.field_url("title")}"')
+        self.assertEqual(self.save("title", {"title": "Buy oat milk"}).status_code, 200)
+        self.card.refresh_from_db()
+        self.assertEqual(self.card.title, "Buy oat milk")
+
+    def test_the_last_change_is_recorded(self):
+        Card.objects.filter(pk=self.card.pk).update(updated_at=timezone.now() - timedelta(days=1))
+        self.card.refresh_from_db()
+        before = self.card.updated_at
+
+        self.save("effort", {"effort": "3"})
+
+        self.card.refresh_from_db()
+        self.assertGreater(self.card.updated_at, before)
+
+    def test_only_the_cards_own_fields_can_be_edited(self):
+        for field in ["stage", "position", "creator", "board", "archived_at"]:
+            with self.subTest(field=field):
+                self.assertEqual(self.open(field).status_code, 404)
+                self.assertEqual(self.save(field, {field: "1"}).status_code, 404)
+
+    def test_a_stranger_sees_nothing(self):
+        self.client.force_login(a_user("mallory@example.com"))
+
+        self.assertEqual(self.open("title").status_code, 404)
+        self.assertEqual(self.save("title", {"title": "Mine now"}).status_code, 404)
+        self.card.refresh_from_db()
+        self.assertEqual(self.card.title, "Buy milk")
+
+    def test_a_card_deleted_while_its_field_was_saved_is_not_found(self):
+        is_valid = CardForm.is_valid
+
+        def deleted_meanwhile(form):
+            valid = is_valid(form)
+            Card.objects.filter(pk=self.card.pk).delete()
+            return valid
+
+        with mock.patch.object(CardForm, "is_valid", deleted_meanwhile):
+            response = self.save("title", {"title": "Buy oat milk"})
+
+        self.assertEqual(response.status_code, 404)
 
 
 class CreatorTests(TestCase):

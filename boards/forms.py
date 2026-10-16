@@ -132,15 +132,21 @@ class CardForm(forms.ModelForm):
             "effort": forms.NumberInput(attrs={"min": "0", "step": "0.1"}),
         }
 
-    def __init__(self, *args, board, **kwargs):
+    def __init__(self, *args, board, only=None, **kwargs):
         super().__init__(*args, **kwargs)
+        # One field alone, as edited in place on the Card's page. The rest
+        # are neither read from the POST nor checked.
+        if only:
+            self.fields = {only: self.fields[only]}
         # Only this board's Members are offered, and anyone else is rejected
         # as an invalid choice rather than trusted from the POST.
-        self.fields["assignee"].queryset = User.objects.filter(
-            memberships__board=board
-        ).order_by("display_name", "email")
+        if "assignee" in self.fields:
+            self.fields["assignee"].queryset = User.objects.filter(
+                memberships__board=board
+            ).order_by("display_name", "email")
         # Named like Unassigned and Unestimated, rather than Django's dashes.
-        self.fields["priority"].choices = [("", "No priority"), *Card.Priority.choices]
+        if "priority" in self.fields:
+            self.fields["priority"].choices = [("", "No priority"), *Card.Priority.choices]
 
 
 class BaseSubtaskFormSet(forms.BaseInlineFormSet):

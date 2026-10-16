@@ -298,6 +298,26 @@ class RemovingTests(TestCase):
             )
 
         self.assertContains(edit, "grace is no longer a Member of this board.", status_code=400)
+
+    def test_an_assignee_chosen_in_place_and_removed_meanwhile_is_refused(self):
+        card = a_card(self.to_do, "Buy milk")
+        is_valid = CardForm.is_valid
+
+        def removed_meanwhile(form):
+            valid = is_valid(form)
+            Membership.objects.get(pk=self.membership.pk).remove()
+            return valid
+
+        with mock.patch.object(CardForm, "is_valid", removed_meanwhile):
+            response = self.client.post(
+                reverse("card_field", args=[self.board.pk, card.pk, "assignee"]),
+                {"assignee": self.grace.pk},
+                headers={"HX-Request": "true"},
+            )
+
+        self.assertContains(response, "grace is no longer a Member of this board.", status_code=400)
+        card.refresh_from_db()
+        self.assertIsNone(card.assignee)
         card.refresh_from_db()
         self.assertIsNone(card.assignee)
 

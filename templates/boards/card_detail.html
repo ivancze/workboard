@@ -1,8 +1,9 @@
 {% extends "base.html" %}
-{% load markdown static %}
+{% load static %}
 
 {% block title %}{{ card.title }} · {{ board.name }} · Workboard{% endblock %}
 {% block scripts %}
+  <script src="{% static 'js/in_place.js' %}" defer></script>
   <script src="{% static 'js/subtasks.js' %}" defer></script>
 {% endblock %}
 
@@ -13,11 +14,14 @@
     <a href="{% url 'board_detail' board.pk %}{{ filter_query }}" class="mb-2 inline-block text-sm text-text-muted hover:text-text">← {{ board.name }}</a>
   {% endif %}
   <div class="flex items-start justify-between gap-4">
-    {% include "components/page_heading.html" with text=card.title %}
+    {% include "components/card_field.html" with field="title" label="Title" %}
     {% url 'card_edit' board.pk card.pk as edit_url %}
     {# Archive and Restore come back to this page, which then shows the change. #}
     <div class="flex shrink-0 gap-2 pt-1">
-      {% include "components/button.html" with label="Edit" href=edit_url|add:filter_query variant="secondary" %}
+      {# With JavaScript each field is edited where it is, so Edit is only for pages without it. #}
+      <noscript>
+        {% include "components/button.html" with label="Edit" href=edit_url|add:filter_query variant="secondary" %}
+      </noscript>
       {% if card.archived_at %}
         <form method="post" action="{% url 'card_restore' board.pk card.pk %}{{ filter_query }}">
           {% csrf_token %}
@@ -41,42 +45,34 @@
     </p>
   {% endif %}
 
-  <dl class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
-    <div>
+  {% comment %}
+    Each value is a link that edits it in place (card_field.html). Three
+    columns at most, so a field being edited has room for its form.
+  {% endcomment %}
+  <dl class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
+    <div class="min-w-0">
       <dt class="text-sm text-text-muted">Priority</dt>
-      <dd class="mt-1 font-semibold">{% if card.priority %}{% include "components/priority_label.html" %}{% else %}<span class="font-normal text-text-muted">No priority</span>{% endif %}</dd>
+      <dd class="mt-1">{% include "components/card_field.html" with field="priority" label="Priority" %}</dd>
     </div>
-    <div>
+    <div class="min-w-0">
       <dt class="text-sm text-text-muted">Assignee</dt>
-      <dd class="mt-1 font-semibold">{% if card.assignee %}{{ card.assignee.name }}{% else %}<span class="font-normal text-text-muted">Unassigned</span>{% endif %}</dd>
+      <dd class="mt-1">{% include "components/card_field.html" with field="assignee" label="Assignee" %}</dd>
     </div>
-    <div>
+    <div class="min-w-0">
       <dt class="text-sm text-text-muted">Due date</dt>
-      <dd class="mt-1 font-semibold">
-        {% if card.due_date %}
-          <span{% if card.is_overdue and not in_last_stage %} class="text-danger"{% endif %}>{{ card.due_date|date:"j F Y" }}{% if card.is_overdue %} · Overdue{% elif card.is_due_today %} · Today{% endif %}</span>
-        {% else %}
-          <span class="font-normal text-text-muted">No due date</span>
-        {% endif %}
-      </dd>
+      <dd class="mt-1">{% include "components/card_field.html" with field="due_date" label="Due date" %}</dd>
     </div>
-    <div>
+    <div class="min-w-0">
       <dt class="text-sm text-text-muted">Effort</dt>
-      <dd class="mt-1 font-semibold">{% if card.effort is not None %}{{ card.effort|floatformat:"-1" }}{% else %}<span class="font-normal text-text-muted">Unestimated</span>{% endif %}</dd>
+      <dd class="mt-1">{% include "components/card_field.html" with field="effort" label="Effort" %}</dd>
     </div>
-    <div>
+    <div class="min-w-0">
       <dt class="text-sm text-text-muted">Contact persons</dt>
-      <dd class="mt-1 font-semibold break-words">{% if card.contact_persons %}{{ card.contact_persons }}{% else %}<span class="font-normal text-text-muted">None</span>{% endif %}</dd>
+      <dd class="mt-1">{% include "components/card_field.html" with field="contact_persons" label="Contact persons" %}</dd>
     </div>
   </dl>
 
-  <section class="mt-6 rounded-xl border border-border bg-surface p-6">
-    {% if card.description %}
-      <div class="prose prose-tokens max-w-none">{{ card.description|markdown }}</div>
-    {% else %}
-      <p class="text-sm text-text-muted">No description.</p>
-    {% endif %}
-  </section>
+  {% include "components/card_field.html" with field="description" label="Description" %}
 
   {% include "components/subtasks.html" %}
 

@@ -50,7 +50,11 @@ Stage can be deleted, and a board always keeps at least one.
 
 **Cards.** *Add card*, beside the board's name, opens a blank Card. Only the
 title is needed, and the Card goes to the bottom of the leftmost Stage. Click
-a Card to open it, and *Edit* to change it:
+a Card to open it. Any Member can change a Card: on its page, click its title,
+the description or any field to edit it where it is. Enter or *Save* saves it,
+and Escape, *Cancel* or a click elsewhere leaves it as it was. The description
+is the exception: a click elsewhere keeps it open, so a stray click doesn't
+lose what you've written. A Card has:
 
 - **Description**, written in Markdown: see *Writing a description* below
 - **Priority**: Urgent, Must have, Should have or Could have, shown on the
@@ -89,8 +93,8 @@ as plain text unless wrapped in `<` `>`. HTML is shown as typed, not applied.
 **Subtasks.** A Card can carry a list of Subtasks: short lines of text to
 tick off as you go. On the Card's page, type one into *Add a Subtask* and press
 Enter, click a box to tick it, click a Subtask's text to change it (Enter
-saves, Escape leaves it), and use ↑ ↓ to reorder and × to remove. New card and
-Edit list them as rows too, with *+ Add a Subtask*. A bar shows how many are
+saves, Escape leaves it), and use ↑ ↓ to reorder and × to remove. New card
+lists them as rows too, with *+ Add a Subtask*. A bar shows how many are
 done, on the Card's page and on its tile on the board. Subtasks are only text:
 they have no Assignee or Due date, and ticking the last one moves nothing. A
 Card holds up to 50.

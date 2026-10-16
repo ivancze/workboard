@@ -275,8 +275,8 @@ def back_to(request, default):
     return redirect(default)
 
 
-# Read-only: edits go to card_edit, so a stray POST here is refused rather than
-# silently dropped.
+# Read-only: edits go to card_field or card_edit, so a stray POST here is
+# refused rather than silently dropped.
 @require_safe
 @login_required
 def card_detail(request, board_pk, pk):
@@ -284,17 +284,20 @@ def card_detail(request, board_pk, pk):
     return card_page(request, board, card)
 
 
+def in_last_stage(board, card):
+    """The board's last Stage reads as finished, so an overdue Card there
+    loses its red, as on its tile. An archived Card has no Stage."""
+    return card.stage_id is not None and card.stage_id == board.stages.last().pk
+
+
 def card_page(request, board, card, *, subtask_form=None, renamed=None, status=200):
-    # The board's last Stage reads as finished, so an overdue Card there loses
-    # its red, as on its tile. An archived Card has no Stage.
-    in_last_stage = card.stage_id is not None and card.stage_id == board.stages.last().pk
     return render(
         request,
         "boards/card_detail.html",
         {
             "board": board,
             "card": card,
-            "in_last_stage": in_last_stage,
+            "in_last_stage": in_last_stage(board, card),
             **subtasks_context(card, subtask_form, renamed),
         },
         status=status,
@@ -444,6 +447,51 @@ def card_edit(request, board_pk, pk):
             )
 
     return render(request, "boards/card_edit.html", context)
+
+
+@login_required
+def card_field(request, board_pk, pk, field):
+    """One field of a Card, edited in place on its page by any Member: htmx
+    gets the field's form, then the field back. Only that field is written,
+    so two people changing different fields of one Card keep both changes,
+    and a move made meanwhile isn't undone. Without JavaScript each field is
+    a link to Edit instead."""
+    if field not in CardForm.Meta.fields:
+        raise Http404("No such field.")
+    board, card = get_card(request, board_pk, pk)
+    # Its own copy, so a refused value never shows as saved.
+    form = CardForm(request.POST or None, instance=copy.copy(card), board=board, only=field)
+    if request.method == "POST" and form.is_valid():
+        try:
+            with transaction.atomic():
+                lock_assignee(board, form)
+                form.instance.save(update_fields=[field, "updated_at"])
+        except Membership.DoesNotExist:
+            pass  # the form now says why
+        except DatabaseError:
+            # As on Edit: the row to update is gone.
+            if Card.objects.filter(pk=card.pk).exists():
+                raise
+            raise Http404("That Card has just been deleted.")
+        else:
+            return render(
+                request,
+                "components/card_field.html",
+                {
+                    "board": board,
+                    "card": form.instance,
+                    "field": field,
+                    "label": form[field].label,
+                    "in_last_stage": in_last_stage(board, card),
+                    "retitle": field == "title",
+                },
+            )
+    return render(
+        request,
+        "components/card_field_form.html",
+        {"board": board, "card": card, "field": field, "bound": form[field]},
+        status=400 if form.is_bound else 200,
+    )
 
 
 @require_POST

@@ -1,0 +1,60 @@
+{% comment %}
+  One field of a Card on its page, which any Member clicks to edit in place:
+  htmx swaps in card_field_form.html, and in_place.js handles focus, Escape
+  and Cancel. Without JavaScript it is a link to Edit, at that field. Needs
+  `board`, `card`, `field`, its `label` and `in_last_stage`. Sent alone after
+  the title is saved with `retitle`, so htmx renames the tab and the delete
+  dialog too.
+{% endcomment %}
+{% load markdown %}
+{% url 'card_field' board.pk card.pk field as field_url %}
+{% url 'card_edit' board.pk card.pk as edit_path %}
+{% with edit_url=edit_path|add:filter_query|add:"#id_"|add:field target="#card-"|add:field %}
+{% if retitle %}
+  <title>{{ card.title }} · {{ board.name }} · Workboard</title>
+  {# The delete dialog (card_delete_dialog.html) names the Card too. #}
+  <div hx-swap-oob="innerHTML:#delete-card-{{ card.pk }}-question">Delete {{ card.title }}?</div>
+{% endif %}
+{% if field == "title" %}
+  <div id="card-title" data-in-place class="min-w-0">
+    <a href="{{ edit_url }}" hx-get="{{ field_url }}" hx-target="{{ target }}" hx-swap="outerHTML" class="-mx-2 block rounded-md px-2 transition-colors hover:bg-sunken"><span class="sr-only">Edit the {{ label }}: </span>{% include "components/page_heading.html" with text=card.title %}</a>
+  </div>
+{% elif field == "description" %}
+  {% comment %}
+    Its Markdown may hold links, and a link can't sit inside another one, so
+    a click anywhere but on a link opens it, and the pencil is the way in by
+    keyboard. The pencil comes first, as in_place.js returns focus to the
+    first link.
+  {% endcomment %}
+  <section id="card-description" data-in-place hx-get="{{ field_url }}" hx-trigger="click[!event.target.closest('a')]" hx-target="this" hx-swap="outerHTML" class="relative mt-6 cursor-pointer rounded-xl border border-border bg-surface p-6 transition-colors hover:border-control">
+    <a href="{{ edit_url }}" hx-get="{{ field_url }}" hx-target="{{ target }}" hx-swap="outerHTML" aria-label="Edit the {{ label }}" title="Edit the {{ label }}" class="absolute top-3 right-3 rounded-md p-1.5 text-text-muted transition-colors hover:bg-sunken hover:text-text">
+      <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
+    </a>
+    {% if card.description %}
+      <div class="prose prose-tokens max-w-none pr-8">{{ card.description|markdown }}</div>
+    {% else %}
+      <p class="text-sm text-text-muted">No description.</p>
+    {% endif %}
+  </section>
+{% else %}
+  <div id="card-{{ field }}" data-in-place>
+    <a href="{{ edit_url }}" hx-get="{{ field_url }}" hx-target="{{ target }}" hx-swap="outerHTML" class="-mx-1.5 inline-block max-w-full rounded-md px-1.5 py-0.5 font-semibold break-words transition-colors hover:bg-sunken"><span class="sr-only">Edit the {{ label }}: </span>
+      {% if field == "priority" %}
+        {% if card.priority %}{% include "components/priority_label.html" %}{% else %}<span class="font-normal text-text-muted">No priority</span>{% endif %}
+      {% elif field == "assignee" %}
+        {% if card.assignee %}{{ card.assignee.name }}{% else %}<span class="font-normal text-text-muted">Unassigned</span>{% endif %}
+      {% elif field == "due_date" %}
+        {% if card.due_date %}
+          <span{% if card.is_overdue and not in_last_stage %} class="text-danger"{% endif %}>{{ card.due_date|date:"j F Y" }}{% if card.is_overdue %} · Overdue{% elif card.is_due_today %} · Today{% endif %}</span>
+        {% else %}
+          <span class="font-normal text-text-muted">No due date</span>
+        {% endif %}
+      {% elif field == "effort" %}
+        {% if card.effort is not None %}{{ card.effort|floatformat:"-1" }}{% else %}<span class="font-normal text-text-muted">Unestimated</span>{% endif %}
+      {% elif field == "contact_persons" %}
+        {% if card.contact_persons %}{{ card.contact_persons }}{% else %}<span class="font-normal text-text-muted">None</span>{% endif %}
+      {% endif %}
+    </a>
+  </div>
+{% endif %}
+{% endwith %}

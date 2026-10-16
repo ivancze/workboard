@@ -163,20 +163,33 @@ that also clips anything overflowing its bottom, so a menu left inside it
 would be cut off on the lowest Card. Scrolling closes an open menu rather than
 leaving it behind, and so does choosing an item that opens a dialog.
 
-**Editing in place: the board's name and description.** For the Owner, the
-pencil beside the name (`components/board_heading.html`) and the description
-itself (`components/board_description.html`) are links to the rename and
-description pages, which is what they stay without JavaScript. Both are
-`data-in-place` elements. With htmx, each swaps for a form with the same id
-(`board_rename_form.html`, `board_description_form.html`).
-- `board.js` focuses and selects the field. It keeps a copy of what the form
-  replaced, so Escape, Cancel or a click elsewhere put it back without a
-  round trip. Opening one closes the other.
-- Saving returns the element, and focus goes back to its link. The name
-  also returns a `<title>`, which htmx applies to the tab.
-- A refused value comes back as a 400 carrying its error. `board.js` lets
-  htmx swap it in, and clears its error status, which would otherwise make
-  `restoreBoard` reload the board.
+**Editing in place: the board's name and description, and a Card's fields.**
+For the Owner, the pencil beside the board's name
+(`components/board_heading.html`) and the description itself
+(`components/board_description.html`) are links to the rename and
+description pages. On a Card's page, for any Member, the title, the
+description and each field (`components/card_field.html`) are links to Edit,
+at that field. That is what they stay without JavaScript, so Edit's own
+button sits in `<noscript>`. All of them are `data-in-place` elements. With
+htmx, each swaps for a form with the same id (`board_rename_form.html`,
+`board_description_form.html`, `card_field_form.html`), and the shared
+script is `static/js/in_place.js`.
+- It focuses the field, selecting a one-line value and putting the caret at
+  the end of a description. It keeps a copy of what the form replaced, so
+  Escape, Cancel or a click elsewhere put it back without a round trip.
+  Opening one closes another. A Card's description is marked
+  `data-keep-open`, so a click elsewhere leaves it open with its draft.
+- A Card's description is Markdown, which may hold links, and a link can't
+  sit inside another. So the whole section opens on a click that isn't on
+  one of its links (an `hx-trigger` filter), and a pencil is the way in by
+  keyboard.
+- Saving returns the element, and focus goes back to its link. A new board
+  name or Card title also returns a `<title>`, which htmx applies to the tab.
+- A Card's field saves through `card_field`, one field at a time, so two
+  people changing different fields keep both changes.
+- A refused value comes back as a 400 carrying its error. `in_place.js`
+  lets htmx swap it in, and clears its error status, which would otherwise
+  make `board.js`'s `restoreBoard` reload the board.
 - A board with no description shows a playful line, picked at random by the
   view on each load (`PLAYFUL_DESCRIPTIONS`). The description's form starts
   empty, not from that line.

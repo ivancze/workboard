@@ -1,0 +1,30 @@
+{% comment %}
+  One field of a Card being edited in place, standing in for
+  card_field.html. Save, or Enter in a one-line field, saves. Escape, Cancel
+  or a click elsewhere puts the field back (in_place.js, which finds it by
+  `data-in-place`), except that a click elsewhere leaves the description
+  open (`data-keep-open`), so a stray click never loses a long draft. A
+  refused value comes back here with its error, as a 400. Needs `board`,
+  `card`, `field` and `bound`, the form's one field.
+{% endcomment %}
+{% url 'card_field' board.pk card.pk field as field_url %}
+<form id="card-{{ field }}" data-in-place{% if field == "description" %} data-keep-open{% endif %} method="post" action="{{ field_url }}" hx-post="{{ field_url }}" hx-target="this" hx-swap="outerHTML" class="flex flex-col gap-2{% if field == 'description' %} mt-6 rounded-xl border border-border bg-surface p-6{% elif field == 'title' %} min-w-0 flex-1{% endif %}">
+  {% csrf_token %}
+  <label for="{{ bound.id_for_label }}" class="sr-only">{{ bound.label }}</label>
+  {% if field == "title" %}
+    <input type="text" name="title" id="{{ bound.id_for_label }}" value="{{ bound.value|default:'' }}" maxlength="200" required{% if bound.errors %} aria-invalid="true"{% endif %} class="min-w-0 rounded-md border border-control bg-surface px-3 py-1 font-display text-3xl font-extrabold tracking-tight text-text">
+  {% else %}
+    {{ bound }}
+  {% endif %}
+  {% if bound.help_text %}
+    <p id="{{ bound.auto_id }}_helptext" class="text-sm text-text-muted">{{ bound.help_text }}</p>
+  {% endif %}
+  {% for error in bound.errors %}
+    <p class="text-sm text-danger">{{ error }}</p>
+  {% endfor %}
+  <div class="flex flex-wrap gap-2">
+    {% include "components/button.html" with label="Save" %}
+    {# in_place.js finds Cancel as the form's one type="button". #}
+    {% include "components/button.html" with label="Cancel" type="button" variant="ghost" %}
+  </div>
+</form>
