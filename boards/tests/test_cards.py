@@ -296,6 +296,14 @@ class MarkdownDescriptionTests(TestCase):
         self.assertContains(response, "<strong>bold</strong>", html=True)
         self.assertContains(response, '<a href="https://example.com">link</a>', html=True)
 
+    def test_a_single_newline_starts_a_new_line(self):
+        """Strict CommonMark joins the lines into one. People typing into a
+        Card expect what they typed, as in GitHub comments."""
+        response = self.view("Milk\nEggs\n\nThen the bakery")
+
+        self.assertContains(response, "<p>Milk<br>Eggs</p>", html=True)
+        self.assertContains(response, "<p>Then the bakery</p>", html=True)
+
     def test_an_embedded_script_does_not_execute(self):
         """The browser only runs a script that reaches it as a <script> element.
         Asserting the tag is absent from the page and present only escaped is

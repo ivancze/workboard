@@ -7,7 +7,9 @@ register = template.Library()
 # `html: False` escapes raw HTML instead of passing it through, and markdown-it
 # refuses to link javascript:, vbscript:, file: and data: URLs. Together these
 # make the output safe to mark as such without a separate sanitiser.
-_renderer = MarkdownIt("commonmark", {"html": False})
+# `breaks: True` keeps a single newline as a line break, as GitHub comments do;
+# strict CommonMark would join the lines into one.
+_renderer = MarkdownIt("commonmark", {"html": False, "breaks": True})
 
 
 @register.filter
