@@ -276,7 +276,7 @@
   }
   /* The other pets' poop (static/js/pet.js): its own sheet, at 1x. */
   .pet[data-pet="poop"] {
-    --grid: 21;
+    --grid: 16;
     --pixel: 0.0625rem;
     background-image: url("../pets/poop.png");
   }

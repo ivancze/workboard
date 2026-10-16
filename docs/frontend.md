@@ -246,8 +246,9 @@ in place of `FRAMES`: egg, wobble, crack, chick, chick-walk1, chick-walk2 and
 chick-sleep. Their `--frame` indexes come from that line, and the frame test
 checks every list.
 
-The other pets' poop has one too, `poop.txt`, 21×21 at 1 px (21 px), read
-from an image the user gave by sampling its grid. Its frames are poop,
+The other pets' poop has one too, `poop.txt`, 16×16 at 1 px (16 px), read
+from an image the user gave by sampling its grid, then redrawn a quarter
+smaller by hand. Its frames are poop,
 poop-buzz (each fly moved a pixel), and puff1 to puff3, the puff of smoke when
 it's cleaned up, drawn as overlapping circles with an outline and a shade.
 
