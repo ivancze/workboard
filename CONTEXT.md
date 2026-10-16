@@ -31,8 +31,9 @@ when clicked: a pug, a duck, a pig, a chicken, or one of two dogs with names,
 Chico (a tan mixed breed) and Bruno (a black Labrador). Chosen by any member,
 one per board, and the same one for everyone on it; a board has none until
 someone picks one. The chicken lays eggs that hatch, when clicked, into
-chicks that follow her. What the pet is doing, and the chicken's eggs and
-chicks, belong to that one viewer in that one browser tab: they last through
+chicks that follow her. The other pets poop instead, and a click cleans it
+up. What the pet is doing, and the eggs, chicks or poop it has left, belong
+to that one viewer in that one browser tab: they last through
 a reload and are gone when the tab closes. Purely for fun: a pet carries no
 information about the board and nothing acts on it. "Pet" for short.
 _Avoid_: Mascot, companion, buddy, avatar

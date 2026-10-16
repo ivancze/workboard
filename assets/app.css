@@ -274,6 +274,12 @@
     --pixel: 0.125rem;
     background-image: url("../pets/brood.png");
   }
+  /* The other pets' poop (static/js/pet.js): its own sheet, at 1x. */
+  .pet[data-pet="poop"] {
+    --grid: 21;
+    --pixel: 0.0625rem;
+    background-image: url("../pets/poop.png");
+  }
   .pet[data-pet="duck"] {
     background-image: url("../pets/duck.png");
   }
@@ -298,6 +304,12 @@
   .pet[data-frame="chick-walk1"] { --frame: 4; }
   .pet[data-frame="chick-walk2"] { --frame: 5; }
   .pet[data-frame="chick-sleep"] { --frame: 6; }
+  /* The poop sheet's frames, in poop.txt's own order. */
+  .pet[data-frame="poop"] { --frame: 0; }
+  .pet[data-frame="poop-buzz"] { --frame: 1; }
+  .pet[data-frame="puff1"] { --frame: 2; }
+  .pet[data-frame="puff2"] { --frame: 3; }
+  .pet[data-frame="puff3"] { --frame: 4; }
   /* The sheets face right. Facing left mirrors the pet, and mirrors its "z"
      back so the letter still reads. */
   .pet[data-facing="left"],

@@ -10,7 +10,8 @@ file is the same size. "." is transparent. "== wag = sit" reuses a frame
 already drawn, as the duck and pig do: they have no tail to wag.
 
 A sheet that isn't a pet lists its own frames on a "frames:" line, in sheet
-order, in place of FRAMES: brood.txt, the chicken's eggs and chicks. A sheet is the frames side by side, in FRAMES order, which
+order, in place of FRAMES: brood.txt, the chicken's eggs and chicks, and
+poop.txt, the other pets' poop. A sheet is the frames side by side, in FRAMES order, which
 assets/app.css relies on to show one frame at a time.
 
 Commit the PNGs: a test rebuilds them and fails if they differ from the grids.

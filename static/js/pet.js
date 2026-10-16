@@ -11,8 +11,8 @@
 // Sitting and sleeping are timers, so a pet at rest costs nothing per frame.
 // With reduced motion it never walks: it sleeps where it is.
 //
-// Leaving the page saves where it is and what it's doing, the chicken's brood
-// with it, to this tab's sessionStorage, so a reload or a trip to another page
+// Leaving the page saves where it is and what it's doing, its eggs, chicks or
+// poop with it, to this tab's sessionStorage, so a reload or a trip to another page
 // and back carries on; closing the tab forgets it. Time away counts: its
 // timers are kept as wall-clock times, so a nap that ran out meanwhile is over.
 
@@ -164,18 +164,26 @@ function runOff() {
 // eggs and chicks at once: with that many, she stops laying. They're saved
 // with her, so they last as long as the tab does, and each viewer has their
 // own. Eggs and chicks share a sheet, data-pet="brood" (assets/pets/brood.txt).
+//
+// The other pets poop instead, on the same timing, behind them. The flies over
+// it buzz, and a click cleans it up in a puff of smoke. It counts towards
+// BROOD, so with five down they stop until one is cleaned. Poop has a sheet of
+// its own, data-pet="poop" (assets/pets/poop.txt).
 const FIRST_LAY = [30_000, 60_000]; // ms before her first egg
 const LAY = [120_000, 600_000]; // ms between eggs after that
-const BROOD = 3;
+const BROOD = 5;
 const SPACING = 6; // px between her and the first chick, and between chicks
 const CHICK_SPEED = 60; // px per second: a little quicker than her, to keep up
 const PEEP = 120; // ms per chick walking frame
 const HATCH = 600; // ms an egg shows its crack before the chick comes out
+const BUZZ = 200; // ms per frame of the flies' buzz
+const PUFF = 120; // ms per frame of the puff of smoke
 
-let brood = []; // { el, x, kind: "egg" | "chick" }, in the order they came
+let brood = []; // { el, x, kind: "egg" | "chick" | "poop" }, in the order they came
 let laying = null; // the next egg's timer
 let layAt = null; // when it fires, in wall-clock ms
 let wobbling = null; // the eggs' occasional wobble
+let buzzing = null; // the flies over the poop
 let flock = null; // the chicks' animation frame
 
 const isHen = () => pet && pet.el.dataset.pet === "chicken";
@@ -185,9 +193,9 @@ function hatchling(kind, x) {
   const el = document.createElement("button");
   el.type = "button";
   el.className = "pet pointer-events-auto absolute bottom-2 left-4 cursor-pointer rounded-md";
-  el.dataset.pet = "brood";
+  el.dataset.pet = kind === "poop" ? "poop" : "brood";
   el.dataset.frame = kind;
-  el.setAttribute("aria-label", kind === "egg" ? "Hatch the egg" : "Pet the chick");
+  el.setAttribute("aria-label", { egg: "Hatch the egg", chick: "Pet the chick", poop: "Clean up the poop" }[kind]);
   pet.el.parentElement.append(el);
   const one = { el, x: Math.max(0, x - el.offsetWidth / 2), kind };
   el.style.translate = `${one.x}px 0`;
@@ -197,17 +205,19 @@ function hatchling(kind, x) {
 
 function layLater(ms = between(...(brood.length ? LAY : FIRST_LAY))) {
   clearTimeout(laying);
-  if (isHen() && brood.length < BROOD) {
+  layAt = null;
+  if (pet && brood.length < BROOD) {
     layAt = Date.now() + ms;
     laying = setTimeout(lay, ms);
   }
 }
 
-// Under her middle; then she settles a moment. Not while she sleeps.
+// An egg under her middle, or another pet's poop under its back end; then it
+// settles a moment. Not while it sleeps.
 function lay() {
-  if (!isHen()) return;
   if (pet.el.dataset.frame !== "sleep") {
-    hatchling("egg", pet.x + pet.el.offsetWidth / 2);
+    if (isHen()) hatchling("egg", pet.x + pet.el.offsetWidth / 2);
+    else hatchling("poop", pet.x + pet.el.offsetWidth * (pet.el.dataset.facing === "left" ? 0.8 : 0.2));
     sit();
   }
   layLater();
@@ -239,6 +249,22 @@ function wobble() {
       setTimeout(() => egg.el.dataset.frame === "wobble" && (egg.el.dataset.frame = "egg"), 250);
     }
   }
+}
+
+// The flies over each poop buzz about.
+function buzz() {
+  for (const one of brood) {
+    if (one.kind === "poop") one.el.dataset.frame = one.el.dataset.frame === "poop" ? "poop-buzz" : "poop";
+  }
+}
+
+// Gone from the brood at once, so it's neither saved nor clicked again, then
+// a puff of smoke where it was. With room again, the next one is on its way.
+function clean(poop) {
+  brood = brood.filter((one) => one !== poop);
+  ["puff1", "puff2", "puff3"].forEach((frame, i) => setTimeout(() => (poop.el.dataset.frame = frame), i * PUFF));
+  setTimeout(() => poop.el.remove(), 3 * PUFF);
+  if (layAt === null) layLater(between(...LAY));
 }
 
 // The chicks walk to their places in a line behind her, in hatching order.
@@ -288,6 +314,7 @@ function stop() {
   clearTimeout(laying);
   layAt = null;
   clearInterval(wobbling);
+  clearInterval(buzzing);
   cancelAnimationFrame(flock);
   flock = null;
   for (const one of brood) one.el.remove();
@@ -330,11 +357,12 @@ function start(root) {
   if (stillness.matches) sleep();
   else if (was?.asleep) was.napUntil > Date.now() ? sleep(was.napUntil - Date.now()) : wake();
   else sit();
-  if (isHen()) {
-    for (const one of was?.brood ?? []) hatchling(one.kind, one.x);
-    if (chicks().length) follow();
-    layLater(was?.layAt == null ? undefined : Math.max(0, was.layAt - Date.now()));
-    if (!stillness.matches) wobbling = setInterval(wobble, 1500);
+  for (const one of was?.brood ?? []) hatchling(one.kind, one.x);
+  if (chicks().length) follow();
+  layLater(was?.layAt == null ? undefined : Math.max(0, was.layAt - Date.now()));
+  if (!stillness.matches) {
+    wobbling = setInterval(wobble, 1500);
+    buzzing = setInterval(buzz, BUZZ);
   }
 }
 
@@ -345,7 +373,7 @@ document.addEventListener("click", (event) => {
   const clicked = event.target.closest("[data-pet]");
   if (clicked === pet.el) return petted();
   const one = brood.find((b) => b.el === clicked);
-  if (one) one.kind === "egg" ? hatch(one) : cheep(one);
+  if (one) ({ egg: hatch, chick: cheep, poop: clean })[one.kind](one);
 });
 window.addEventListener("resize", () => pet && place());
 stillness.addEventListener("change", () => pet && (stillness.matches ? sleep() : wake()));

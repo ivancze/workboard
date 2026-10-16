@@ -167,8 +167,8 @@ class SpriteSheetTests(TestCase):
     def test_every_pet_has_a_sheet_built_from_its_grid(self):
         built = runpy.run_path(str(BUILDER))["build"]()
 
-        # The pets, and the chicken's eggs and chicks.
-        self.assertEqual(set(built), {"chico", "pug", "duck", "pig", "bruno", "chicken", "brood"})
+        # The pets, the chicken's eggs and chicks, and the others' poop.
+        self.assertEqual(set(built), {"chico", "pug", "duck", "pig", "bruno", "chicken", "brood", "poop"})
         for name, png in built.items():
             with self.subTest(pet=name):
                 committed = Path(settings.BASE_DIR, "static", "pets", f"{name}.png").read_bytes()
@@ -189,11 +189,12 @@ class SpriteSheetTests(TestCase):
         adding or reordering a frame there has to be matched here."""
         builder = runpy.run_path(str(BUILDER))
         brood = builder["frames_of"](Path(settings.BASE_DIR, "assets", "pets", "brood.txt").read_text())
+        poop = builder["frames_of"](Path(settings.BASE_DIR, "assets", "pets", "poop.txt").read_text())
         css = Path(settings.BASE_DIR, "assets", "app.css").read_text()
 
         shown = dict(re.findall(r'\.pet\[data-frame="([\w-]+)"\]\s*{\s*--frame:\s*(\d+);', css))
 
-        expected = {name: str(index) for frames in (builder["FRAMES"], brood) for index, name in enumerate(frames)}
+        expected = {name: str(index) for frames in (builder["FRAMES"], brood, poop) for index, name in enumerate(frames)}
         self.assertEqual(shown, expected)
 
 

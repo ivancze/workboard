@@ -242,7 +242,12 @@ The chicken's eggs and chicks have a sheet of their own, `brood.txt`, 14×14 at
 2 px (28 px). It isn't a pet, so it lists its own frames on a `frames:` line
 in place of `FRAMES`: egg, wobble, crack, chick, chick-walk1, chick-walk2 and
 chick-sleep. Their `--frame` indexes come from that line, and the frame test
-checks both lists.
+checks every list.
+
+The other pets' poop has one too, `poop.txt`, 21×21 at 1 px (21 px), read
+from an image the user gave by sampling its grid. Its frames are poop,
+poop-buzz (each fly moved a pixel), and puff1 to puff3, the puff of smoke when
+it's cleaned up, drawn as overlapping circles with an outline and a shade.
 
 The strip they stand on is `h-24` (96 px), the height Bruno needs.
 
@@ -275,10 +280,18 @@ they stay on that animal's grid.
   not while she sleeps. An egg wobbles now and then until it's clicked. Then
   it cracks, and a chick hatches and follows her in a line, stopping when she
   stops and sleeping when she sleeps. A click on a chick gives a heart. There
-  are never more than three eggs and chicks (`BROOD`); with three, she stops
+  are never more than five eggs and chicks (`BROOD`); with five, she stops
   laying. Each viewer has their own.
+- The other pets poop on the same timing, under their back end, which
+  depends on which way they face. The poop shares the eggs' and chicks' list
+  and their `BROOD` of five, so with five down they stop until one is
+  cleaned; cleaning one restarts the timer at `LAY`, not `FIRST_LAY`. The
+  flies buzz, `poop` and `poop-buzz` alternating every 200 ms (`BUZZ`), which
+  reduced motion skips. A click takes it out of the list at once, so it's
+  neither saved nor clicked twice, and plays puff1 to puff3 at 120 ms a frame
+  (`PUFF`) before removing it.
 - Leaving the page (`pagehide`) saves the pet's place, facing, whether it's
-  asleep, its timers, and the chicken's eggs and chicks, to `sessionStorage`
+  asleep, its timers, and its eggs, chicks or poop, to `sessionStorage`
   under `pet:` plus the board's path. The next load of that board in the same
   tab takes it once and carries on, so a reload or a trip to another page and
   back keeps them, and closing the tab forgets them. Time away counts: the
